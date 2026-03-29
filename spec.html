@@ -84,6 +84,7 @@
       <a href="index.html">Directory</a>
       <a href="profile.html">Sample Profile</a>
       <a href="create.html">Create Profile</a>
+      <a href="setup.html">Hosting Guide</a>
       <a href="spec.html" class="active">Specification</a>
     </div>
   </div>
@@ -651,16 +652,29 @@
       </table>
 
       <h4>Recommended self-hosting options</h4>
-      <p>Users need a domain they control and a place to serve static files (JSON-LD, images). Search Star recommends the following options, ordered from simplest to most sovereign:</p>
+      <p>Users need a domain they control and a place to serve static files (JSON-LD, images). Most Search Star users are not developers, so the default recommendation prioritizes simplicity.</p>
+
+      <div class="callout callout-green"><strong>Our recommendation: Cloudflare Pages + R2.</strong> Free tier covers everything a single profile needs — unlimited bandwidth, 10GB photo storage, global CDN, and custom domain support. Setup is entirely dashboard-based — no terminal, no git, no code. Cloudflare is critical internet infrastructure that isn't going anywhere. For most users, this is the right choice. <a href="setup.html" style="color:var(--green); font-weight:700;">See the step-by-step setup guide →</a></div>
+
       <table>
         <tr><th>Option</th><th>Difficulty</th><th>Cost</th><th>Best for</th></tr>
-        <tr><td><strong>Vercel + GitHub</strong></td><td>Easy</td><td>Free tier available</td><td>Developers, technical users. Push JSON + photos to a GitHub repo, Vercel serves them at your domain. One-command deploys.</td></tr>
-        <tr><td><strong>Cloudflare Pages + R2</strong></td><td>Easy</td><td>Free tier available</td><td>Anyone comfortable with a dashboard. Pages serves the profile, R2 stores photos with global CDN. Custom domain via Cloudflare DNS.</td></tr>
-        <tr><td><strong>Netlify</strong></td><td>Easy</td><td>Free tier available</td><td>Non-technical users. Drag-and-drop deploy. Custom domain. Good for static profiles that don't change often.</td></tr>
-        <tr><td><strong>AWS S3 + CloudFront</strong></td><td>Medium</td><td>~$1–5/month</td><td>Users who want full AWS control. S3 bucket for storage, CloudFront for CDN, Route 53 for DNS. More configuration but maximum flexibility.</td></tr>
-        <tr><td><strong>Self-hosted VPS</strong></td><td>Hard</td><td>$5–20/month</td><td>Maximum sovereignty. DigitalOcean, Hetzner, or Linode droplet running nginx. You control every byte on the wire. Requires Linux knowledge.</td></tr>
-        <tr><td><strong>IPFS + ENS</strong></td><td>Hard</td><td>Variable</td><td>Crypto-native users. Profile pinned to IPFS, addressed via ENS name. Censorship-resistant but slower access and more complex tooling.</td></tr>
+        <tr><td><strong>Cloudflare Pages + R2</strong> ⭐</td><td>Easy</td><td>Free</td><td><strong>Default recommendation.</strong> Dashboard-based setup. Pages serves your profile JSON-LD, R2 stores your photos with global CDN. Custom domain via Cloudflare DNS. No code required.</td></tr>
+        <tr><td><strong>Vercel + GitHub</strong></td><td>Easy (for developers)</td><td>Free</td><td>Developers who already use git. Push JSON + photos to a repo, Vercel serves them. One-command deploys. Requires git literacy.</td></tr>
+        <tr><td><strong>Netlify</strong></td><td>Easy</td><td>Free</td><td>Drag-and-drop deploy. Good for static profiles. Tighter bandwidth limits than Cloudflare. No built-in photo storage — pair with a separate image host.</td></tr>
+        <tr><td><strong>AWS S3 + CloudFront</strong></td><td>Medium</td><td>~$1–5/month</td><td>Full AWS control. S3 for storage, CloudFront for CDN, Route 53 for DNS. More configuration but maximum flexibility.</td></tr>
+        <tr><td><strong>Self-hosted VPS (Hetzner)</strong></td><td>Hard</td><td>€4/month</td><td>Maximum sovereignty. Hetzner (Germany) or DigitalOcean droplet running nginx. European privacy laws. You control every byte. Requires Linux knowledge.</td></tr>
+        <tr><td><strong>IPFS + ENS</strong></td><td>Hard</td><td>Variable</td><td>Crypto-native users. Profile pinned to IPFS, addressed via ENS name. Censorship-resistant but slower and more complex.</td></tr>
       </table>
+
+      <h4>What to look for in a host</h4>
+      <ul>
+        <li><strong>Custom domain support</strong> — your profile should live at a URL you own (e.g., <code>profile.yourname.com</code>), not a platform subdomain.</li>
+        <li><strong>HTTPS by default</strong> — querying platforms require it. All recommended options provide free SSL.</li>
+        <li><strong>Global CDN</strong> — dating apps and recruiters need fast response times. Cloudflare, Vercel, and Netlify all include this.</li>
+        <li><strong>Photo storage with direct URLs</strong> — each photo needs a stable, publicly accessible URL. Cloudflare R2 and S3 do this natively. Vercel and Netlify serve photos from the repo/deploy.</li>
+        <li><strong>Uptime</strong> — if your hosting is down, queries fail and you earn nothing. Choose infrastructure with 99.9%+ uptime.</li>
+        <li><strong>You can delete everything</strong> — true sovereignty means you can remove your profile and all photos at any time with no holdback period.</li>
+      </ul>
 
       <h4>Photo hosting requirements</h4>
       <p>Selected profile photos must be hosted at URLs the user controls, served over HTTPS, and accessible to querying platforms without authentication (for photos in the public or private tier). The profile JSON-LD references each photo by URL and SHA-256 content hash. Querying platforms verify the hash to ensure photos haven't been tampered with since scoring.</p>
