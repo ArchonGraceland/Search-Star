@@ -111,6 +111,7 @@
         <a class="toc-indent" href="#skills">3.3 Skills &amp; Credentials</a>
         <a class="toc-indent" href="#interests">3.4 Interests</a>
         <a class="toc-indent" href="#advertising">3.5 Advertising Profile <span class="new-badge">New in v0.3</span></a>
+        <a class="toc-indent" href="#dating">3.6 Intimate &amp; Dating <span class="new-badge">New in v0.3</span></a>
         <a href="#access">4. Access Control &amp; Monetization</a>
         <a class="toc-indent" href="#tiers">4.1 Three Tiers</a>
         <a class="toc-indent" href="#pricing">4.2 Pricing Model</a>
@@ -280,6 +281,113 @@
       <p>Shorthand tags for advertising audience segmentation, generated automatically from the profile and approved by the user. Examples: "High-net-worth male 55+", "Cultural luxury segment", "Tech-literate self-directed", "Education decision-maker".</p>
 
       <div class="callout callout-red"><strong>Privacy guardrails.</strong> The advertising profile MUST NOT include: medical conditions or health data (insurance discrimination risk), specific financial targets or transaction intentions (front-running risk), or relationship status details beyond broad life stage. The user approves every signal, category, and tag. Nothing is published without explicit consent.</div>
+
+      <!-- 3.6 Intimate & Dating — NEW -->
+      <h3 id="dating">3.6 Intimate &amp; Dating <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h3>
+      <p>The dating section makes Search Star profiles queryable by dating platforms — Tinder, Hinge, Bumble, Grindr, Scruff, Raya, and any future entrant. Instead of rebuilding your profile on every app, you maintain one sovereign dating profile that platforms query via API. You control every field, and you get paid for every query.</p>
+      <div class="callout callout-info">This section is <strong>entirely optional</strong>. Users who don't want their profile queryable by dating platforms simply omit this section or set its access tier to "disabled." The presence or absence of a dating section has no effect on the rest of the profile.</div>
+
+      <h4>Core fields</h4>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>orientation</code></td><td>String or array</td><td>Sexual orientation. Supports standard labels (straight, gay, bisexual, pansexual, queer, asexual, etc.) and freeform text. Array format allows multiple labels.</td></tr>
+        <tr><td><code>genderIdentity</code></td><td>String or array</td><td>Gender identity. Supports standard labels (man, woman, nonbinary, trans man, trans woman, genderqueer, genderfluid, etc.) and freeform text.</td></tr>
+        <tr><td><code>pronouns</code></td><td>String</td><td>Preferred pronouns (e.g., he/him, she/her, they/them).</td></tr>
+        <tr><td><code>relationshipStatus</code></td><td>String</td><td>Current status: single, partnered, married, divorced, separated, widowed, it's complicated, prefer not to say.</td></tr>
+        <tr><td><code>relationshipType</code></td><td>String or array</td><td>What they're open to: monogamous, open, polyamorous, casual, relationship anarchy, undecided.</td></tr>
+        <tr><td><code>datingIntention</code></td><td>String</td><td>What they're looking for right now: long-term relationship, casual dating, hookups, friends first, not sure, open to anything.</td></tr>
+        <tr><td><code>locationRadius</code></td><td>Object</td><td>Preferred dating radius: <code>{ "center": "New York, NY", "radiusMiles": 50, "openToLongDistance": false }</code></td></tr>
+        <tr><td><code>ageRange</code></td><td>Object</td><td>Preferred partner age range: <code>{ "min": 25, "max": 45 }</code></td></tr>
+      </table>
+
+      <h4>Physical attributes</h4>
+      <p>All physical fields are optional and self-reported. Verified fields (via KYC or photos) are flagged as such.</p>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+        <tr><td><code>height</code></td><td>Object</td><td><code>{ "cm": 185, "verified": true }</code> — verifiable via KYC ID scan</td></tr>
+        <tr><td><code>bodyType</code></td><td>String</td><td>Slim, athletic, average, curvy, muscular, heavyset, dad bod, prefer not to say</td></tr>
+        <tr><td><code>ethnicity</code></td><td>String or array</td><td>Self-reported. Optional. Array for multiracial users.</td></tr>
+        <tr><td><code>hairColor</code></td><td>String</td><td>Optional.</td></tr>
+        <tr><td><code>eyeColor</code></td><td>String</td><td>Optional.</td></tr>
+        <tr><td><code>tattoos</code></td><td>String</td><td>None, a few, many, heavily tattooed</td></tr>
+        <tr><td><code>piercings</code></td><td>String</td><td>None, a few, many</td></tr>
+      </table>
+
+      <h4>Lifestyle &amp; compatibility</h4>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Options</th></tr>
+        <tr><td><code>smoking</code></td><td>String</td><td>Never, socially, regularly, trying to quit</td></tr>
+        <tr><td><code>drinking</code></td><td>String</td><td>Never, socially, regularly, sober</td></tr>
+        <tr><td><code>cannabis</code></td><td>String</td><td>Never, socially, regularly, prefer not to say</td></tr>
+        <tr><td><code>diet</code></td><td>String</td><td>Omnivore, vegetarian, vegan, pescatarian, keto, halal, kosher, other</td></tr>
+        <tr><td><code>children</code></td><td>String</td><td>Has children, wants children, doesn't want children, open to children, prefer not to say</td></tr>
+        <tr><td><code>pets</code></td><td>String or array</td><td>Has dogs, has cats, has other pets, wants pets, no pets, allergic</td></tr>
+        <tr><td><code>religion</code></td><td>String</td><td>Freeform. Optional.</td></tr>
+        <tr><td><code>politicalLeaning</code></td><td>String</td><td>Freeform. Optional.</td></tr>
+        <tr><td><code>languages</code></td><td>Array</td><td>Languages spoken with proficiency level</td></tr>
+        <tr><td><code>loveLanguages</code></td><td>Array</td><td>From the five love languages framework: words of affirmation, acts of service, receiving gifts, quality time, physical touch</td></tr>
+      </table>
+
+      <h4>Dealbreakers</h4>
+      <p>An array of hard filters the user defines. Querying platforms can use these to pre-filter matches before paying for a full profile query, reducing wasted spend for both sides.</p>
+      <pre>{
+  "dealbreakers": [
+    { "field": "smoking", "operator": "not", "value": "regularly" },
+    { "field": "children", "operator": "equals", "value": "wants children" },
+    { "field": "locationRadius", "operator": "within", "value": 100 }
+  ]
+}</pre>
+
+      <h4>Dating photos</h4>
+      <p>The dating section references photos from the user's self-hosted media (see section 7.1). The AI builder can recommend which photos from the user's library work best for dating contexts — prioritizing clear face shots, full-body photos, activity/lifestyle shots, and group photos that show social context. Photos are tagged with their purpose:</p>
+      <table>
+        <tr><th>Tag</th><th>Description</th><th>Recommended count</th></tr>
+        <tr><td><code>primary</code></td><td>Main profile photo — clear face, good lighting, recent</td><td>1</td></tr>
+        <tr><td><code>full_body</code></td><td>Full-length photo showing body type accurately</td><td>1–2</td></tr>
+        <tr><td><code>activity</code></td><td>Doing something — sport, travel, cooking, performing</td><td>1–2</td></tr>
+        <tr><td><code>social</code></td><td>With friends or in a group setting</td><td>1</td></tr>
+        <tr><td><code>dressed_up</code></td><td>Formal or semi-formal context</td><td>0–1</td></tr>
+        <tr><td><code>candid</code></td><td>Unposed, natural moment</td><td>0–1</td></tr>
+      </table>
+      <p>All photos are hosted on the user's infrastructure. Search Star indexes only URLs and hashes. Dating platforms fetch photos directly from the user's hosting when serving matches.</p>
+
+      <h4>Access control for dating</h4>
+      <p>The dating section defaults to the <strong>Private tier</strong> — only platforms the user explicitly approves can query it. Users can further restrict by platform category:</p>
+      <pre>{
+  "dating": {
+    "accessTier": "private",
+    "platformRestrictions": {
+      "allowCategories": ["dating", "matchmaking"],
+      "blockPlatforms": ["platform_xyz"],
+      "requireMutualInterest": true
+    }
+  }
+}</pre>
+      <p>The <code>requireMutualInterest</code> flag, when enabled, means a querying platform can only access the full dating profile if the user has also expressed interest in profiles on that platform. This prevents passive harvesting by platforms the user hasn't actively engaged with.</p>
+
+      <h4>Adult extension (self-hosted, not indexed)</h4>
+      <p>For users who want to express explicit sexual preferences, kink taxonomies, NSFW photos, or other adult content, the spec defines a separate <code>adultExtension</code> that lives <strong>entirely on the user's self-hosted infrastructure</strong>. Search Star never indexes, stores, or transmits adult extension content.</p>
+      <table>
+        <tr><th>Property</th><th>Detail</th></tr>
+        <tr><td>Hosting</td><td>User's own domain only. Never on Search Star infrastructure.</td></tr>
+        <tr><td>Indexing</td><td>Search Star indexes only the existence of an adult extension (boolean flag) and the URL. Never the content.</td></tr>
+        <tr><td>Content</td><td>Defined by the user. May include sexual preferences, kink taxonomy, explicit photos, body measurements, role preferences, or any other adult content.</td></tr>
+        <tr><td>Schema</td><td>Freeform JSON at the user's endpoint. Search Star does not define or validate the adult extension schema — only the URL reference.</td></tr>
+        <tr><td>Access</td><td>Controlled entirely by the user's hosting. Platforms must authenticate directly with the user's endpoint. Search Star is not involved in the access flow.</td></tr>
+        <tr><td>Payment</td><td>Queries to the adult extension are <strong>not metered through Search Star</strong>. The user may charge for access independently or provide it free — this is outside Search Star's payment infrastructure.</td></tr>
+      </table>
+      <pre>{
+  "dating": {
+    "...core dating fields...",
+    "adultExtension": {
+      "exists": true,
+      "endpoint": "https://yourname.com/api/v1/adult",
+      "auth": "OAuth2",
+      "disclaimer": "Content at this endpoint is self-hosted and not indexed, moderated, or verified by Search Star."
+    }
+  }
+}</pre>
+      <div class="callout callout-warn"><strong>Why the separation?</strong> Keeping adult content off Search Star's infrastructure protects the core platform's payment processing (Stripe prohibits explicit content on managed accounts), app store compliance, and mainstream platform partnerships. Users maintain full freedom to host whatever they want on their own domain — the spec simply doesn't route that content through Search Star's systems.</div>
 
       <!-- ═══════════ 4. ACCESS ═══════════ -->
 
