@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search Star — Specification v0.1</title>
+<title>Search Star — Specification v0.3</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -11,7 +11,10 @@
     --navy: #1a3a6b; --navy-dk: #112a4f; --white: #ffffff; --black: #1a1a1a;
     --gray-2: #5a5a5a; --gray-3: #767676; --gray-4: #b8b8b8; --gray-5: #e8e8e8; --gray-6: #f5f5f5;
     --border: #d4d4d4; --cream: #eef2f8; --green: #166534; --green-bg: #f0fdf4;
+    --amber: #92400e; --amber-bg: #fffbeb;
+    --red: #991b1b; --red-bg: #fef2f2;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --radius: 6px;
   }
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Crimson Text', Georgia, serif; background: var(--gray-6); color: var(--black); font-size: 18px; line-height: 1.7; }
@@ -31,8 +34,7 @@
   .spec-meta { font-family: 'Roboto', sans-serif; font-size: 12px; color: var(--gray-3); margin-bottom: 32px; display: flex; gap: 24px; }
   .spec-meta span { display: flex; align-items: center; gap: 6px; }
 
-  .doc { background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 48px 56px; box-shadow: var(--shadow-sm); margin-bottom: 32px; }
-
+  .doc { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 48px 56px; box-shadow: var(--shadow-sm); margin-bottom: 32px; }
   .doc h2 { font-family: 'Crimson Text', Georgia, serif; font-size: 28px; font-weight: 700; margin-top: 40px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--gray-5); }
   .doc h2:first-child { margin-top: 0; }
   .doc h3 { font-family: 'Crimson Text', Georgia, serif; font-size: 22px; font-weight: 700; margin-top: 32px; margin-bottom: 8px; }
@@ -41,20 +43,22 @@
   .doc ul, .doc ol { margin: 0 0 16px 24px; }
   .doc li { margin-bottom: 6px; }
   .doc code { font-family: 'JetBrains Mono', monospace; font-size: 14px; background: var(--cream); padding: 2px 6px; border-radius: 3px; }
-  .doc pre { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #1a1a1a; color: #e0ddd5; padding: 24px; border-radius: 6px; overflow-x: auto; margin-bottom: 16px; line-height: 1.7; }
+  .doc pre { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #1a1a1a; color: #e0ddd5; padding: 24px; border-radius: var(--radius); overflow-x: auto; margin-bottom: 16px; line-height: 1.7; }
   .doc table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 16px; }
   .doc th { font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-3); text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--gray-5); }
   .doc td { padding: 10px 12px; border-bottom: 1px solid var(--gray-5); }
   .doc td code { font-size: 13px; }
-  .callout { padding: 16px 20px; border-radius: 6px; margin-bottom: 16px; font-size: 16px; }
+  .callout { padding: 16px 20px; border-radius: var(--radius); margin-bottom: 16px; font-size: 16px; }
   .callout-info { background: var(--cream); border-left: 3px solid var(--navy); }
-  .callout-warn { background: #fffbeb; border-left: 3px solid #92400e; }
+  .callout-warn { background: var(--amber-bg); border-left: 3px solid var(--amber); }
   .callout-green { background: var(--green-bg); border-left: 3px solid var(--green); }
+  .callout-red { background: var(--red-bg); border-left: 3px solid var(--red); }
 
   .toc { margin-bottom: 32px; }
   .toc a { font-family: 'Roboto', sans-serif; font-size: 14px; color: var(--navy); text-decoration: none; display: block; padding: 4px 0; }
   .toc a:hover { text-decoration: underline; }
   .toc .toc-indent { padding-left: 20px; }
+  .toc .new-badge { font-family: 'Roboto', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 1px 6px; border-radius: 2px; background: var(--green-bg); color: var(--green); margin-left: 6px; vertical-align: middle; }
 
   .site-footer { background: var(--black); color: rgba(255,255,255,0.55); padding: 32px 0; }
   .footer-inner { font-family: 'Roboto', sans-serif; font-size: 12px; display: flex; justify-content: space-between; }
@@ -75,7 +79,7 @@
       Search Star
     </div>
     <h1>Specification</h1>
-    <div class="header-sub">Technical specification for the Search Star sovereign personal data standard. Schema, scoring methodology, access control, and monetization.</div>
+    <div class="header-sub">Technical specification for the Search Star sovereign personal data standard. Schema, scoring methodology, advertising profile, validation layer, access control, and monetization.</div>
     <div class="header-nav">
       <a href="index.html">Directory</a>
       <a href="profile.html">Sample Profile</a>
@@ -89,7 +93,7 @@
   <div class="wrap">
 
     <div class="spec-meta">
-      <span><strong>Version</strong> 0.1.0</span>
+      <span><strong>Version</strong> 0.3.0</span>
       <span><strong>Date</strong> March 2026</span>
       <span><strong>Status</strong> Draft</span>
       <span><strong>License</strong> MIT</span>
@@ -106,19 +110,30 @@
         <a class="toc-indent" href="#presence">3.2 Presence Composite</a>
         <a class="toc-indent" href="#skills">3.3 Skills &amp; Credentials</a>
         <a class="toc-indent" href="#interests">3.4 Interests</a>
+        <a class="toc-indent" href="#advertising">3.5 Advertising Profile <span class="new-badge">New in v0.3</span></a>
         <a href="#access">4. Access Control &amp; Monetization</a>
         <a class="toc-indent" href="#tiers">4.1 Three Tiers</a>
         <a class="toc-indent" href="#pricing">4.2 Pricing Model</a>
         <a class="toc-indent" href="#marketing">4.3 Marketing Tier Rules</a>
-        <a href="#numbering">5. Profile Numbering</a>
-        <a href="#tech">6. Technical Stack</a>
-        <a href="#roadmap">7. Roadmap</a>
+        <a href="#validation">5. Validation &amp; Trust Layer <span class="new-badge">New in v0.3</span></a>
+        <a class="toc-indent" href="#validators">5.1 Validators &amp; Staking</a>
+        <a class="toc-indent" href="#automated">5.2 Automated Verification</a>
+        <a class="toc-indent" href="#trustscore">5.3 Trust Score</a>
+        <a class="toc-indent" href="#disputes">5.4 Dispute Resolution</a>
+        <a href="#numbering">6. Profile Numbering</a>
+        <a href="#tech">7. Technical Stack</a>
+        <a href="#roadmap">8. Roadmap</a>
       </div>
+
+      <!-- ═══════════ 1. OVERVIEW ═══════════ -->
 
       <h2 id="overview">1. Overview</h2>
       <p>Search Star is an open-source standard for self-sovereign personal data profiles. An individual hosts their profile at a URI they control, served as JSON-LD. Platforms — dating apps, recruiters, investment networks, brands — query the individual's API endpoint and pay per query at a price the individual sets.</p>
-      <p>The standard covers three data domains: financial standing (expressed as age-cohort percentiles, not raw dollars), personal presence (the Presence Composite: Rizz, Vibe, Drip), and professional capability (skills, credentials, interests). Each field can be independently scoped to one of three access tiers.</p>
+      <p>The standard covers four data domains: financial standing (expressed as age-cohort percentiles, not raw dollars), personal presence (the Presence Composite: Rizz, Vibe, Drip), professional capability (skills, credentials, interests), and an advertising profile (high-value targeting signals the user explicitly approves). Each field can be independently scoped to one of three access tiers.</p>
+      <p>Profiles are backed by a validation layer where trusted third parties stake money against the accuracy of profile claims. If claims are proven false, validators forfeit their stakes to refund advertisers.</p>
       <div class="callout callout-info">Search Star inverts the data economy. Instead of platforms harvesting user data for free and selling it to advertisers, individuals own, host, price, and monetize their own data directly.</div>
+
+      <!-- ═══════════ 2. IDENTITY ═══════════ -->
 
       <h2 id="identity">2. Identity &amp; Registration</h2>
       <p>Each Search Star profile is assigned a permanent, sequential identifier in the format <code>SS-XXXXXX</code> (e.g., SS-000001). This number never changes and is globally unique.</p>
@@ -132,12 +147,30 @@
         <tr><td><code>kyc.attestation</code></td><td>did:web:stripe.com#kyc-abc123</td><td>Verifiable attestation reference</td></tr>
       </table>
 
-      <h2 id="schema">3. Profile Schema</h2>
-      <p>Profiles are served as JSON-LD documents at the owner's endpoint. The schema context is <code>https://schema.searchstar.org/v0.1</code>. All fields support field-level access control via the <code>accessTier</code> property.</p>
+      <!-- ═══════════ 3. SCHEMA ═══════════ -->
 
+      <h2 id="schema">3. Profile Schema</h2>
+      <p>Profiles are served as JSON-LD documents at the owner's endpoint. The schema context is <code>https://schema.searchstar.org/v0.3</code>. All fields support field-level access control via the <code>accessTier</code> property.</p>
+
+      <!-- 3.1 Financial -->
       <h3 id="financial">3.1 Financial (Age-Percentile Model)</h3>
       <p>All financial metrics are expressed as percentiles within the owner's age cohort (5-year bands). No raw dollar amounts ever leave the profile. This makes a 26-year-old with $100K in savings and a 50-year-old with $2M directly comparable — both might be 90th percentile for their cohort.</p>
       <div class="callout callout-green">Percentile data is sourced from the Federal Reserve Survey of Consumer Finances and verified via zero-knowledge proofs (ZK-SNARKs). The proof attests that the owner's actual value meets or exceeds the claimed percentile threshold, without revealing the underlying number.</div>
+
+      <h4>Net worth percentile benchmarks by age cohort (US, Federal Reserve SCF)</h4>
+      <table>
+        <tr><th>Cohort</th><th>50th</th><th>75th</th><th>90th</th><th>95th</th><th>99th</th></tr>
+        <tr><td>25–29</td><td>$10K</td><td>$40K</td><td>$150K</td><td>$300K</td><td>—</td></tr>
+        <tr><td>30–34</td><td>$50K</td><td>$150K</td><td>$400K</td><td>$800K</td><td>$3M</td></tr>
+        <tr><td>35–39</td><td>$90K</td><td>$250K</td><td>$700K</td><td>$1.5M</td><td>$5M</td></tr>
+        <tr><td>40–44</td><td>$130K</td><td>$400K</td><td>$1M</td><td>$2.5M</td><td>$8M</td></tr>
+        <tr><td>45–49</td><td>$170K</td><td>$500K</td><td>$1.5M</td><td>$3.5M</td><td>$12M</td></tr>
+        <tr><td>50–54</td><td>$240K</td><td>$700K</td><td>$1.8M</td><td>$3.8M</td><td>$14M</td></tr>
+        <tr><td>55–59</td><td>$300K</td><td>$800K</td><td>$2M</td><td>$4M</td><td>$15M</td></tr>
+        <tr><td>60–64</td><td>$350K</td><td>$900K</td><td>$2.2M</td><td>$4.5M</td><td>$16M</td></tr>
+      </table>
+
+      <h4>Financial metrics</h4>
       <table>
         <tr><th>Metric</th><th>Type</th><th>Verification</th></tr>
         <tr><td>Net worth</td><td>Percentile + cohort</td><td>ZK proof via Plaid</td></tr>
@@ -148,6 +181,7 @@
         <tr><td>Portfolio breakdown</td><td>Allocation %</td><td>Plaid (private tier only)</td></tr>
       </table>
 
+      <!-- 3.2 Presence -->
       <h3 id="presence">3.2 Presence Composite™</h3>
       <p>The Presence Composite is a three-dimensional score measuring interpersonal magnetism, aesthetic taste, and visual self-expression. It is deliberately brand-blind — the algorithm has no input for price tags, brand names, or logos.</p>
 
@@ -160,7 +194,6 @@
       </table>
 
       <h4>Scoring penalties &amp; boosts</h4>
-      <p>The Drip dimension includes explicit penalties and boosts to prevent the score from becoming a brand-spending leaderboard:</p>
       <table>
         <tr><th>Type</th><th>Signal</th><th>Weight</th></tr>
         <tr><td style="color:#991b1b">Penalty</td><td>Visible logos</td><td>-0.15</td></tr>
@@ -172,14 +205,18 @@
         <tr><td style="color:var(--green)">Boost</td><td>Cultural fluency</td><td>+0.15</td></tr>
       </table>
 
+      <h4>Confidence discount</h4>
+      <p>If Presence is scored from self-assessment only (no photos, no peer reviews, no social content), a 0.85 confidence discount is applied to all factor scores. Providing visual evidence (outfit photos, space photos, social content) removes the discount for the relevant dimensions.</p>
+
       <h4>Data sources</h4>
       <p>Presence scores are derived from: photo AI analysis (fit, color, composition), blinded peer reviews (reviewers cannot see others' scores), space photos (home and workspace aesthetic), taste signals (music, film, reading), anonymized conversation samples, and social content originality indexes.</p>
 
+      <!-- 3.3 Skills -->
       <h3 id="skills">3.3 Skills &amp; Credentials</h3>
       <p>Skills use the W3C Verifiable Credentials standard. Each skill has a name, self-reported level (beginner through expert), a numeric score (0–100), and an optional verifiable credential with issuer DID and cryptographic proof.</p>
 
+      <!-- 3.4 Interests -->
       <h3 id="interests">3.4 Interests</h3>
-      <p>Interests are organized into three domains:</p>
       <table>
         <tr><th>Domain</th><th>Examples</th><th>Fields per item</th></tr>
         <tr><td><strong>Athletic</strong></td><td>Sports, fitness, competition</td><td>Name, category, level, years, frequency, competitive flag, tags</td></tr>
@@ -188,22 +225,50 @@
       </table>
       <p>Interests are part of the public tier by default — they serve as discovery signals that help platforms and people find relevant profiles.</p>
 
+      <!-- 3.5 Advertising Profile — NEW -->
+      <h3 id="advertising">3.5 Advertising Profile <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h3>
+      <p>The advertising profile makes a user's data valuable to advertisers without exposing them to exploitation. It contains four sub-sections, each composed of signals the user explicitly approves before publication.</p>
+
+      <h4>Life stage signals</h4>
+      <p>Broad categorical descriptors of where the user is in life. These are inferred from identity, financial, and interests data — the user does not self-categorize into advertising buckets. Each signal includes an <code>advertiserRelevance</code> field that makes the value proposition explicit to querying platforms.</p>
+      <table>
+        <tr><th>Example signal</th><th>Advertiser relevance</th></tr>
+        <tr><td>Independent self-directed professional</td><td>High-agency decision-maker, not reachable through employer channels</td></tr>
+        <tr><td>High-net-worth, low-debt household</td><td>Premium financial services, wealth management</td></tr>
+        <tr><td>Education-involved parent</td><td>EdTech, curricula, learning platforms</td></tr>
+        <tr><td>International cultural traveler</td><td>Premium travel, cultural tourism</td></tr>
+        <tr><td>Active investor</td><td>Fintech, alternative investments, advisory</td></tr>
+      </table>
+
+      <h4>Consumption profile</h4>
+      <p>Category-level spending patterns. Never dollar amounts — only qualitative tiers: low, moderate, high, very high. Each entry includes category, frequency, scope, and estimated annual value tier.</p>
+
+      <h4>Professional openness</h4>
+      <p>What kind of professional inbound the user welcomes: advisory/board roles, consulting, mentorship, collaboration, speaking/teaching, or none. This is asked directly — it cannot be reliably inferred.</p>
+
+      <h4>Demographic value tags</h4>
+      <p>Shorthand tags for advertising audience segmentation, generated automatically from the profile and approved by the user. Examples: "High-net-worth male 55+", "Cultural luxury segment", "Tech-literate self-directed", "Education decision-maker".</p>
+
+      <div class="callout callout-red"><strong>Privacy guardrails.</strong> The advertising profile MUST NOT include: medical conditions or health data (insurance discrimination risk), specific financial targets or transaction intentions (front-running risk), or relationship status details beyond broad life stage. The user approves every signal, category, and tag. Nothing is published without explicit consent.</div>
+
+      <!-- ═══════════ 4. ACCESS ═══════════ -->
+
       <h2 id="access">4. Access Control &amp; Monetization</h2>
 
       <h3 id="tiers">4.1 Three Tiers</h3>
       <table>
         <tr><th>Tier</th><th>Access</th><th>Fields</th><th>Pricing</th></tr>
         <tr><td><strong>Public</strong></td><td>Open to all platforms</td><td>Identity, skills, interests, headline Presence score</td><td>Per query, owner-set</td></tr>
-        <tr><td><strong>Private</strong></td><td>Owner-approved platforms only</td><td>All fields — financials, Presence breakdown, media</td><td>Per query, owner-set</td></tr>
+        <tr><td><strong>Private</strong></td><td>Owner-approved platforms only</td><td>All fields — financials, Presence breakdown, advertising profile, media</td><td>Per query, owner-set</td></tr>
         <tr><td><strong>Marketing</strong></td><td>Open to all senders</td><td>Messaging inbox</td><td>Per message, owner-set</td></tr>
       </table>
 
       <h3 id="pricing">4.2 Pricing Model</h3>
       <p>All pricing is per-query (or per-message for Marketing tier), set by the profile owner. There are no subscriptions, no flat rates, and no free tiers. Owners can set different prices per platform. Billing is handled via Stripe Connect with real-time settlement.</p>
+      <p>The advertising profile section increases private tier value by 2–5x over a profile without it. Higher Presence scores, verified financials, and higher trust scores (see section 5) all justify higher prices.</p>
       <div class="callout callout-warn">A message costs what it costs. There are no refunds on Marketing tier messages. The price is the filter — it protects the profile owner's attention and signals seriousness from the sender.</div>
 
       <h3 id="marketing">4.3 Marketing Tier Rules</h3>
-      <p>The Marketing tier allows anyone to message a profile owner by paying their set price. Rules enforced by the protocol:</p>
       <ul>
         <li>Maximum message length: 500 characters</li>
         <li>Sender must verify identity before sending</li>
@@ -211,36 +276,94 @@
         <li>No refunds — payment is for the opportunity to reach the owner, not a guarantee of response</li>
       </ul>
 
-      <h4>Future: response likelihood score</h4>
-      <p>A planned addition to the Marketing tier is a response likelihood score displayed to senders before payment. Based on the profile owner's historical response rate by message category (recruiter, brand, dating, investor), this score lets senders make an informed decision about whether the price is worth it for their specific use case.</p>
+      <!-- ═══════════ 5. VALIDATION — NEW ═══════════ -->
 
-      <h2 id="numbering">5. Profile Numbering</h2>
-      <p>Profiles are assigned sequential numbers in the format <code>SS-XXXXXX</code>, zero-padded to six digits. The number is permanent — it never changes, even if the owner changes their handle or domain. Numbering starts at SS-000001.</p>
+      <h2 id="validation">5. Validation &amp; Trust Layer <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h2>
+      <p>The validation system allows trusted third parties to vouch for the accuracy of a user's profile by staking money against it. This creates a trust signal for advertisers and querying platforms — a profile backed by real financial stakes is more credible than an unvalidated one.</p>
+
+      <h3 id="validators">5.1 Validators &amp; Staking</h3>
+      <p>Only people the profile owner explicitly approves can validate. Validators review specific sections they have personal knowledge of and choose how much to stake (minimum $1.00). Stakes are held in escrow via Stripe Connect.</p>
+
+      <h4>Validator relationship types</h4>
       <table>
-        <tr><th>Number</th><th>Owner</th><th>Status</th></tr>
-        <tr><td><code>SS-000001</code></td><td>Steve Smith</td><td>Active, verified</td></tr>
-        <tr><td><code>SS-000002</code></td><td>(Unassigned)</td><td>Available</td></tr>
+        <tr><th>Relationship</th><th>Best suited to validate</th></tr>
+        <tr><td><code>colleague</code></td><td>Skills, professional openness</td></tr>
+        <tr><td><code>friend</code></td><td>Interests, presence</td></tr>
+        <tr><td><code>family</code></td><td>Life stage signals</td></tr>
+        <tr><td><code>mentor</code></td><td>Skills, professional trajectory</td></tr>
+        <tr><td><code>collaborator</code></td><td>Skills, project output</td></tr>
+        <tr><td><code>acquaintance</code></td><td>General identity, location</td></tr>
+        <tr><td><code>professional_contact</code></td><td>Industry reputation, skills</td></tr>
+      </table>
+      <p>Validators see only the sections selected for their review, in a read-only validation view. They never see raw financial data (only percentile bands) and never see access policy pricing.</p>
+      <p>A validator may withdraw at any time. Their stake is returned (minus any penalties from prior upheld disputes), their validation is removed, and the trust score is recalculated.</p>
+
+      <h3 id="automated">5.2 Automated Verification</h3>
+      <p>For fields that can be verified programmatically, the system runs automated checks and records results. These do not require a human validator or staking.</p>
+      <table>
+        <tr><th>Field</th><th>Source</th><th>Method</th></tr>
+        <tr><td>Credit score percentile</td><td>Experian / TransUnion / Equifax</td><td>OAuth consent, returns percentile only</td></tr>
+        <tr><td>Income percentile</td><td>IRS IVES</td><td>Consent-based, returns bracket only</td></tr>
+        <tr><td>Net worth percentile</td><td>Plaid / Yodlee</td><td>OAuth consent, computed to percentile</td></tr>
+        <tr><td>Skills credentials</td><td>GitHub API, LinkedIn API</td><td>URL verification, commit history</td></tr>
+        <tr><td>Location</td><td>IP geolocation, utility records</td><td>Passive or consent-based</td></tr>
+        <tr><td>Identity</td><td>Stripe Identity, Persona</td><td>Document scan, confirmed/denied</td></tr>
       </table>
 
-      <h2 id="tech">6. Technical Stack</h2>
+      <h3 id="trustscore">5.3 Trust Score</h3>
+      <p>Each profile receives a composite trust score (0–100) based on three inputs:</p>
+      <table>
+        <tr><th>Component</th><th>Weight</th><th>Scoring</th></tr>
+        <tr><td>Validator coverage</td><td>0–40 points</td><td>Percentage of profile sections with at least one human validator</td></tr>
+        <tr><td>Total stake</td><td>0–30 points</td><td>Logarithmic: $0 = 0 pts, $10 = 10, $100 = 20, $1,000+ = 30</td></tr>
+        <tr><td>Automated checks passed</td><td>0–30 points</td><td>Proportion of verifiable fields confirmed by automated sources</td></tr>
+      </table>
+      <p>Trust score directly influences suggested query pricing. A profile with a trust score of 80+ can justify 3–5x the base query price.</p>
+
+      <h3 id="disputes">5.4 Dispute Resolution</h3>
+      <p>When information is proven wrong, the following process applies:</p>
+      <ol>
+        <li><strong>Automated check fails.</strong> If a previously-passing automated check returns a contradictory result on re-verification, the system flags the field automatically.</li>
+        <li><strong>Advertiser dispute.</strong> A querying platform that paid for profile data can file a dispute with evidence of material inaccuracy.</li>
+        <li><strong>Review.</strong> Automated-source contradictions are upheld automatically. Subjective disputes (e.g., Presence score inflation) are flagged for manual review.</li>
+        <li><strong>Penalty on upheld dispute:</strong> The field is marked as disputed. Validators who vouched for it forfeit their stakes: 70% refunded to advertisers, 20% platform fee, 10% to the disputing party.</li>
+        <li><strong>Bad-faith dispute penalty.</strong> If a dispute is rejected (the profile data was accurate), the disputing party pays a $5 filing fee to deter frivolous disputes.</li>
+      </ol>
+      <div class="callout callout-info">The profile owner may update any disputed field and request re-verification. The trust score is recalculated after every dispute resolution.</div>
+
+      <!-- ═══════════ 6. NUMBERING ═══════════ -->
+
+      <h2 id="numbering">6. Profile Numbering</h2>
+      <p>Profiles are assigned sequential numbers in the format <code>SS-XXXXXX</code>, zero-padded to six digits. The number is permanent — it never changes, even if the owner changes their handle or domain.</p>
+
+      <!-- ═══════════ 7. TECH STACK ═══════════ -->
+
+      <h2 id="tech">7. Technical Stack</h2>
       <table>
         <tr><th>Component</th><th>Technology</th></tr>
+        <tr><td>Frontend</td><td>Next.js on Vercel</td></tr>
+        <tr><td>Backend / Database</td><td>Supabase (auth, profile storage, edge functions)</td></tr>
+        <tr><td>AI Profile Builder</td><td>Anthropic API (Claude)</td></tr>
         <tr><td>Identity</td><td>DID:web (W3C Decentralized Identifiers)</td></tr>
         <tr><td>Credentials</td><td>W3C Verifiable Credentials</td></tr>
         <tr><td>Financial proofs</td><td>ZK-SNARKs (zero-knowledge proofs)</td></tr>
         <tr><td>Data format</td><td>JSON-LD</td></tr>
         <tr><td>Auth</td><td>OAuth 2.0 + API keys</td></tr>
-        <tr><td>Billing</td><td>Stripe Connect (per-query metering)</td></tr>
-        <tr><td>Hosting</td><td>Self-hosted at owner's domain (or Search Star managed hosting)</td></tr>
+        <tr><td>Billing / Escrow</td><td>Stripe Connect (per-query metering, validator stake escrow)</td></tr>
+        <tr><td>Hosting</td><td>Self-hosted at owner's domain or Search Star managed hosting</td></tr>
       </table>
 
-      <h2 id="roadmap">7. Roadmap</h2>
+      <!-- ═══════════ 8. ROADMAP ═══════════ -->
+
+      <h2 id="roadmap">8. Roadmap</h2>
       <table>
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
         <tr><td><code>v0.1</code></td><td>March 2026</td><td>Schema spec, sample profile, static prototype, Presence Composite methodology</td></tr>
-        <tr><td><code>v0.2</code></td><td>Q2 2026</td><td>Profile creation flow, user authentication, dynamic profiles, API endpoint generation</td></tr>
-        <tr><td><code>v0.3</code></td><td>Q3 2026</td><td>Stripe Connect integration, per-query metering, platform API keys, revenue dashboard</td></tr>
-        <tr><td><code>v0.4</code></td><td>Q4 2026</td><td>Marketing tier messaging, response likelihood scoring, platform directory</td></tr>
+        <tr><td><code>v0.2</code></td><td>March 2026</td><td>Advertising profile section, expanded age cohort tables, builder methodology</td></tr>
+        <tr><td><code>v0.3</code></td><td>March 2026</td><td>Validation &amp; trust layer: validator staking, automated verification, dispute resolution, trust score</td></tr>
+        <tr><td><code>v0.4</code></td><td>Q2 2026</td><td>Profile creation flow (Next.js + Supabase), user authentication, dynamic profiles, API endpoint generation</td></tr>
+        <tr><td><code>v0.5</code></td><td>Q3 2026</td><td>Stripe Connect integration, per-query metering, platform API keys, revenue dashboard</td></tr>
+        <tr><td><code>v0.6</code></td><td>Q4 2026</td><td>Marketing tier messaging, response likelihood scoring, platform directory</td></tr>
         <tr><td><code>v1.0</code></td><td>2027</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, third-party verification partnerships</td></tr>
       </table>
 
@@ -252,7 +375,7 @@
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v0.1 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v0.3 · MIT License</div>
       <div class="footer-links">
         <a href="index.html">Directory</a>
         <a href="profile.html">Sample</a>
