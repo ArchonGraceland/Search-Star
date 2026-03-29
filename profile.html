@@ -970,10 +970,11 @@
     Search Star
   </div>
   <div class="topbar-nav">
-    <a href="index.html" style="font-family:'Roboto',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:7px 16px;border:1px solid rgba(255,255,255,0.25);border-radius:3px;background:transparent;color:rgba(255,255,255,0.7);text-decoration:none;transition:all 0.2s;">Directory</a>
+    <a href="index.html" style="font-family:'Roboto',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:7px 16px;border:1px solid rgba(255,255,255,0.25);border-radius:3px;background:transparent;color:rgba(255,255,255,0.7);text-decoration:none;transition:all 0.2s;">Home</a>
     <button class="active" onclick="switchView('profile')">Profile</button>
     <button onclick="switchView('schema')">Schema Spec</button>
     <button onclick="switchView('access')">Access &amp; Monetization</button>
+    <a href="setup.html" style="font-family:'Roboto',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:7px 16px;border:1px solid rgba(255,255,255,0.25);border-radius:3px;background:transparent;color:rgba(255,255,255,0.7);text-decoration:none;transition:all 0.2s;">Hosting Guide</a>
     <a href="spec.html" style="font-family:'Roboto',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:7px 16px;border:1px solid rgba(255,255,255,0.25);border-radius:3px;background:transparent;color:rgba(255,255,255,0.7);text-decoration:none;transition:all 0.2s;">Full Spec</a>
   </div>
 </div>
@@ -985,8 +986,12 @@
 
     <div class="profile-header animate-in">
       <div class="avatar-wrap">
-        <div class="avatar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div class="avatar" style="background:linear-gradient(145deg, #1a3a6b, #2a5a8f);">
+          <svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;opacity:0.7;">
+            <ellipse cx="100" cy="78" rx="32" ry="36" fill="rgba(255,255,255,0.2)"/>
+            <path d="M100,114 C60,114 35,150 35,200 L165,200 C165,150 140,114 100,114Z" fill="rgba(255,255,255,0.12)"/>
+            <circle cx="100" cy="75" r="28" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/>
+          </svg>
         </div>
         <div class="verified-badge">✓</div>
       </div>
@@ -1084,12 +1089,34 @@
       <!-- Photos + basic stats row -->
       <div class="appeal-grid">
         <div class="appeal-photos">
-          <div class="appeal-photo">Portrait</div>
-          <div class="appeal-photo">Full Length</div>
-          <div class="appeal-photo locked"></div>
-          <div class="appeal-photo locked"></div>
-          <div class="appeal-photo locked"></div>
-          <div class="appeal-photo locked"></div>
+          <div class="appeal-photo" style="background:linear-gradient(145deg, #1a3a6b, #2a5a8f); border-color:#2a5a8f; position:relative; overflow:hidden;">
+            <svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;"><ellipse cx="60" cy="52" rx="22" ry="25" fill="rgba(255,255,255,0.18)"/><path d="M60,77 C38,77 22,100 22,135 L98,135 C98,100 82,77 60,77Z" fill="rgba(255,255,255,0.1)"/></svg>
+            <span style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:Roboto,sans-serif;font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Portrait</span>
+          </div>
+          <div class="appeal-photo" style="background:linear-gradient(145deg, #1a3a6b, #2a5a8f); border-color:#2a5a8f; position:relative; overflow:hidden;">
+            <svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;"><ellipse cx="60" cy="35" rx="16" ry="18" fill="rgba(255,255,255,0.18)"/><path d="M60,53 C45,53 35,68 35,90 L85,90 C85,68 75,53 60,53Z" fill="rgba(255,255,255,0.1)"/><rect x="42" y="90" width="12" height="50" rx="3" fill="rgba(255,255,255,0.08)"/><rect x="66" y="90" width="12" height="50" rx="3" fill="rgba(255,255,255,0.08)"/></svg>
+            <span style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:Roboto,sans-serif;font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Full Length</span>
+          </div>
+          <div class="appeal-photo" style="background:linear-gradient(135deg, #1a3a6b, #2a5a8f); border-color:#2a5a8f; position:relative; overflow:hidden;">
+            <svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;"><ellipse cx="45" cy="55" rx="14" ry="16" fill="rgba(255,255,255,0.12)"/><ellipse cx="80" cy="60" rx="12" ry="14" fill="rgba(255,255,255,0.08)"/><path d="M45,71 C32,71 24,85 24,105 L66,105 C66,85 58,71 45,71Z" fill="rgba(255,255,255,0.07)"/></svg>
+            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;">&#x1f512;</span>
+            <span style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:Roboto,sans-serif;font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Social</span>
+          </div>
+          <div class="appeal-photo" style="background:linear-gradient(135deg, #1a3a6b, #2a5a8f); border-color:#2a5a8f; position:relative; overflow:hidden;">
+            <svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;"><rect x="15" y="40" width="90" height="60" rx="4" fill="rgba(255,255,255,0.08)"/><polygon points="30,80 55,55 70,70 90,50 105,70 105,100 15,100" fill="rgba(255,255,255,0.06)"/><circle cx="85" cy="55" r="8" fill="rgba(255,255,255,0.1)"/></svg>
+            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;">&#x1f512;</span>
+            <span style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:Roboto,sans-serif;font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Travel</span>
+          </div>
+          <div class="appeal-photo" style="background:linear-gradient(135deg, #1a3a6b, #2a5a8f); border-color:#2a5a8f; position:relative; overflow:hidden;">
+            <svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;"><ellipse cx="60" cy="50" rx="18" ry="20" fill="rgba(255,255,255,0.12)"/><path d="M60,70 C44,70 32,86 32,110 L88,110 C88,86 76,70 60,70Z" fill="rgba(255,255,255,0.07)"/><rect x="30" y="115" width="60" height="25" rx="3" fill="rgba(255,255,255,0.05)"/></svg>
+            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;">&#x1f512;</span>
+            <span style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:Roboto,sans-serif;font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Formal</span>
+          </div>
+          <div class="appeal-photo" style="background:linear-gradient(135deg, #1a3a6b, #2a5a8f); border-color:#2a5a8f; position:relative; overflow:hidden;">
+            <svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;"><ellipse cx="60" cy="55" rx="20" ry="22" fill="rgba(255,255,255,0.12)"/><circle cx="42" cy="85" r="6" fill="rgba(255,255,255,0.06)"/><circle cx="78" cy="88" r="5" fill="rgba(255,255,255,0.06)"/><path d="M30,110 Q60,130 90,110" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/></svg>
+            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;">&#x1f512;</span>
+            <span style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:Roboto,sans-serif;font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Activity</span>
+          </div>
         </div>
         <div class="appeal-stats">
           <div class="appeal-stat-item">
