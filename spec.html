@@ -110,8 +110,9 @@
         <a class="toc-indent" href="#presence">3.2 Presence Composite</a>
         <a class="toc-indent" href="#skills">3.3 Skills &amp; Credentials</a>
         <a class="toc-indent" href="#interests">3.4 Interests</a>
-        <a class="toc-indent" href="#advertising">3.5 Advertising Profile <span class="new-badge">New in v0.3</span></a>
-        <a class="toc-indent" href="#dating">3.6 Intimate &amp; Dating <span class="new-badge">New in v0.3</span></a>
+        <a class="toc-indent" href="#family">3.5 Family &amp; Household <span class="new-badge">New in v0.3</span></a>
+        <a class="toc-indent" href="#advertising">3.6 Advertising Profile <span class="new-badge">New in v0.3</span></a>
+        <a class="toc-indent" href="#dating">3.7 Intimate &amp; Dating <span class="new-badge">New in v0.3</span></a>
         <a href="#access">4. Access Control &amp; Monetization</a>
         <a class="toc-indent" href="#tiers">4.1 Three Tiers</a>
         <a class="toc-indent" href="#pricing">4.2 Pricing Model</a>
@@ -257,8 +258,61 @@
       </table>
       <p>Interests are part of the public tier by default — they serve as discovery signals that help platforms and people find relevant profiles.</p>
 
-      <!-- 3.5 Advertising Profile — NEW -->
-      <h3 id="advertising">3.5 Advertising Profile <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h3>
+      <!-- 3.5 Family & Household — NEW -->
+      <h3 id="family">3.5 Family &amp; Household <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h3>
+      <p>Most platforms that profile people treat career and net worth as the defining signals of a person's value. Search Star deliberately rejects this. Family — building one, raising one, sustaining one — is a first-class section of the profile, equal in structural weight to financial standing, skills, and presence.</p>
+      <p>This section captures the full picture: existing family, the role the user plays in it, and — for those who want it — their intentions and readiness to build or expand a family. It is designed to make parenthood, caregiving, and family commitment legible as the serious life investment they are, not as a checkbox or a dealbreaker filter.</p>
+      <div class="callout callout-info"><strong>Design philosophy:</strong> A mother raising three children has made a capital allocation, a time commitment, and a values decision at least as significant as founding a company. A father coaching his daughter's soccer team every Saturday is making a choice about how to spend his most finite resource. This section exists so those choices show up in a profile with the same weight and structure as a job title or a net worth percentile.</div>
+
+      <h4>Current family</h4>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>householdStructure</code></td><td>String</td><td>Single, partnered (no children), nuclear family, single parent, blended family, multigenerational household, co-parenting, empty nester, other</td></tr>
+        <tr><td><code>children</code></td><td>Array</td><td>Each child: age range (toddler, school-age, teenager, adult), gender (optional), and whether they live in the household. No names or identifying details.</td></tr>
+        <tr><td><code>childrenCount</code></td><td>Integer</td><td>Total number of children.</td></tr>
+        <tr><td><code>caregivingRoles</code></td><td>Array</td><td>Active caregiving responsibilities: primary parent, co-parent, eldercare, special needs care, foster parent, guardian, or other. Multiple roles supported.</td></tr>
+        <tr><td><code>familyInvolvement</code></td><td>String</td><td>Self-assessed level of daily family involvement: primary caregiver, highly involved, shared equally, involved but secondary, limited involvement.</td></tr>
+      </table>
+
+      <h4>Parenting &amp; caregiving as investment</h4>
+      <p>To give family commitment the same legibility as career credentials, the profile captures structured signals about the depth and nature of the user's parenting or caregiving:</p>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>parentingApproach</code></td><td>Array</td><td>Freeform tags describing the user's parenting philosophy or style. Examples: homeschool, Montessori, faith-based, outdoor-focused, bilingual, classical education, unschooling. No judgment — the system captures, it doesn't rank.</td></tr>
+        <tr><td><code>familyActivities</code></td><td>Array</td><td>Activities the user does with their family: coaching sports, family travel, shared meals/cooking, music, religious practice, nature/camping, volunteering together. Each entry includes name, frequency, and description.</td></tr>
+        <tr><td><code>educationInvolvement</code></td><td>String</td><td>Level of involvement in children's education: homeschool educator, active classroom volunteer, homework support, tutoring, school board member, minimal, not applicable.</td></tr>
+        <tr><td><code>communityRole</code></td><td>Array</td><td>Family-related community roles: PTA, coaching, scouting, religious education teacher, foster care advocacy, family support group leader, etc.</td></tr>
+      </table>
+
+      <h4>Family intentions</h4>
+      <p>For users who are open to sharing their intentions around family — particularly valuable for dating platforms and matchmaking — the spec captures forward-looking signals:</p>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>wantsChildren</code></td><td>String</td><td>Yes, no, open to it, already have and want more, already have and done, prefer not to say</td></tr>
+        <tr><td><code>familyTimeline</code></td><td>String</td><td>Now, 1–2 years, 3–5 years, someday, no specific timeline, not applicable</td></tr>
+        <tr><td><code>familySize</code></td><td>String</td><td>Desired or ideal family size: one child, two children, large family (3+), open, no preference</td></tr>
+        <tr><td><code>familyValues</code></td><td>Array</td><td>Freeform tags capturing what matters most to the user in family life. Examples: faith, stability, adventure, education, cultural heritage, close extended family, independence, shared meals, outdoor life. The AI builder should infer these from conversation and present them for approval rather than offering a checklist.</td></tr>
+        <tr><td><code>partnerExpectations</code></td><td>Object</td><td>What the user values in a co-parent or partner's approach to family: <code>{ "sharedParenting": true, "faithAlignment": "important", "educationPhilosophy": "flexible", "extendedFamilyInvolvement": "valued" }</code>. Freeform keys — the user defines what matters.</td></tr>
+      </table>
+
+      <h4>Access control for family data</h4>
+      <p>Family data defaults to the <strong>Private tier</strong>. Users can selectively expose specific fields to specific platform categories:</p>
+      <pre>{
+  "family": {
+    "accessTier": "private",
+    "selectiveAccess": {
+      "dating": ["wantsChildren", "familyTimeline", "familyValues", "householdStructure"],
+      "recruiting": ["caregivingRoles", "familyInvolvement"],
+      "advertising": ["householdStructure", "childrenCount"]
+    }
+  }
+}</pre>
+      <p>This lets dating platforms see family intentions without seeing existing children's details, lets recruiters understand caregiving commitments that might affect scheduling, and lets advertisers know household composition for targeting — all under the user's explicit control.</p>
+
+      <div class="callout callout-warn"><strong>Builder instructions:</strong> When building the family section, the AI should approach this conversationally and warmly. Do not present it as a form. Ask about the user's family life naturally — "Tell me about your family" — and build the structured data from the conversation. For family intentions, be sensitive: not everyone wants children, not everyone can have them, and the section should feel equally welcoming to a single person with no plans for children as to a mother of five. The section is optional. Omitting it carries no stigma and has no effect on the rest of the profile.</div>
+
+      <!-- 3.6 Advertising Profile -->
+      <h3 id="advertising">3.6 Advertising Profile <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h3>
       <p>The advertising profile makes a user's data valuable to advertisers without exposing them to exploitation. It contains four sub-sections, each composed of signals the user explicitly approves before publication.</p>
 
       <h4>Life stage signals</h4>
@@ -284,7 +338,7 @@
       <div class="callout callout-red"><strong>Privacy guardrails.</strong> The advertising profile MUST NOT include: medical conditions or health data (insurance discrimination risk), specific financial targets or transaction intentions (front-running risk), or relationship status details beyond broad life stage. The user approves every signal, category, and tag. Nothing is published without explicit consent.</div>
 
       <!-- 3.6 Intimate & Dating — NEW -->
-      <h3 id="dating">3.6 Intimate &amp; Dating <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h3>
+      <h3 id="dating">3.7 Intimate &amp; Dating <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h3>
       <p>The dating section makes Search Star profiles queryable by dating platforms — Tinder, Hinge, Bumble, Grindr, Scruff, Raya, and any future entrant. Instead of rebuilding your profile on every app, you maintain one sovereign dating profile that platforms query via API. You control every field, and you get paid for every query.</p>
       <div class="callout callout-info">This section is <strong>entirely optional</strong>. Users who don't want their profile queryable by dating platforms simply omit this section or set its access tier to "disabled." The presence or absence of a dating section has no effect on the rest of the profile.</div>
 
