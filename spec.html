@@ -128,9 +128,15 @@
         <a class="toc-indent" href="#trustscore">5.3 Trust Score</a>
         <a class="toc-indent" href="#disputes">5.4 Dispute Resolution</a>
         <a href="#numbering">6. Profile Numbering</a>
-        <a href="#tech">7. Technical Stack</a>
-        <a class="toc-indent" href="#selfhost">7.1 Self-Hosting &amp; Data Sovereignty <span class="new-badge">New in v0.3</span></a>
-        <a href="#roadmap">8. Roadmap</a>
+        <a href="#directory">7. Directory, Registration &amp; Search API <span class="new-badge">New in v0.3</span></a>
+        <a class="toc-indent" href="#registration">7.1 Profile Registration</a>
+        <a class="toc-indent" href="#crawling">7.2 Crawling &amp; Indexing</a>
+        <a class="toc-indent" href="#directoryschema">7.3 Directory Schema</a>
+        <a class="toc-indent" href="#searchapi">7.4 Search API</a>
+        <a class="toc-indent" href="#queryflow">7.5 Full Query Flow</a>
+        <a href="#tech">8. Technical Stack</a>
+        <a class="toc-indent" href="#selfhost">8.1 Self-Hosting &amp; Data Sovereignty <span class="new-badge">New in v0.3</span></a>
+        <a href="#roadmap">9. Roadmap</a>
       </div>
 
       <!-- ═══════════ 1. OVERVIEW ═══════════ -->
@@ -140,7 +146,7 @@
       <p>The standard covers four data domains: financial standing (expressed as age-cohort percentiles, not raw dollars), personal presence (the Presence Composite: Rizz, Vibe, Drip), professional capability (skills, credentials, interests), and an advertising profile (high-value targeting signals the user explicitly approves). Each field can be independently scoped to one of three access tiers.</p>
       <p>Profiles are backed by a validation layer where trusted third parties stake money against the accuracy of profile claims. If claims are proven false, validators forfeit their stakes to refund advertisers.</p>
       <div class="callout callout-info">Search Star inverts the data economy. Instead of platforms harvesting user data for free and selling it to advertisers, individuals own, host, price, and monetize their own data directly.</div>
-      <div class="callout callout-warn"><strong>Architectural principle: Search Star is a directory and payment layer, not a hosting platform.</strong> Search Star never hosts, stores, or caches user profiles, photos, or media. The user hosts all of their own data on infrastructure they control (see section 7.1). Search Star's database contains only: the directory index (profile numbers, handles, endpoint URLs, trust scores, tier pricing), the earnings ledger (query transactions, revenue splits, settlement records), and the validation layer (validator stakes, automated check results, disputes). If Search Star disappeared tomorrow, every user's profile would still exist at their own URL.</div>
+      <div class="callout callout-warn"><strong>Architectural principle: Search Star is a directory and payment layer, not a hosting platform.</strong> Search Star never hosts, stores, or caches user profiles, photos, or media. The user hosts all of their own data on infrastructure they control (see section 8.1). Search Star's database contains only: the directory index (profile numbers, handles, endpoint URLs, trust scores, tier pricing), the earnings ledger (query transactions, revenue splits, settlement records), and the validation layer (validator stakes, automated check results, disputes). If Search Star disappeared tomorrow, every user's profile would still exist at their own URL.</div>
 
       <!-- ═══════════ 2. IDENTITY ═══════════ -->
 
@@ -243,7 +249,7 @@
         <li><strong>User approval.</strong> The AI presents its photo recommendations with explanations of why each was selected and which dimension it serves. The user approves, rejects, or substitutes any photo before it is included in the profile.</li>
         <li><strong>Scoring.</strong> Approved photos are analyzed for Presence factor scores. Having photo evidence removes the 0.85 confidence discount for the relevant dimensions. Photos covering all three dimensions remove the discount entirely.</li>
       </ol>
-      <div class="callout callout-info"><strong>Privacy note:</strong> The AI searches photos locally during the profile creation session. Photos are never sent to Search Star servers. Selected photos are hosted by the user on their own infrastructure (see section 7.1: Self-Hosting) and referenced by URL in the profile JSON-LD. Search Star indexes only the URL and the hash — never the image data.</div>
+      <div class="callout callout-info"><strong>Privacy note:</strong> The AI searches photos locally during the profile creation session. Photos are never sent to Search Star servers. Selected photos are hosted by the user on their own infrastructure (see section 8.1: Self-Hosting) and referenced by URL in the profile JSON-LD. Search Star indexes only the URL and the hash — never the image data.</div>
 
       <!-- 3.3 Skills -->
       <h3 id="skills">3.3 Skills &amp; Credentials</h3>
@@ -395,7 +401,7 @@
 }</pre>
 
       <h4>Dating photos</h4>
-      <p>The dating section references photos from the user's self-hosted media (see section 7.1). The AI builder can recommend which photos from the user's library work best for dating contexts — prioritizing clear face shots, full-body photos, activity/lifestyle shots, and group photos that show social context. Photos are tagged with their purpose:</p>
+      <p>The dating section references photos from the user's self-hosted media (see section 8.1). The AI builder can recommend which photos from the user's library work best for dating contexts — prioritizing clear face shots, full-body photos, activity/lifestyle shots, and group photos that show social context. Photos are tagged with their purpose:</p>
       <table>
         <tr><th>Tag</th><th>Description</th><th>Recommended count</th></tr>
         <tr><td><code>primary</code></td><td>Main profile photo — clear face, good lighting, recent</td><td>1</td></tr>
@@ -622,9 +628,282 @@
       <h2 id="numbering">6. Profile Numbering</h2>
       <p>Profiles are assigned sequential numbers in the format <code>SS-XXXXXX</code>, zero-padded to six digits. The number is permanent — it never changes, even if the owner changes their handle or domain.</p>
 
-      <!-- ═══════════ 7. TECH STACK ═══════════ -->
+      <!-- ═══════════ 7. DIRECTORY, REGISTRATION & SEARCH API — NEW ═══════════ -->
 
-      <h2 id="tech">7. Technical Stack</h2>
+      <h2 id="directory">7. Directory, Registration &amp; Search API <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h2>
+      <p>Search Star is a directory and payment layer. Users host their own profiles. Platforms discover profiles through Search Star's directory and search API, then query user-hosted endpoints directly — with payment routed through Search Star. This section specifies how profiles get into the directory, how they're indexed, what the directory stores, and how platforms search it.</p>
+
+      <h3 id="registration">7.1 Profile Registration</h3>
+      <p>After a user creates their profile (via the AI builder) and hosts it at their own domain (see section 8.1), they register the profile endpoint with Search Star.</p>
+
+      <h4>Registration flow</h4>
+      <ol>
+        <li><strong>User creates a Search Star account.</strong> Email + password via Supabase Auth. This is the user's account for managing their directory listing, earnings, and validators — not for hosting their profile.</li>
+        <li><strong>User submits their profile endpoint URL.</strong> Example: <code>https://yourname.com/profile.json</code></li>
+        <li><strong>Search Star validates the endpoint.</strong> The system fetches the URL and checks:
+          <ul>
+            <li>Returns valid JSON-LD with <code>@context: "https://schema.searchstar.org/v0.3"</code></li>
+            <li>Contains required fields: <code>identity.displayName</code>, <code>identity.handle</code>, <code>accessPolicy</code></li>
+            <li>Served over HTTPS</li>
+            <li>Response time under 5 seconds</li>
+          </ul>
+        </li>
+        <li><strong>Domain ownership verification.</strong> The user proves they control the domain by adding a DNS TXT record: <code>searchstar-verify=SS-XXXXXX</code>. Alternatively, they can place a verification file at <code>/.well-known/searchstar-verification.json</code>.</li>
+        <li><strong>Profile number assigned.</strong> Upon successful validation and domain verification, Search Star assigns the next sequential profile number (SS-XXXXXX) and indexes the profile metadata.</li>
+        <li><strong>User connects Stripe.</strong> To receive earnings from queries, the user connects a Stripe Connect account. This can be done at registration or later — the profile is discoverable in the directory either way, but queries that would generate revenue require Stripe to be connected.</li>
+      </ol>
+
+      <div class="callout callout-info"><strong>Handle uniqueness.</strong> The <code>identity.handle</code> in the user's profile JSON-LD must be unique across the directory. If a handle is already claimed, registration fails until the user changes their handle. Handles are case-insensitive and follow the format <code>@name</code> or <code>name.domain.tld</code>.</div>
+
+      <h3 id="crawling">7.2 Crawling &amp; Indexing</h3>
+      <p>After registration, Search Star periodically crawls each registered endpoint to keep the directory index current.</p>
+
+      <h4>Crawl behavior</h4>
+      <table>
+        <tr><th>Parameter</th><th>Value</th></tr>
+        <tr><td>Crawl frequency</td><td>Every 24 hours (default). Users can trigger a manual re-index from their dashboard at any time.</td></tr>
+        <tr><td>Crawl timeout</td><td>10 seconds. If the endpoint doesn't respond within 10 seconds, the crawl is marked as failed.</td></tr>
+        <tr><td>Consecutive failures</td><td>After 3 consecutive crawl failures, the profile is marked as <code>status: "unreachable"</code> in the directory. After 14 consecutive days unreachable, the profile is delisted (hidden from search results but not deleted — the user can re-register by fixing their hosting).</td></tr>
+        <tr><td>What is fetched</td><td>The full JSON-LD document. Only the metadata fields listed in section 7.3 are extracted and stored. The full document is discarded after indexing — Search Star does not cache profile content.</td></tr>
+        <tr><td>User-Agent</td><td><code>SearchStar-Crawler/0.3 (+https://searchstar.com/crawler)</code></td></tr>
+        <tr><td>Respect robots.txt</td><td>No. The user explicitly registered this endpoint for crawling. However, if the endpoint returns 403 or 410, the profile is treated as intentionally withdrawn.</td></tr>
+      </table>
+
+      <h4>Change detection</h4>
+      <p>On each crawl, Search Star compares the fetched metadata against the stored index. If any indexed field has changed, the directory is updated and the <code>lastIndexedAt</code> timestamp is refreshed. If the profile's trust score depends on fields that changed (e.g., financial percentiles), the trust score is recalculated.</p>
+
+      <h3 id="directoryschema">7.3 Directory Schema</h3>
+      <p>The directory stores only metadata extracted from the user's self-hosted profile. This is what Search Star keeps in Supabase — nothing more.</p>
+
+      <h4>Supabase <code>directory</code> table</h4>
+      <pre>create table directory (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  profile_number text unique not null,       -- SS-XXXXXX
+  handle text unique not null,               -- @steve.smith.id
+  display_name text not null,
+  endpoint_url text not null,                -- https://yourname.com/profile.json
+  domain text not null,                      -- yourname.com
+  domain_verified boolean default false,
+
+  -- Indexed metadata (extracted from crawls)
+  location text,
+  age_cohort text,                           -- "30-34", "55-59", etc.
+  presence_score integer,                    -- 0-100
+  trust_score integer,                       -- 0-100
+  skills_count integer default 0,
+  interests_tags text[],                     -- flattened array of interest tags
+  has_financial boolean default false,
+  has_dating boolean default false,
+  has_family boolean default false,
+  has_advertising boolean default false,
+  has_adult_extension boolean default false,
+
+  -- Financial percentile ranges (for search filtering, not raw data)
+  net_worth_percentile integer,
+  income_percentile integer,
+
+  -- Dating fields (for dating platform search)
+  orientation text[],
+  gender_identity text[],
+  relationship_status text,
+  dating_intention text,
+  dating_location text,
+  dating_radius_miles integer,
+  age_range_min integer,
+  age_range_max integer,
+
+  -- Access pricing
+  price_public numeric(10,4),
+  price_private numeric(10,4),
+  price_marketing numeric(10,4),
+
+  -- Operational
+  status text default 'active'
+    check (status in ('active', 'unreachable', 'delisted', 'suspended')),
+  stripe_connected boolean default false,
+  registered_at timestamptz default now(),
+  last_crawled_at timestamptz,
+  last_indexed_at timestamptz,
+  consecutive_failures integer default 0,
+
+  -- Search optimization
+  search_vector tsvector
+);</pre>
+
+      <div class="callout callout-warn"><strong>This is all Search Star stores.</strong> No profile content, no photos, no financial details beyond percentile integers, no Presence factor breakdowns, no skills details, no interest descriptions, no family details, no dating preferences beyond what's needed for search filtering. The directory is a phone book — name, address, and enough metadata to support search queries. Everything else lives on the user's hosting.</div>
+
+      <h4>Indexes for search performance</h4>
+      <pre>-- Full-text search on name, handle, interests
+create index idx_directory_search on directory using gin(search_vector);
+
+-- Common filter queries
+create index idx_directory_location on directory(location);
+create index idx_directory_presence on directory(presence_score);
+create index idx_directory_trust on directory(trust_score);
+create index idx_directory_cohort on directory(age_cohort);
+create index idx_directory_status on directory(status);
+create index idx_directory_dating on directory(has_dating) where has_dating = true;
+create index idx_directory_net_worth on directory(net_worth_percentile);
+
+-- Composite indexes for common platform queries
+create index idx_directory_dating_search on directory(
+  dating_location, orientation, dating_intention, status
+) where has_dating = true and status = 'active';
+
+-- RLS
+alter table directory enable row level security;
+
+-- Anyone can search the directory (read-only for search)
+create policy "Public directory read"
+  on directory for select using (status = 'active');
+
+-- Owners can update their own listing
+create policy "Owners manage own listing"
+  on directory for all using (auth.uid() = user_id);
+
+      <h3 id="searchapi">7.4 Search API</h3>
+      <p>Platforms discover profiles through Search Star's REST API. The search API queries the directory index — it never touches user-hosted profile data. Platforms use search results to identify profiles of interest, then query those profiles directly (routed through Search Star's payment layer).</p>
+
+      <h4>Base URL</h4>
+      <pre>https://api.searchstar.com/v1</pre>
+
+      <h4>Authentication</h4>
+      <p>All API requests require a platform API key in the <code>Authorization</code> header:</p>
+      <pre>Authorization: Bearer sk_live_platform_abc123</pre>
+      <p>Platform API keys are issued when a platform creates an account and deposits prepaid credits (see section 4.4).</p>
+
+      <h4>Search endpoint</h4>
+      <pre>GET /v1/search</pre>
+      <p>Returns a paginated list of profiles matching the query filters. Search queries are free — platforms are not charged for searching the directory. Charges only apply when a platform queries a specific profile's full data (see section 7.5).</p>
+
+      <h4>Query parameters</h4>
+      <table>
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>q</code></td><td>string</td><td>Full-text search across name, handle, skills, and interest tags. Example: <code>q=bjj+opera+python</code></td></tr>
+        <tr><td><code>location</code></td><td>string</td><td>Filter by location. Example: <code>location=New York</code></td></tr>
+        <tr><td><code>age_cohort</code></td><td>string</td><td>Filter by age cohort. Example: <code>age_cohort=30-34</code></td></tr>
+        <tr><td><code>presence_min</code></td><td>integer</td><td>Minimum Presence Composite score. Example: <code>presence_min=70</code></td></tr>
+        <tr><td><code>trust_min</code></td><td>integer</td><td>Minimum trust score. Example: <code>trust_min=50</code></td></tr>
+        <tr><td><code>net_worth_min</code></td><td>integer</td><td>Minimum net worth percentile. Example: <code>net_worth_min=75</code></td></tr>
+        <tr><td><code>has_dating</code></td><td>boolean</td><td>Only profiles with a dating section. Example: <code>has_dating=true</code></td></tr>
+        <tr><td><code>has_family</code></td><td>boolean</td><td>Only profiles with a family section.</td></tr>
+        <tr><td><code>has_advertising</code></td><td>boolean</td><td>Only profiles with an advertising profile.</td></tr>
+        <tr><td><code>orientation</code></td><td>string</td><td>Dating filter. Example: <code>orientation=gay</code></td></tr>
+        <tr><td><code>dating_intention</code></td><td>string</td><td>Dating filter. Example: <code>dating_intention=long-term relationship</code></td></tr>
+        <tr><td><code>interests</code></td><td>string</td><td>Comma-separated interest tags. Example: <code>interests=opera,bjj,political-economy</code></td></tr>
+        <tr><td><code>price_max</code></td><td>number</td><td>Maximum per-query price the platform is willing to pay. Example: <code>price_max=1.00</code></td></tr>
+        <tr><td><code>tier</code></td><td>string</td><td>Which tier's price to filter by: <code>public</code>, <code>private</code>, or <code>marketing</code>. Default: <code>private</code>.</td></tr>
+        <tr><td><code>sort</code></td><td>string</td><td>Sort order: <code>presence</code>, <code>trust</code>, <code>price_asc</code>, <code>price_desc</code>, <code>newest</code>. Default: <code>trust</code>.</td></tr>
+        <tr><td><code>page</code></td><td>integer</td><td>Page number (1-indexed). Default: 1.</td></tr>
+        <tr><td><code>per_page</code></td><td>integer</td><td>Results per page. Max: 100. Default: 20.</td></tr>
+      </table>
+
+      <h4>Example search request</h4>
+      <pre>GET /v1/search?location=New+York&amp;has_dating=true&amp;presence_min=65&amp;age_cohort=30-34&amp;sort=presence&amp;per_page=10
+
+Authorization: Bearer sk_live_platform_abc123</pre>
+
+      <h4>Example search response</h4>
+      <pre>{
+  "results": [
+    {
+      "profileNumber": "SS-000001",
+      "handle": "@steve.smith.id",
+      "displayName": "Steve Smith",
+      "location": "New York, NY",
+      "ageCohort": "30-34",
+      "presenceScore": 82,
+      "trustScore": 74,
+      "skillsCount": 5,
+      "interestsTags": ["bjj", "opera", "political-economy", "marathon", "polyglot"],
+      "hasDating": true,
+      "hasFamily": false,
+      "hasAdvertising": true,
+      "pricing": {
+        "public": 0.02,
+        "private": 0.50,
+        "marketing": 5.00
+      },
+      "endpointUrl": "https://steve.smith.id/profile.json",
+      "status": "active",
+      "lastIndexedAt": "2026-03-29T00:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "perPage": 10,
+    "totalResults": 1,
+    "totalPages": 1
+  }
+}</pre>
+      <div class="callout callout-green"><strong>Search is free.</strong> Platforms can search the directory as much as they want without being charged. The directory is the storefront — making it free to browse maximizes profile discovery and query volume. Charges only apply when a platform fetches a specific profile's full data.</div>
+
+      <h4>Profile detail endpoint</h4>
+      <pre>GET /v1/profiles/{profileNumber}</pre>
+      <p>Returns the same directory metadata as the search endpoint, but for a single profile. Also free — this is still just directory data, not the user's actual profile content.</p>
+
+      <h4>Profile query endpoint (paid)</h4>
+      <pre>POST /v1/query/{profileNumber}</pre>
+      <p>This is the paid endpoint. When a platform calls this, Search Star debits the platform's credit balance, fetches the profile from the user's endpoint, serves the data to the platform, and credits the owner's earnings ledger. See section 7.5 for the full flow.</p>
+      <table>
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>tier</code></td><td>string (required)</td><td>Which tier to query: <code>public</code>, <code>private</code>, or <code>marketing</code></td></tr>
+        <tr><td><code>message</code></td><td>string</td><td>Required for marketing tier. The message to deliver to the profile owner. Max 500 characters.</td></tr>
+        <tr><td><code>fields</code></td><td>string[]</td><td>Optional. Specific fields to return (for public/private tiers). If omitted, all fields for the tier are returned.</td></tr>
+      </table>
+
+      <h3 id="queryflow">7.5 Full Query Flow</h3>
+      <p>This is the end-to-end flow from a platform discovering a profile to the profile owner getting paid. It ties together the search API (section 7.4), the payment infrastructure (section 4.4), and the user's self-hosted profile.</p>
+
+      <h4>Step-by-step</h4>
+      <ol>
+        <li><strong>Platform searches the directory.</strong> <code>GET /v1/search?...</code> — free, returns directory metadata for matching profiles.</li>
+        <li><strong>Platform identifies a profile of interest.</strong> From the search results, the platform has the profile number, handle, pricing, Presence score, trust score, and interest tags.</li>
+        <li><strong>Platform requests a paid query.</strong> <code>POST /v1/query/SS-000001 { "tier": "private" }</code></li>
+        <li><strong>Search Star checks the platform's credit balance.</strong> The platform needs ≥ the profile owner's private tier price (e.g., $0.50) in their prepaid balance.</li>
+        <li><strong>If insufficient balance:</strong> Return <code>402 Payment Required</code>. If auto-refill is enabled, trigger refill and retry once.</li>
+        <li><strong>If sufficient balance:</strong> Search Star fetches the profile from the user's endpoint (<code>https://steve.smith.id/profile.json</code>).</li>
+        <li><strong>If the user's endpoint is down:</strong> Return <code>502 Bad Gateway</code>. No charge to the platform.</li>
+        <li><strong>If the user's endpoint responds:</strong> Search Star filters the response to only the fields available at the requested tier, debits the platform's balance ($0.50), credits the owner's earnings ledger ($0.45 = 90%), credits Search Star's revenue ($0.05 = 10%), and serves the filtered profile data to the platform.</li>
+        <li><strong>Transaction logged.</strong> An entry is written to the access log and earnings ledger with timestamp, platform ID, profile number, tier, gross price, fee, and net earnings.</li>
+        <li><strong>Weekly settlement.</strong> On Monday at 00:00 UTC, accumulated earnings are paid out to the profile owner via Stripe Connect.</li>
+      </ol>
+
+      <h4>Flow diagram</h4>
+      <pre>
+Platform                Search Star              User's Hosting
+   │                        │                          │
+   │── GET /v1/search ─────▶│                          │
+   │◀── search results ─────│                          │
+   │                        │                          │
+   │── POST /v1/query ─────▶│                          │
+   │                        │── check credit balance   │
+   │                        │── fetch profile ────────▶│
+   │                        │◀── profile JSON ─────────│
+   │                        │── debit platform ($0.50) │
+   │                        │── credit owner ($0.45)   │
+   │                        │── credit SS ($0.05)      │
+   │◀── filtered profile ───│                          │
+   │                        │── log transaction        │
+   │                        │                          │
+   │                        │── Monday 00:00 UTC ──────│
+   │                        │── Stripe payout ($0.45) ▶│ owner's bank
+      </pre>
+
+      <div class="callout callout-info"><strong>Search Star is a pass-through.</strong> The profile data flows from the user's hosting through Search Star to the platform in a single request. Search Star does not cache, store, or retain the profile content after serving it. The only data retained is the transaction record in the earnings ledger.</div>
+
+      <h4>Rate limiting</h4>
+      <table>
+        <tr><th>Endpoint</th><th>Limit</th><th>Notes</th></tr>
+        <tr><td><code>GET /v1/search</code></td><td>100 requests/minute per API key</td><td>Free. Generous limit for browse/discovery.</td></tr>
+        <tr><td><code>GET /v1/profiles/{id}</code></td><td>100 requests/minute per API key</td><td>Free. Directory metadata only.</td></tr>
+        <tr><td><code>POST /v1/query/{id}</code></td><td>No rate limit — limited by credit balance</td><td>Paid. The credit balance is the rate limiter.</td></tr>
+      </table>
+
+      <!-- ═══════════ 8. TECH STACK ═══════════ -->
+
+      <h2 id="tech">8. Technical Stack</h2>
       <table>
         <tr><th>Component</th><th>Technology</th></tr>
         <tr><td>Frontend</td><td>Next.js on Vercel</td></tr>
@@ -636,10 +915,10 @@
         <tr><td>Data format</td><td>JSON-LD</td></tr>
         <tr><td>Auth</td><td>OAuth 2.0 + API keys</td></tr>
         <tr><td>Billing / Escrow</td><td>Stripe Connect (per-query metering, validator stake escrow)</td></tr>
-        <tr><td>Profile hosting</td><td>Self-hosted at owner's domain (Search Star does not host profiles — see section 7.1)</td></tr>
+        <tr><td>Profile hosting</td><td>Self-hosted at owner's domain (Search Star does not host profiles — see section 8.1)</td></tr>
       </table>
 
-      <h3 id="selfhost">7.1 Self-Hosting &amp; Data Sovereignty <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.3</span></h3>
+      <h3 id="selfhost">8.1 Self-Hosting &amp; Data Sovereignty <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.3</span></h3>
       <p>Search Star is a sovereign data standard. The user — not Search Star — hosts their profile data, photos, and media. Search Star's directory indexes only metadata (profile number, handle, trust score, access tier pricing) and references (URLs, content hashes). The actual data lives on infrastructure the user controls.</p>
 
       <h4>What the user hosts</h4>
@@ -682,9 +961,9 @@
 
       <div class="callout callout-warn"><strong>Search Star never stores your photos.</strong> When the AI builder recommends photos during profile creation, the analysis happens in the AI session (e.g., Claude analyzing uploaded images). The photos are then placed on your hosting by you. Search Star's directory stores only the URL and the hash — if you delete a photo from your hosting, it disappears from your profile. You maintain full control at all times.</div>
 
-      <!-- ═══════════ 8. ROADMAP ═══════════ -->
+      <!-- ═══════════ 9. ROADMAP ═══════════ -->
 
-      <h2 id="roadmap">8. Roadmap</h2>
+      <h2 id="roadmap">9. Roadmap</h2>
       <table>
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
         <tr><td><code>v0.1</code></td><td>March 2026</td><td>Schema spec, sample profile, static prototype, Presence Composite methodology</td></tr>
