@@ -138,6 +138,7 @@
       <p>The standard covers four data domains: financial standing (expressed as age-cohort percentiles, not raw dollars), personal presence (the Presence Composite: Rizz, Vibe, Drip), professional capability (skills, credentials, interests), and an advertising profile (high-value targeting signals the user explicitly approves). Each field can be independently scoped to one of three access tiers.</p>
       <p>Profiles are backed by a validation layer where trusted third parties stake money against the accuracy of profile claims. If claims are proven false, validators forfeit their stakes to refund advertisers.</p>
       <div class="callout callout-info">Search Star inverts the data economy. Instead of platforms harvesting user data for free and selling it to advertisers, individuals own, host, price, and monetize their own data directly.</div>
+      <div class="callout callout-warn"><strong>Architectural principle: Search Star is a directory and payment layer, not a hosting platform.</strong> Search Star never hosts, stores, or caches user profiles, photos, or media. The user hosts all of their own data on infrastructure they control (see section 7.1). Search Star's database contains only: the directory index (profile numbers, handles, endpoint URLs, trust scores, tier pricing), the earnings ledger (query transactions, revenue splits, settlement records), and the validation layer (validator stakes, automated check results, disputes). If Search Star disappeared tomorrow, every user's profile would still exist at their own URL.</div>
 
       <!-- ═══════════ 2. IDENTITY ═══════════ -->
 
@@ -572,7 +573,7 @@
       <table>
         <tr><th>Component</th><th>Technology</th></tr>
         <tr><td>Frontend</td><td>Next.js on Vercel</td></tr>
-        <tr><td>Backend / Database</td><td>Supabase (auth, profile storage, edge functions)</td></tr>
+        <tr><td>Backend / Database</td><td>Supabase (auth, directory index, earnings ledger, edge functions)</td></tr>
         <tr><td>AI Profile Builder</td><td>Anthropic API (Claude)</td></tr>
         <tr><td>Identity</td><td>DID:web (W3C Decentralized Identifiers)</td></tr>
         <tr><td>Credentials</td><td>W3C Verifiable Credentials</td></tr>
@@ -580,7 +581,7 @@
         <tr><td>Data format</td><td>JSON-LD</td></tr>
         <tr><td>Auth</td><td>OAuth 2.0 + API keys</td></tr>
         <tr><td>Billing / Escrow</td><td>Stripe Connect (per-query metering, validator stake escrow)</td></tr>
-        <tr><td>Hosting</td><td>Self-hosted at owner's domain or Search Star managed hosting</td></tr>
+        <tr><td>Profile hosting</td><td>Self-hosted at owner's domain (Search Star does not host profiles — see section 7.1)</td></tr>
       </table>
 
       <h3 id="selfhost">7.1 Self-Hosting &amp; Data Sovereignty <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.3</span></h3>
