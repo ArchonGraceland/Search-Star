@@ -582,6 +582,88 @@
     color: var(--muted);
   }
 
+  /* ---- INTERESTS SECTIONS ---- */
+  .interests-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .interest-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .interest-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .interest-card.athletic::before { background: var(--green); }
+  .interest-card.social::before { background: var(--navy); }
+  .interest-card.intellectual::before { background: #5b21b6; }
+  .interest-card .interest-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .interest-card.athletic .interest-label { color: var(--green); }
+  .interest-card.social .interest-label { color: var(--navy); }
+  .interest-card.intellectual .interest-label { color: #5b21b6; }
+  .interest-card .interest-name {
+    font-family: 'Crimson Text', Georgia, serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    line-height: 1.25;
+  }
+  .interest-card .interest-detail {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .interest-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .interest-tag {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .interest-tag.athletic { background: var(--green-light); color: var(--green); }
+  .interest-tag.social { background: var(--cream); color: var(--navy); }
+  .interest-tag.intellectual { background: #f5f3ff; color: #5b21b6; }
+
+  .interest-section-block {
+    margin-bottom: 24px;
+  }
+  .interest-section-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--gray-5);
+  }
+
   /* =========================================
      VIEW 2: THE SCHEMA
      ========================================= */
@@ -854,6 +936,7 @@
     .appeal-grid { grid-template-columns: 1fr; }
     .tiers-grid { grid-template-columns: 1fr; }
     .skill-item { grid-template-columns: 1fr; gap: 8px; }
+    .interests-grid { grid-template-columns: 1fr; }
     .flow-steps { flex-direction: column; }
     .flow-step::after { display: none; }
     .topbar { padding: 12px 20px; }
@@ -1205,9 +1288,117 @@
       </div>
     </div>
 
-  </div>
+    <!-- INTERESTS: ATHLETIC -->
+    <div class="section animate-in delay-4">
+      <div class="section-header">
+        <h2>Interests</h2>
+        <span class="tier-badge tier-public">Public Tier</span>
+      </div>
 
-  <!-- ===================== VIEW 2: SCHEMA SPEC ===================== -->
+      <!-- Athletic -->
+      <div class="interest-section-block">
+        <div class="interest-section-label">Athletic</div>
+        <div class="interests-grid">
+          <div class="interest-card athletic">
+            <div class="interest-label">Primary sport</div>
+            <div class="interest-name">Brazilian Jiu-Jitsu</div>
+            <div class="interest-detail">Purple belt · 6 years · Competes IBJJF · 3x/week</div>
+            <div class="interest-tags">
+              <span class="interest-tag athletic">Grappling</span>
+              <span class="interest-tag athletic">Competition</span>
+            </div>
+          </div>
+          <div class="interest-card athletic">
+            <div class="interest-label">Endurance</div>
+            <div class="interest-name">Marathon Running</div>
+            <div class="interest-detail">3:12 PR · 4 completed · Currently training for Boston</div>
+            <div class="interest-tags">
+              <span class="interest-tag athletic">Distance</span>
+              <span class="interest-tag athletic">Road</span>
+            </div>
+          </div>
+          <div class="interest-card athletic">
+            <div class="interest-label">Strength</div>
+            <div class="interest-name">Olympic Lifting</div>
+            <div class="interest-detail">Clean &amp; jerk 275 lb · Snatch 215 lb · 4x/week</div>
+            <div class="interest-tags">
+              <span class="interest-tag athletic">Barbell</span>
+              <span class="interest-tag athletic">Power</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Social -->
+      <div class="interest-section-block">
+        <div class="interest-section-label">Social</div>
+        <div class="interests-grid">
+          <div class="interest-card social">
+            <div class="interest-label">Community</div>
+            <div class="interest-name">Founder Dinners</div>
+            <div class="interest-detail">Hosts monthly 12-person dinners for early-stage founders in NYC. Curated, no pitching.</div>
+            <div class="interest-tags">
+              <span class="interest-tag social">Hosting</span>
+              <span class="interest-tag social">Networking</span>
+            </div>
+          </div>
+          <div class="interest-card social">
+            <div class="interest-label">Culture</div>
+            <div class="interest-name">Opera &amp; Classical Music</div>
+            <div class="interest-detail">Met Opera subscriber · 30+ performances/year · Particular interest in bel canto repertoire</div>
+            <div class="interest-tags">
+              <span class="interest-tag social">Arts</span>
+              <span class="interest-tag social">Patron</span>
+            </div>
+          </div>
+          <div class="interest-card social">
+            <div class="interest-label">Travel</div>
+            <div class="interest-name">22 Countries</div>
+            <div class="interest-detail">Extended stays preferred over tourism. Recent: 3 months in Italy, 6 weeks in Japan.</div>
+            <div class="interest-tags">
+              <span class="interest-tag social">Immersion</span>
+              <span class="interest-tag social">Long-stay</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Intellectual -->
+      <div class="interest-section-block">
+        <div class="interest-section-label">Intellectual</div>
+        <div class="interests-grid">
+          <div class="interest-card intellectual">
+            <div class="interest-label">Research</div>
+            <div class="interest-name">Political Economy</div>
+            <div class="interest-detail">Institutional design, public choice theory, hegemonic frameworks. 3 working papers.</div>
+            <div class="interest-tags">
+              <span class="interest-tag intellectual">Economics</span>
+              <span class="interest-tag intellectual">Theory</span>
+            </div>
+          </div>
+          <div class="interest-card intellectual">
+            <div class="interest-label">Language</div>
+            <div class="interest-name">Italian &amp; German</div>
+            <div class="interest-detail">Italian B2 · German B1 · Studying both actively · Latin reading proficiency</div>
+            <div class="interest-tags">
+              <span class="interest-tag intellectual">Polyglot</span>
+              <span class="interest-tag intellectual">Active study</span>
+            </div>
+          </div>
+          <div class="interest-card intellectual">
+            <div class="interest-label">Reading</div>
+            <div class="interest-name">60+ Books/Year</div>
+            <div class="interest-detail">Heavy on history, philosophy, biography. Current: Thucydides, Pieper, Tocqueville.</div>
+            <div class="interest-tags">
+              <span class="interest-tag intellectual">Humanities</span>
+              <span class="interest-tag intellectual">Classics</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
   <div id="view-schema" class="view-container">
 
     <div class="schema-intro animate-in">
@@ -1385,6 +1576,40 @@
     <span class="bracket">}</span>
   <span class="bracket">]</span>,
 
+  <span class="comment">// ── Interests (public tier) ──</span>
+  <span class="key">"interests"</span>: <span class="bracket">{</span>
+    <span class="key">"accessTier"</span>: <span class="string">"public"</span>,
+    <span class="key">"athletic"</span>: <span class="bracket">[</span>
+      <span class="bracket">{</span>
+        <span class="key">"name"</span>: <span class="string">"Brazilian Jiu-Jitsu"</span>,
+        <span class="key">"category"</span>: <span class="string">"primary_sport"</span>,
+        <span class="key">"level"</span>: <span class="string">"Purple belt"</span>,
+        <span class="key">"years"</span>: <span class="number">6</span>,
+        <span class="key">"frequency"</span>: <span class="string">"3x/week"</span>,
+        <span class="key">"competitive"</span>: <span class="number">true</span>,
+        <span class="key">"tags"</span>: <span class="bracket">[</span><span class="string">"grappling"</span>, <span class="string">"competition"</span><span class="bracket">]</span>
+      <span class="bracket">}</span>
+    <span class="bracket">]</span>,
+    <span class="key">"social"</span>: <span class="bracket">[</span>
+      <span class="bracket">{</span>
+        <span class="key">"name"</span>: <span class="string">"Founder Dinners"</span>,
+        <span class="key">"category"</span>: <span class="string">"community"</span>,
+        <span class="key">"description"</span>: <span class="string">"Monthly 12-person curated dinners"</span>,
+        <span class="key">"role"</span>: <span class="string">"host"</span>,
+        <span class="key">"tags"</span>: <span class="bracket">[</span><span class="string">"hosting"</span>, <span class="string">"networking"</span><span class="bracket">]</span>
+      <span class="bracket">}</span>
+    <span class="bracket">]</span>,
+    <span class="key">"intellectual"</span>: <span class="bracket">[</span>
+      <span class="bracket">{</span>
+        <span class="key">"name"</span>: <span class="string">"Political Economy"</span>,
+        <span class="key">"category"</span>: <span class="string">"research"</span>,
+        <span class="key">"description"</span>: <span class="string">"Institutional design, public choice theory"</span>,
+        <span class="key">"output"</span>: <span class="string">"3 working papers"</span>,
+        <span class="key">"tags"</span>: <span class="bracket">[</span><span class="string">"economics"</span>, <span class="string">"theory"</span><span class="bracket">]</span>
+      <span class="bracket">}</span>
+    <span class="bracket">]</span>
+  <span class="bracket">}</span>,
+
   <span class="comment">// ── Access Control (how platforms query you) ──</span>
   <span class="key">"accessPolicy"</span>: <span class="bracket">{</span>
     <span class="key">"endpoint"</span>: <span class="string">"https://steve.smith.id/api/v1/profile"</span>,
@@ -1392,7 +1617,7 @@
     <span class="key">"tiers"</span>: <span class="bracket">{</span>
       <span class="key">"public"</span>: <span class="bracket">{</span>
         <span class="key">"description"</span>: <span class="string">"Visible to anyone. Your storefront."</span>,
-        <span class="key">"fields"</span>: <span class="bracket">[</span><span class="string">"identity"</span>, <span class="string">"skills"</span>, <span class="string">"presenceComposite.score"</span><span class="bracket">]</span>,
+        <span class="key">"fields"</span>: <span class="bracket">[</span><span class="string">"identity"</span>, <span class="string">"skills"</span>, <span class="string">"interests"</span>, <span class="string">"presenceComposite.score"</span><span class="bracket">]</span>,
         <span class="key">"access"</span>: <span class="string">"open"</span>,
         <span class="key">"pricePerQuery"</span>: <span class="number">0.02</span>,
         <span class="key">"setBy"</span>: <span class="string">"owner"</span>
