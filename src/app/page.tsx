@@ -15,19 +15,27 @@ export default async function Home() {
       {/* Header */}
       <header className="bg-[#1a3a6b] border-b-[3px] border-[#112a4f] py-9 px-8">
         <div className="max-w-[1120px] mx-auto">
-          <div className="flex items-center gap-2.5 mb-2.5">
-            <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" className="w-[22px] h-[22px]">
-              <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8"/>
-              <polygon points="32,6 36,24 32,20 28,24" fill="#fff"/>
-              <polygon points="32,6 36,24 32,28 28,24" fill="rgba(255,255,255,0.6)"/>
-              <polygon points="58,32 40,28 44,32 40,36" fill="#fff" opacity="0.6"/>
-              <polygon points="32,58 28,40 32,44 36,40" fill="#fff" opacity="0.6"/>
-              <polygon points="6,32 24,36 20,32 24,28" fill="#fff" opacity="0.6"/>
-              <circle cx="32" cy="32" r="3" fill="#fff"/>
-            </svg>
-            <span className="font-body text-xs font-medium tracking-[0.2em] uppercase text-white/60">
-              Search Star
-            </span>
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-2.5">
+              <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" className="w-[22px] h-[22px]">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8"/>
+                <polygon points="32,6 36,24 32,20 28,24" fill="#fff"/>
+                <polygon points="32,6 36,24 32,28 28,24" fill="rgba(255,255,255,0.6)"/>
+                <polygon points="58,32 40,28 44,32 40,36" fill="#fff" opacity="0.6"/>
+                <polygon points="32,58 28,40 32,44 36,40" fill="#fff" opacity="0.6"/>
+                <polygon points="6,32 24,36 20,32 24,28" fill="#fff" opacity="0.6"/>
+                <circle cx="32" cy="32" r="3" fill="#fff"/>
+              </svg>
+              <span className="font-body text-xs font-medium tracking-[0.2em] uppercase text-white/60">
+                Search Star
+              </span>
+            </div>
+            <Link
+              href="/login"
+              className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] border border-white/25 text-white/70 rounded-[3px] no-underline transition-all hover:bg-white/10 hover:text-white"
+            >
+              Sign In
+            </Link>
           </div>
           <h1 className="font-heading font-bold text-white text-[clamp(1.75rem,4vw,2.5rem)] leading-[1.15] mb-1.5">
             Own your data. Set your price.
@@ -47,24 +55,6 @@ export default async function Home() {
               className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] border border-white/25 text-white/70 rounded-[3px] no-underline transition-all hover:bg-white/10 hover:text-white"
             >
               Estimate Earnings
-            </Link>
-            <Link
-              href="/login"
-              className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] border border-white/25 text-white/70 rounded-[3px] no-underline transition-all hover:bg-white/10 hover:text-white"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/spec"
-              className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] border border-white/25 text-white/70 rounded-[3px] no-underline transition-all hover:bg-white/10 hover:text-white"
-            >
-              Specification
-            </Link>
-            <Link
-              href="/platform-signup"
-              className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] bg-[#0d9488] text-white rounded-[3px] no-underline transition-all hover:bg-[#14b8a6]"
-            >
-              For Platforms
             </Link>
           </div>
         </div>
@@ -123,6 +113,24 @@ export default async function Home() {
           </div>
         </div>
       </main>
+
+      {/* For Platforms CTA */}
+      <section className="max-w-[860px] mx-auto px-8 pb-12">
+        <div className="bg-[#f0fdfa] border border-[#0d9488]/20 rounded-[3px] p-8 flex items-center justify-between">
+          <div>
+            <h3 className="font-heading text-xl font-bold mb-1">Are you a platform?</h3>
+            <p className="font-body text-sm text-[#5a5a5a] m-0">
+              Recruiters, dating apps, brands — query sovereign profiles and send marketing messages via the Platform Portal.
+            </p>
+          </div>
+          <Link
+            href="/platform-signup"
+            className="btn-platform inline-block no-underline flex-shrink-0 ml-6"
+          >
+            For Platforms
+          </Link>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="bg-[#1a1a1a] text-white/55 py-8">
