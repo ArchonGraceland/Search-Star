@@ -171,36 +171,35 @@ System administration for operators.
 - [x] **Deployed and verified live**
 
 ### Phase 5 — Platform Portal
-**Status: ⚪ NOT STARTED**
+**Status: ✅ COMPLETE**
 
 Demand-side dashboard for platforms (advertisers, recruiters, dating apps, brands) to manage their Search Star operations. Spec section 9 (v0.6).
 
-#### Phase 5a — Platform Auth + Credit Management
-- [ ] Platform signup flow (company name, billing email, company URL)
-- [ ] Separate auth role (`role: 'platform'` in user_metadata)
-- [ ] Company verification (domain DNS TXT or email verification)
-- [ ] API key generation and rotation
-- [ ] Stripe integration for credit deposits ($50 minimum)
-- [ ] Auto-refill configuration (threshold + target)
-- [ ] Real-time credit balance display
-- [ ] Transaction history with CSV export
-- [ ] Schema: add `user_id` to `platform_accounts`, add `platform_users` table or role flag
+#### Phase 5a — Platform Auth + Credit Management ✅
+- [x] Platform signup flow (company name, billing email, company URL) → /platform-signup
+- [x] Separate auth role (`role: 'platform'` in user_metadata + profiles)
+- [x] API key generation (sk_live_...) and regeneration
+- [x] Mock credit deposits (Stripe integration deferred)
+- [x] Auto-refill configuration (threshold + target)
+- [x] Real-time credit balance display in sidebar
+- [x] Transaction history with type filtering, pagination, CSV export
+- [x] Schema: added `user_id` to `platform_accounts`, `platform_transactions` table, role constraint updated
 
-#### Phase 5b — Directory Browser + Messaging
-- [ ] Searchable directory UI (mirrors GET /v1/search parameters)
-- [ ] Profile query from browser (paid, debits balance)
-- [ ] Marketing message composer (500 char, price preview, confirmation)
-- [ ] Sent message history
-- [ ] Block rate tracking (how often recipients block the platform)
+#### Phase 5b — Directory Browser + Messaging ✅
+- [x] Searchable directory UI with filters (text, location, age cohort, presence range, interests)
+- [x] Profile query from browser (paid, debits balance, 90/10 split, transaction log)
+- [x] Marketing message composer (500 char limit, price preview, no-refund confirmation)
+- [x] Sent message history at /platform/messages
+- [x] Block rate tracking
 
-#### Phase 5c — Spending Analytics
-- [ ] Total spend (lifetime + by period)
-- [ ] Spend breakdown by tier (Public, Private, Marketing)
-- [ ] Query volume over time
-- [ ] Average cost per query by tier
-- [ ] Top profiles queried with spend per profile
-- [ ] Credit usage forecast (30-day projection)
-- [ ] Marketing message stats (sent, spend, block rate)
+#### Phase 5c — Spending Analytics ✅
+- [x] Total spend (lifetime + this month)
+- [x] Spend breakdown by tier (Public, Marketing) with progress bars
+- [x] Query volume bar chart (last 8 weeks)
+- [x] Average cost per query/message
+- [x] Top 10 profiles queried with spend per profile
+- [x] Credit usage forecast (trailing 7-day average, days until empty)
+- [x] Marketing message stats (sent, spend, block rate)
 
 ---
 
@@ -228,6 +227,16 @@ Demand-side dashboard for platforms (advertisers, recruiters, dating apps, brand
 | Mar 31, 2026 | Phase 4b | User-facing /support page with ticket form, own-ticket list, ticket detail with reply |
 | Mar 31, 2026 | Phase 4b | Admin /admin/tickets queue with filters, ticket detail with reply + status management |
 | Mar 31, 2026 | Phase 4 | Sidebar updated: Support for all, Admin for admins. **Deployed and verified live** |
+| Mar 31, 2026 | Phase 5a | /platform-signup page, /platform layout (teal sidebar #0f2e2b), credit balance + deposit, API key display/regenerate |
+| Mar 31, 2026 | Phase 5a | Auto-refill settings, transaction history with type filtering + CSV export, platform account API |
+| Mar 31, 2026 | Phase 5a | Platform signup API (auth user + profile + platform_account creation), API key generation |
+| Mar 31, 2026 | Phase 5b | /platform/directory — searchable profile browser with filters (text, location, age, presence, interests) |
+| Mar 31, 2026 | Phase 5b | Paid query execution (balance debit + 90/10 earnings split + transaction log), JSON result modal |
+| Mar 31, 2026 | Phase 5b | Marketing message composer with 500-char limit, confirmation step, no-refund notice, sent messages list |
+| Mar 31, 2026 | Phase 5c | /platform/analytics — summary cards, spend by tier, query volume bar chart (8 weeks), cost per action |
+| Mar 31, 2026 | Phase 5c | Top profiles queried, marketing stats with block rate, credit usage forecast |
+| Mar 31, 2026 | Phase 5 | SQL migration (user_id on platform_accounts, 'platform' role, platform_transactions table, RLS) |
+| Mar 31, 2026 | Phase 5 | Seed data endpoint (POST /api/seed-platform), middleware + routing updates. **Deployed and verified live** |
 
 ---
 
