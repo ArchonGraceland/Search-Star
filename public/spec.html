@@ -1403,22 +1403,51 @@ Platform                Search Star              User's Hosting
       <h3 id="platform-directory">9.3 Directory &amp; Messaging</h3>
       <p>The Platform Portal includes a web-based interface for the same operations available via API (spec 7.4, 7.5), so that non-technical platform operators can browse and message profiles without writing code.</p>
 
-      <h4>Directory browser</h4>
-      <p>A searchable, filterable view of the Search Star directory. Mirrors the search API parameters: full-text search, location, age cohort, Presence score range, skills, interests, dating availability, financial percentile ranges, and content feed topics. Results show the same directory metadata returned by <code>GET /v1/search</code>: profile number, handle, display name, Presence score, trust score, tier pricing, and interest tags.</p>
+      <h4>Directory browser (<code>/platform/directory</code>)</h4>
+      <p>A searchable, filterable view of the Search Star directory. Results display as expandable profile cards sorted by Presence score (descending), showing profile number, handle, display name, Presence score badge, trust score, location, age cohort, interest tags, and per-query pricing. Clicking a card expands to reveal full directory metadata, all three tier prices, and the complete interest tag list.</p>
 
-      <h4>Profile query</h4>
-      <p>From a search result, a platform can execute a paid query (Public or Private tier) directly from the portal. The response displays the profile data returned by the user's endpoint, and the platform's credit balance is debited accordingly. This is the same flow as a programmatic <code>POST /v1/query/{id}</code> but executed via the web UI.</p>
+      <h4>Search filters</h4>
+      <table>
+        <tr><th>Filter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>Text search</td><td>Free text</td><td>Searches display name, handle, and profile number</td></tr>
+        <tr><td>Location</td><td>Free text</td><td>Partial match on profile location field</td></tr>
+        <tr><td>Age cohort</td><td>Dropdown</td><td>Filter by 5-year age bands: 18-24, 25-34, 35-44, 45-54, 55-64, 65+</td></tr>
+        <tr><td>Presence score range</td><td>Min / Max (0–100)</td><td>Filter profiles by Presence Composite score</td></tr>
+        <tr><td>Interest tag</td><td>Free text</td><td>Exact match on the <code>interests_tags</code> array</td></tr>
+      </table>
+      <p>Results are paginated at 20 profiles per page with previous/next navigation.</p>
 
-      <h4>Marketing message composer</h4>
-      <p>A form for sending Marketing tier messages directly from the portal:</p>
-      <ul>
-        <li>Select recipient from directory search results</li>
-        <li>Compose message (500 character limit enforced in UI, per spec 4.3)</li>
-        <li>Review price (recipient's marketing tier price) before sending</li>
-        <li>Confirmation step showing total cost, no-refund policy, and remaining balance after send</li>
-        <li>Delivery confirmation with message ID and timestamp</li>
-      </ul>
+      <h4>Profile query (<code>/platform/directory</code> → Query button)</h4>
+      <p>Each search result has a teal <strong>Query</strong> button. Clicking it executes a paid Public tier query against that profile:</p>
+      <ol>
+        <li>Platform's credit balance is checked against the profile's <code>price_public</code>.</li>
+        <li>If sufficient: balance is debited (optimistic lock), 90% credited to the profile owner's earnings ledger, 10% to Search Star, and a <code>platform_transactions</code> record is created with type <code>query_debit</code>.</li>
+        <li>The returned public profile data is displayed in a modal overlay as formatted JSON, along with the query cost and remaining balance.</li>
+        <li>If insufficient balance: an error is shown with the shortfall amount.</li>
+      </ol>
+
+      <h4>Marketing message composer (<code>/platform/directory</code> → Message button)</h4>
+      <p>Each search result has an amber <strong>Message</strong> button alongside the Query button. Clicking it opens a modal compose form. The full send flow:</p>
+      <ol>
+        <li><strong>Modal opens.</strong> Shows recipient name, profile number, and an amber warning box displaying the recipient's marketing tier price and the text "No refunds."</li>
+        <li><strong>Compose.</strong> The platform types their message in a textarea. A live character counter enforces the 500-character limit (per spec 4.3). The counter updates as the user types: <code>(247/500)</code>.</li>
+        <li><strong>Confirm and send.</strong> The send button displays the exact cost: "Send — $5.00" (or whatever the recipient's <code>price_marketing</code> is). Clicking it triggers the transaction.</li>
+        <li><strong>Transaction executes.</strong> The platform's credit balance is debited. Revenue is split 90/10 — 90% to the profile owner's earnings ledger, 10% to Search Star. A <code>platform_transactions</code> record is created with type <code>marketing_debit</code>. The message is inserted into the <code>messages</code> table with <code>type: 'marketing'</code> and delivered to the recipient's feed in real time via Supabase Realtime.</li>
+        <li><strong>Success confirmation.</strong> The modal shows cost charged and remaining balance. It auto-closes after 2 seconds.</li>
+        <li><strong>Failure.</strong> If the platform has insufficient balance, a red error is displayed inline in the modal. No charge occurs.</li>
+      </ol>
       <div class="callout callout-warn">All Marketing tier rules from spec 4.3 apply in the portal exactly as they apply via API. No refunds. Message costs what it costs. The portal is a convenience layer, not a policy bypass.</div>
+
+      <h4>Sent messages (<code>/platform/messages</code>)</h4>
+      <p>A dedicated page listing all marketing messages the platform has sent, with three summary statistics at the top:</p>
+      <table>
+        <tr><th>Metric</th><th>Description</th></tr>
+        <tr><td>Total Sent</td><td>Count of all marketing messages sent by this platform</td></tr>
+        <tr><td>Total Spent</td><td>Sum of all marketing message costs</td></tr>
+        <tr><td>Block Rate</td><td>Percentage of sent messages where the recipient blocked the platform. Color-coded: green (&lt;10%), amber (10–20%), red (&gt;20%).</td></tr>
+      </table>
+      <p>Each message row shows recipient name and profile number, subject line, cost paid, sent date, and a "Blocked" badge if the recipient blocked the sender. Clicking a message expands to show the full message body. Paginated at 20 messages per page.</p>
+      <div class="callout callout-info"><strong>Block rate is a health signal.</strong> A platform with a high block rate is sending messages that recipients don't want. While there's no automated penalty in the MVP, block rate is visible to Search Star admins and may factor into platform account reviews in future versions. Platforms are encouraged to treat block rate like an email unsubscribe rate — keep it under 5%.</div>
 
       <h3 id="platform-analytics">9.4 Spending Analytics</h3>
       <p>The portal provides a dashboard for platforms to understand their Search Star spending:</p>
