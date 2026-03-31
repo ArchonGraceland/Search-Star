@@ -526,6 +526,30 @@
       </ul>
       <p>Users who prefer to build their own access control can ignore the reference implementation and use any auth mechanism they want — OAuth2, HTTP basic auth, IP allowlists, or anything else. The only requirement is that the endpoint returns content for authorized requests and <code>403</code> for unauthorized ones. Search Star doesn't care how the user implements access control — only that the user has it.</p>
 
+      <h4>Consent framework</h4>
+      <p>Explicit content on Search Star operates on a strict <strong>pull-only, consent-first</strong> model. No one ever receives explicit content they didn't actively request. The system is designed so that unsolicited explicit material — the "dick pic problem" — is structurally impossible, not just discouraged.</p>
+
+      <h4>How consent works end-to-end</h4>
+      <ol>
+        <li><strong>Discovery.</strong> A person sees that a profile has an adult extension (the boolean flag in the directory). This tells them the extension <em>exists</em> — nothing about what's in it. No preview, no thumbnail, no description is exposed in the directory or search results.</li>
+        <li><strong>Request.</strong> If the person wants access, they send a Marketing tier message to the profile owner. This message is plain text only (see section 4.3) — no images, no links to explicit content, no media of any kind. The message might say "I'd like access to your adult extension" or nothing at all — the content of the request is up to the sender. The sender pays the owner's Marketing tier price, which filters out spam and signals seriousness.</li>
+        <li><strong>Grant.</strong> The profile owner reviews the request, sees the sender's verified identity (KYC'd), and decides whether to grant access. If yes, the owner generates a token and delivers it to the requester. If no, nothing happens — the owner can ignore the request entirely or block the sender.</li>
+        <li><strong>Access.</strong> The requester uses their token to view the adult extension at the owner's self-hosted endpoint. They go to the content — the content never comes to them. Every view is a deliberate act by the viewer.</li>
+        <li><strong>Revocation.</strong> The owner can revoke access at any time for any reason. Instant, unilateral, no explanation required.</li>
+      </ol>
+
+      <h4>What is structurally prevented</h4>
+      <table>
+        <tr><th>Attack vector</th><th>How it's blocked</th></tr>
+        <tr><td>Sending explicit images via Marketing tier message</td><td>Marketing messages are plain text only. Media payloads are rejected at the API level. Links to explicit content are flagged and result in account suspension.</td></tr>
+        <tr><td>Pushing explicit content to someone's inbox</td><td>There is no content push mechanism in Search Star. The adult extension is a self-hosted endpoint that people visit — it does not send content to anyone.</td></tr>
+        <tr><td>Embedding explicit content in a profile query response</td><td>Profile queries return structured JSON-LD. The adult extension is a separate endpoint, not part of the standard profile response. Platforms never receive adult content through the Search Star API.</td></tr>
+        <tr><td>Using the content feed to distribute explicit material</td><td>Content feeds are metered through Search Star's payment infrastructure and subject to Stripe's content policies. Explicit content in feeds would violate Stripe ToS and result in account termination. Explicit content belongs in the adult extension only — self-hosted, outside Search Star's infrastructure.</td></tr>
+        <tr><td>Spamming access tokens to people who didn't request them</td><td>A token is useless without the intent to use it. Receiving an unsolicited token doesn't expose anyone to content — they'd have to actively visit the endpoint and submit the token. An unwanted token is just a meaningless string.</td></tr>
+      </table>
+
+      <div class="callout callout-info"><strong>The principle: initiative belongs to the viewer.</strong> At every step — discovery, request, access — the person viewing explicit content is the one taking action. The content owner can grant or deny access, but they cannot force content onto anyone. This is the opposite of how unsolicited explicit content works on traditional platforms, where the sender pushes an image into someone's inbox or DMs without consent. On Search Star, you have to go get it. It never comes to you.</div>
+
       <div class="callout callout-red"><strong>Your content, your rules.</strong> Revoking access is instant and unilateral. The user owes no explanation. There is no dispute process, no appeal, and no refund. This is not a bug — it is the core design principle. The person granted access accepted these terms by requesting access in the first place. If the user wants to shut someone out at 3am because they feel like it, the system supports that with a single tap.</div>
 
       <div class="callout callout-warn"><strong>Why the separation?</strong> Keeping adult content off Search Star's infrastructure protects the core platform's payment processing (Stripe prohibits explicit content on managed accounts), app store compliance, and mainstream platform partnerships. Users maintain full freedom to host whatever they want on their own domain — the spec simply doesn't route that content through Search Star's systems.</div>
@@ -664,10 +688,13 @@
       <h3 id="marketing">4.3 Marketing Tier Rules</h3>
       <ul>
         <li>Maximum message length: 500 characters</li>
-        <li>Sender must verify identity before sending</li>
+        <li><strong>Plain text only — no media, no attachments, no images.</strong> Marketing tier messages cannot contain photos, videos, audio, file attachments, or embedded media of any kind. This is enforced at the API level — requests with media payloads are rejected.</li>
+        <li><strong>No links to explicit content.</strong> Messages may not contain URLs that resolve to sexually explicit, nude, or NSFW material. Automated link scanning flags violations. A confirmed violation results in the sender's account being suspended and all active message privileges revoked across all profiles. One strike.</li>
+        <li>Sender must verify identity (KYC) before sending</li>
         <li>Profile owner can permanently block any sender</li>
         <li>No refunds — payment is for the opportunity to reach the owner, not a guarantee of response</li>
       </ul>
+      <div class="callout callout-red"><strong>No unsolicited explicit content. Ever.</strong> The Marketing tier is designed so that explicit material cannot be pushed to another person under any circumstances. Messages are text-only. Links to explicit content are prohibited and automatically scanned. The only way explicit content moves between two people on Search Star is when the viewer actively requests access to a user's adult extension and the owner explicitly grants it. The initiative always belongs to the viewer. Content is always pull, never push.</div>
 
       <h3 id="payments">4.4 Payment Infrastructure <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.3</span></h3>
       <p>Search Star handles the flow of money between querying platforms and profile owners. The system uses Stripe Connect as the payment rail, with prepaid credit balances for platforms and weekly batch settlement for profile owners.</p>
