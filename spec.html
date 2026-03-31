@@ -94,7 +94,7 @@
   <div class="wrap">
 
     <div class="spec-meta">
-      <span><strong>Version</strong> 0.3.0</span>
+      <span><strong>Version</strong> 0.4.0</span>
       <span><strong>Date</strong> March 2026</span>
       <span><strong>Status</strong> Draft</span>
       <span><strong>License</strong> MIT</span>
@@ -114,6 +114,7 @@
         <a class="toc-indent" href="#family">3.5 Family &amp; Household <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#advertising">3.6 Advertising Profile <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#dating">3.7 Intimate &amp; Dating <span class="new-badge">New in v0.3</span></a>
+        <a class="toc-indent" href="#contentfeed">3.8 Content Feed <span class="new-badge">New in v0.4</span></a>
         <a href="#access">4. Access Control &amp; Monetization</a>
         <a class="toc-indent" href="#tiers">4.1 Three Tiers</a>
         <a class="toc-indent" href="#pricing">4.2 Pricing Model</a>
@@ -122,6 +123,7 @@
         <a class="toc-indent" href="#settlement">4.5 Profile Owner Settlement <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#revshare">4.6 Revenue Share &amp; Fee Structure <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#bulkquery">4.7 Bulk Queries &amp; Volume Pricing <span class="new-badge">New in v0.3</span></a>
+        <a class="toc-indent" href="#feedsubs">4.8 Feed Subscriptions <span class="new-badge">New in v0.4</span></a>
         <a href="#validation">5. Validation &amp; Trust Layer <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#validators">5.1 Validators &amp; Staking</a>
         <a class="toc-indent" href="#automated">5.2 Automated Verification</a>
@@ -457,6 +459,120 @@
 }</pre>
       <div class="callout callout-warn"><strong>Why the separation?</strong> Keeping adult content off Search Star's infrastructure protects the core platform's payment processing (Stripe prohibits explicit content on managed accounts), app store compliance, and mainstream platform partnerships. Users maintain full freedom to host whatever they want on their own domain — the spec simply doesn't route that content through Search Star's systems.</div>
 
+      <!-- ═══════════ 3.8 CONTENT FEED — NEW ═══════════ -->
+
+      <h3 id="contentfeed">3.8 Content Feed <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.4</span></h3>
+      <p>The content feed turns a Search Star profile into a sovereign publishing channel. The user hosts a feed of content — essays, analysis, photos, podcasts, video, newsletters, or any media — at their own domain. Platforms and individuals access the feed through Search Star's payment layer, paying per item or via subscription. The same 90/10 revenue split applies.</p>
+      <p>This is the inverse of social media. Instead of the platform owning the feed and selling the audience to advertisers, the <em>person</em> owns the feed and sells access directly. There is no algorithmic amplification, no engagement optimization, no injected content from strangers, and no ads. Every item costs real money to access, so the content has to be worth it. The slop disappears because there is no incentive to manufacture it.</p>
+
+      <h4>Architecture</h4>
+      <p>The content feed follows the same sovereignty model as the rest of Search Star: the user hosts the feed at their own endpoint, and Search Star indexes only metadata in the directory. Content never passes through or is cached by Search Star's infrastructure — the feed endpoint is fetched on demand when a paid query executes, exactly like a profile query.</p>
+      <table>
+        <tr><th>Property</th><th>Detail</th></tr>
+        <tr><td>Hosting</td><td>User's own domain. The feed endpoint sits alongside or separate from the profile JSON.</td></tr>
+        <tr><td>Format</td><td><code>searchstar-feed-v1</code> — a JSON array of feed items with standardized metadata (see schema below).</td></tr>
+        <tr><td>Indexing</td><td>Search Star indexes only: feed existence (boolean), topic tags, content types, item count, per-item price, subscription price, and last-updated timestamp. Never the content itself.</td></tr>
+        <tr><td>Payment</td><td>All feed queries are metered through Search Star's payment infrastructure. Same prepaid credit model, same 90/10 split, same weekly settlement.</td></tr>
+        <tr><td>Content moderation</td><td>Search Star does not moderate feed content. The user's trust score, validator backing, and reputation are the quality signals. Platforms may apply their own content policies when displaying feed items to their users.</td></tr>
+      </table>
+
+      <h4>Feed schema (profile JSON-LD)</h4>
+      <p>The content feed is declared in the user's profile JSON-LD as a top-level section:</p>
+      <pre>{
+  "contentFeed": {
+    "endpoint": "https://steve.smith.id/feed.json",
+    "format": "searchstar-feed-v1",
+    "tier": "public",
+    "pricing": {
+      "perItem": 0.01,
+      "subscription": {
+        "price": 0.50,
+        "interval": "monthly",
+        "includesBackCatalog": false
+      }
+    },
+    "topics": ["investing", "startups", "opera-reviews"],
+    "contentTypes": ["text", "image"],
+    "itemCount": 47,
+    "lastUpdated": "2026-03-28T14:00:00Z"
+  }
+}</pre>
+
+      <h4>Feed item schema</h4>
+      <p>Each item in the feed array follows this structure. Items are hosted at the user's feed endpoint and served as a JSON array sorted reverse-chronologically (newest first).</p>
+      <pre>{
+  "items": [
+    {
+      "id": "item-2026-03-28-001",
+      "type": "text",
+      "title": "Why sovereign data changes startup fundraising",
+      "summary": "A short preview or first paragraph...",
+      "content": "The full item content. Only served on paid query.",
+      "topics": ["startups", "investing"],
+      "publishedAt": "2026-03-28T14:00:00Z",
+      "updatedAt": null,
+      "media": [],
+      "wordCount": 1240,
+      "contentHash": "sha256:a1b2c3..."
+    },
+    {
+      "id": "item-2026-03-25-001",
+      "type": "image",
+      "title": "Opening night at the Met — Tosca",
+      "summary": "Behind the curtain at Puccini's masterwork.",
+      "content": "Extended caption and commentary.",
+      "topics": ["opera-reviews"],
+      "publishedAt": "2026-03-25T20:30:00Z",
+      "updatedAt": null,
+      "media": [
+        {
+          "url": "https://steve.smith.id/media/met-tosca-2026.webp",
+          "type": "image/webp",
+          "hash": "sha256:d4e5f6...",
+          "width": 2400,
+          "height": 1600
+        }
+      ],
+      "wordCount": 380,
+      "contentHash": "sha256:g7h8i9..."
+    }
+  ]
+}</pre>
+
+      <h4>Content types</h4>
+      <table>
+        <tr><th>Type</th><th>Description</th><th>Media field</th></tr>
+        <tr><td><code>text</code></td><td>Essays, analysis, newsletters, commentary. Content is plain text or Markdown.</td><td>Optional — inline images, attachments</td></tr>
+        <tr><td><code>image</code></td><td>Photography, visual art, infographics. Primary content is in the media array.</td><td>Required — at least one image</td></tr>
+        <tr><td><code>audio</code></td><td>Podcasts, music, voice memos. Served as a media URL.</td><td>Required — audio file URL</td></tr>
+        <tr><td><code>video</code></td><td>Video content. Served as a media URL (self-hosted or external embed).</td><td>Required — video file or embed URL</td></tr>
+        <tr><td><code>link</code></td><td>Curated links with commentary. The <code>content</code> field contains the commentary; the <code>media</code> field contains the linked URL.</td><td>Required — the linked URL</td></tr>
+      </table>
+
+      <h4>Access model</h4>
+      <p>Feed items support two access modes, both routed through Search Star's payment infrastructure:</p>
+      <table>
+        <tr><th>Mode</th><th>How it works</th><th>Pricing</th></tr>
+        <tr><td><strong>Per-item</strong></td><td>A platform or individual pays the owner's per-item price to pull a single feed item. Good for discovery, one-off reads, or platforms surfacing specific content to their users.</td><td>Owner-set price per item (e.g., $0.01–$1.00)</td></tr>
+        <tr><td><strong>Subscription</strong></td><td>A recurring prepaid commitment. The subscriber pays the owner's subscription price per billing interval and gets access to all new items published during that period. See section 4.8 for subscription mechanics.</td><td>Owner-set price per interval (e.g., $0.50/month)</td></tr>
+      </table>
+
+      <h4>What platforms can build on this</h4>
+      <p>A platform could subscribe to hundreds of users' content feeds, aggregate them into a timeline, and display them in an app. The economics are inverted from traditional social media: the platform pays the <em>creators</em>, not the other way around. The platform's value proposition becomes curation and interface — not attention harvesting. There is no ad inventory to sell, no engagement algorithm to juice, no reason to inject recommended content from strangers. The feed is clean because the incentives are clean.</p>
+
+      <h4>Feed hosting requirements</h4>
+      <ul>
+        <li>Feed endpoint must be served over HTTPS from a domain the user controls.</li>
+        <li>Response must be valid JSON conforming to the <code>searchstar-feed-v1</code> schema.</li>
+        <li>Response time must be under 5 seconds (same as profile endpoint).</li>
+        <li>Media files must be hosted at URLs the user controls, served over HTTPS, with stable URLs and content hashes.</li>
+        <li>Recommended: set <code>Cache-Control</code> headers to at least 1 hour for the feed endpoint and 24 hours for media files.</li>
+      </ul>
+
+      <div class="callout callout-info"><strong>The summary field is free.</strong> When a platform queries the feed index (not individual items), Search Star returns item metadata including the <code>summary</code> field — but not the <code>content</code> or <code>media</code> fields. This lets platforms show previews and titles to entice clicks, similar to how the public tier shows headline data for free. The full content is behind the paywall.</div>
+
+      <div class="callout callout-warn"><strong>Content ownership.</strong> Search Star does not claim any rights to feed content. The user retains full copyright and can remove, edit, or restrict access to any item at any time by updating their feed endpoint. If an item is removed from the feed, it becomes inaccessible — Search Star does not cache or archive content. Subscribers who have already accessed an item retain whatever they downloaded, but cannot re-fetch deleted items.</div>
+
       <!-- ═══════════ 4. ACCESS ═══════════ -->
 
       <h2 id="access">4. Access Control &amp; Monetization</h2>
@@ -573,6 +689,44 @@
 }</pre>
       <p>Platform overrides are set by the profile owner and stored in their profile JSON-LD. Search Star's query engine checks for overrides before applying the default tier price. The 10% marketplace fee applies to the negotiated price, not the default price.</p>
       <div class="callout callout-warn"><strong>No platform subsidies.</strong> Search Star does not discount its 10% fee for high-volume platforms. The marketplace fee is flat and non-negotiable. Profile owners may choose to offer volume discounts from their 90% share, but Search Star's cut remains constant.</div>
+
+      <h3 id="feedsubs">4.8 Feed Subscriptions <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.4</span></h3>
+      <p>Feed subscriptions are recurring prepaid commitments that give a platform or individual access to all new content a profile owner publishes during the billing period. Subscriptions are managed through Search Star's payment infrastructure using Stripe Connect recurring billing.</p>
+
+      <h4>How subscriptions work</h4>
+      <ol>
+        <li><strong>Platform creates a subscription.</strong> <code>POST /v1/subscribe/{profileNumber}/feed</code> — the platform's credit balance is debited for the first interval immediately.</li>
+        <li><strong>Access granted.</strong> The subscriber receives a subscription ID and can query any feed item published after the subscription start date without additional per-item charges.</li>
+        <li><strong>Recurring billing.</strong> At each interval boundary (e.g., monthly), Search Star automatically debits the platform's credit balance for the next period. If the balance is insufficient and auto-refill fails, the subscription is paused — not cancelled. It resumes when funds are available.</li>
+        <li><strong>Revenue split.</strong> The same 90/10 split applies to each subscription payment. On a $0.50/month subscription: $0.45 to the owner, $0.05 to Search Star.</li>
+        <li><strong>Settlement.</strong> Subscription revenue is credited to the owner's earnings ledger at the moment of each interval debit and included in the standard weekly Monday settlement.</li>
+      </ol>
+
+      <h4>Subscription parameters</h4>
+      <table>
+        <tr><th>Parameter</th><th>Detail</th></tr>
+        <tr><td>Interval</td><td>Set by the profile owner: <code>weekly</code>, <code>monthly</code>, or <code>yearly</code>.</td></tr>
+        <tr><td>Price</td><td>Set by the profile owner, per interval. No minimum. Owner can change the price at any time — existing subscriptions honor their original price until renewal, then adopt the new price.</td></tr>
+        <tr><td>Back catalog</td><td>The <code>includesBackCatalog</code> flag determines whether subscribers can access items published before the subscription start date. If <code>false</code>, only items published after the subscription start are accessible. The owner can offer back catalog access as a separate one-time purchase or as a value justification for a higher subscription price.</td></tr>
+        <tr><td>Cancellation</td><td>Either party can cancel. The subscriber retains access until the end of the current paid interval. No refunds on the current interval — the price was for the period, not for specific items.</td></tr>
+        <tr><td>Pause</td><td>Automatic if the platform's credit balance is insufficient at renewal. The subscription resumes on the next successful debit attempt (checked daily). After 30 consecutive days paused, the subscription is cancelled.</td></tr>
+      </table>
+
+      <h4>Per-item vs. subscription economics</h4>
+      <p>The two modes coexist. A platform might use per-item access for discovery (sampling individual posts from many creators) and subscribe to the feeds it values most. The pricing creates natural segmentation:</p>
+      <table>
+        <tr><th>Scenario</th><th>Per-item cost</th><th>Subscription cost</th><th>Better deal</th></tr>
+        <tr><td>Casual reader, 5 items/month</td><td>5 × $0.01 = $0.05</td><td>$0.50/month</td><td>Per-item</td></tr>
+        <tr><td>Regular reader, 30 items/month</td><td>30 × $0.01 = $0.30</td><td>$0.50/month</td><td>Per-item (barely)</td></tr>
+        <tr><td>Daily reader, 60+ items/month</td><td>60 × $0.01 = $0.60</td><td>$0.50/month</td><td>Subscription</td></tr>
+        <tr><td>Platform aggregating 100 feeds</td><td>Variable, high friction</td><td>100 × $0.50 = $50/month</td><td>Subscription (lower friction)</td></tr>
+      </table>
+      <p>Profile owners are encouraged to set subscription prices above the expected per-item cost at moderate volumes — the subscription premium is for convenience and guaranteed access, not for a discount. A prolific poster might set per-item at $0.01 and subscription at $2.00/month, making the subscription worthwhile only for dedicated followers.</p>
+
+      <h4>Subscription management</h4>
+      <p>Profile owners can view all active subscriptions to their feed in the earnings dashboard: subscriber identity (platform or individual), subscription start date, current interval, price, and total revenue generated. Owners can block any subscriber at any time — the subscription is immediately cancelled, the current interval is not refunded (same principle as Marketing tier), and the subscriber cannot re-subscribe without the owner's approval.</p>
+
+      <div class="callout callout-info"><strong>Subscriptions don't bypass sovereignty.</strong> A subscription grants the right to query feed items — it does not grant the right to cache, redistribute, or archive content. Each item access still flows through Search Star's payment layer and is logged. If the owner removes an item from their feed endpoint, it becomes inaccessible to subscribers. The owner retains full control of their content at all times.</div>
 
       <!-- ═══════════ 5. VALIDATION — NEW ═══════════ -->
 
@@ -705,6 +859,16 @@
   has_advertising boolean default false,
   has_adult_extension boolean default false,
 
+  -- Content feed metadata (for feed discovery)
+  has_content_feed boolean default false,
+  feed_topics text[],                        -- topic tags for search filtering
+  feed_content_types text[],                 -- e.g. {'text','image','audio'}
+  feed_item_count integer default 0,
+  feed_per_item_price numeric(10,4),
+  feed_subscription_price numeric(10,4),
+  feed_subscription_interval text,           -- 'weekly', 'monthly', 'yearly'
+  feed_last_updated timestamptz,
+
   -- Financial percentile ranges (for search filtering, not raw data)
   net_worth_percentile integer,
   income_percentile integer,
@@ -750,6 +914,8 @@ create index idx_directory_trust on directory(trust_score);
 create index idx_directory_cohort on directory(age_cohort);
 create index idx_directory_status on directory(status);
 create index idx_directory_dating on directory(has_dating) where has_dating = true;
+create index idx_directory_feed on directory(has_content_feed) where has_content_feed = true;
+create index idx_directory_feed_topics on directory using gin(feed_topics) where has_content_feed = true;
 create index idx_directory_net_worth on directory(net_worth_percentile);
 
 -- Composite indexes for common platform queries
@@ -795,6 +961,8 @@ create policy "Owners manage own listing"
         <tr><td><code>has_dating</code></td><td>boolean</td><td>Only profiles with a dating section. Example: <code>has_dating=true</code></td></tr>
         <tr><td><code>has_family</code></td><td>boolean</td><td>Only profiles with a family section.</td></tr>
         <tr><td><code>has_advertising</code></td><td>boolean</td><td>Only profiles with an advertising profile.</td></tr>
+        <tr><td><code>has_content_feed</code></td><td>boolean</td><td>Only profiles with a content feed. Example: <code>has_content_feed=true</code></td></tr>
+        <tr><td><code>feed_topics</code></td><td>string</td><td>Comma-separated feed topic tags. Example: <code>feed_topics=investing,startups</code></td></tr>
         <tr><td><code>orientation</code></td><td>string</td><td>Dating filter. Example: <code>orientation=gay</code></td></tr>
         <tr><td><code>dating_intention</code></td><td>string</td><td>Dating filter. Example: <code>dating_intention=long-term relationship</code></td></tr>
         <tr><td><code>interests</code></td><td>string</td><td>Comma-separated interest tags. Example: <code>interests=opera,bjj,political-economy</code></td></tr>
@@ -826,10 +994,16 @@ Authorization: Bearer sk_live_platform_abc123</pre>
       "hasDating": true,
       "hasFamily": false,
       "hasAdvertising": true,
+      "hasContentFeed": true,
+      "feedTopics": ["investing", "startups", "opera-reviews"],
+      "feedItemCount": 47,
       "pricing": {
         "public": 0.02,
         "private": 0.50,
-        "marketing": 5.00
+        "marketing": 5.00,
+        "feedPerItem": 0.01,
+        "feedSubscription": 0.50,
+        "feedSubscriptionInterval": "monthly"
       },
       "endpointUrl": "https://steve.smith.id/profile.json",
       "status": "active",
@@ -858,6 +1032,43 @@ Authorization: Bearer sk_live_platform_abc123</pre>
         <tr><td><code>message</code></td><td>string</td><td>Required for marketing tier. The message to deliver to the profile owner. Max 500 characters.</td></tr>
         <tr><td><code>fields</code></td><td>string[]</td><td>Optional. Specific fields to return (for public/private tiers). If omitted, all fields for the tier are returned.</td></tr>
       </table>
+
+      <h4>Feed index endpoint (free)</h4>
+      <pre>GET /v1/feed/{profileNumber}</pre>
+      <p>Returns the feed's item list with metadata — titles, summaries, topics, publish dates, content types — but not the full content or media. This is the "preview" layer, equivalent to browsing headlines. Free, no charge.</p>
+
+      <h4>Feed item query endpoint (paid)</h4>
+      <pre>POST /v1/feed/{profileNumber}/{itemId}</pre>
+      <p>Fetches a single feed item's full content and media from the user's endpoint. The platform's credit balance is debited at the owner's per-item price. Same debit flow as a profile query: check balance, fetch from user's hosting, debit, credit owner 90%, credit Search Star 10%, serve to platform, log transaction.</p>
+      <table>
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>itemId</code></td><td>string (required, path)</td><td>The feed item ID to retrieve.</td></tr>
+      </table>
+
+      <h4>Feed subscription endpoint</h4>
+      <pre>POST /v1/subscribe/{profileNumber}/feed</pre>
+      <p>Creates a recurring subscription to a profile owner's content feed. The platform's credit balance is debited immediately for the first interval. See section 4.8 for full subscription mechanics.</p>
+      <table>
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>includeBackCatalog</code></td><td>boolean</td><td>Optional. If the owner's feed allows back catalog access and this is <code>true</code>, the subscriber gains access to all existing items. Default: <code>false</code>.</td></tr>
+      </table>
+      <p>Returns a subscription object:</p>
+      <pre>{
+  "subscriptionId": "sub_abc123",
+  "profileNumber": "SS-000001",
+  "status": "active",
+  "interval": "monthly",
+  "price": 0.50,
+  "currentPeriodStart": "2026-03-30T00:00:00Z",
+  "currentPeriodEnd": "2026-04-30T00:00:00Z",
+  "includesBackCatalog": false,
+  "accessibleAfter": "2026-03-30T00:00:00Z"
+}</pre>
+
+      <h4>Subscription management endpoints</h4>
+      <pre>GET /v1/subscriptions                          — list all active subscriptions for this API key
+GET /v1/subscriptions/{subscriptionId}         — get subscription details
+DELETE /v1/subscriptions/{subscriptionId}      — cancel subscription (access continues until period end)</pre>
 
       <h3 id="queryflow">7.5 Full Query Flow</h3>
       <p>This is the end-to-end flow from a platform discovering a profile to the profile owner getting paid. It ties together the search API (section 7.4), the payment infrastructure (section 4.4), and the user's self-hosted profile.</p>
@@ -905,6 +1116,9 @@ Platform                Search Star              User's Hosting
         <tr><td><code>GET /v1/search</code></td><td>100 requests/minute per API key</td><td>Free. Generous limit for browse/discovery.</td></tr>
         <tr><td><code>GET /v1/profiles/{id}</code></td><td>100 requests/minute per API key</td><td>Free. Directory metadata only.</td></tr>
         <tr><td><code>POST /v1/query/{id}</code></td><td>No rate limit — limited by credit balance</td><td>Paid. The credit balance is the rate limiter.</td></tr>
+        <tr><td><code>GET /v1/feed/{id}</code></td><td>100 requests/minute per API key</td><td>Free. Feed index/preview only.</td></tr>
+        <tr><td><code>POST /v1/feed/{id}/{itemId}</code></td><td>No rate limit — limited by credit balance</td><td>Paid. Per-item debit.</td></tr>
+        <tr><td><code>POST /v1/subscribe/{id}/feed</code></td><td>10 requests/minute per API key</td><td>Paid. Subscription creation.</td></tr>
       </table>
 
       <!-- ═══════════ 8. TECH STACK ═══════════ -->
@@ -975,9 +1189,10 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.1</code></td><td>March 2026</td><td>Schema spec, sample profile, static prototype, Presence Composite methodology</td></tr>
         <tr><td><code>v0.2</code></td><td>March 2026</td><td>Advertising profile section, expanded age cohort tables, builder methodology</td></tr>
         <tr><td><code>v0.3</code></td><td>March 2026</td><td>Validation &amp; trust layer: validator staking, automated verification, dispute resolution, trust score</td></tr>
-        <tr><td><code>v0.4</code></td><td>Q2 2026</td><td>Profile creation flow (Next.js + Supabase), user authentication, dynamic profiles, API endpoint generation</td></tr>
-        <tr><td><code>v0.5</code></td><td>Q3 2026</td><td>Stripe Connect integration, per-query metering, platform API keys, revenue dashboard</td></tr>
-        <tr><td><code>v0.6</code></td><td>Q4 2026</td><td>Marketing tier messaging, response likelihood scoring, platform directory</td></tr>
+        <tr><td><code>v0.4</code></td><td>March 2026</td><td>Content feed: sovereign publishing, per-item queries, feed subscriptions, feed discovery in directory search</td></tr>
+        <tr><td><code>v0.5</code></td><td>Q2 2026</td><td>Profile creation flow (Next.js + Supabase), user authentication, dynamic profiles, API endpoint generation</td></tr>
+        <tr><td><code>v0.6</code></td><td>Q3 2026</td><td>Stripe Connect integration, per-query metering, platform API keys, revenue dashboard</td></tr>
+        <tr><td><code>v0.7</code></td><td>Q4 2026</td><td>Marketing tier messaging, response likelihood scoring, platform directory</td></tr>
         <tr><td><code>v1.0</code></td><td>2027</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, third-party verification partnerships</td></tr>
       </table>
 
@@ -989,7 +1204,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v0.3 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v0.4 · MIT License</div>
       <div class="footer-links">
         <a href="index.html">Directory</a>
         <a href="profile.html">Sample</a>
