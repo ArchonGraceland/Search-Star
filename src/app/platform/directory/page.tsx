@@ -109,41 +109,21 @@ export default function PlatformDirectory() {
     setMessageSending(true)
     setMessageResult(null)
 
-    // Use the existing marketing API with a platform-context wrapper
-    const res = await fetch('/api/messages/marketing', {
+    const res = await fetch('/api/platform/send-marketing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        api_key: 'SESSION_AUTH', // We'll handle auth server-side via a platform-specific route
-        recipient_profile_number: messageTarget.profile_number,
+        recipient_profile_id: messageTarget.id,
         message: messageBody,
       }),
     })
-
-    // If the above doesn't work with session auth, use our platform-specific route
-    if (!res.ok) {
-      // Try the platform-specific marketing route
-      const res2 = await fetch('/api/platform/send-marketing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipient_profile_id: messageTarget.id,
-          message: messageBody,
-        }),
-      })
-      const data2 = await res2.json()
-      if (res2.ok) {
-        setMessageResult({ type: 'success', text: `Message sent! Cost: $${data2.price_charged?.toFixed(2) || messageTarget.price_marketing}` })
-        setMessageBody('')
-        setTimeout(() => setMessageTarget(null), 2000)
-      } else {
-        setMessageResult({ type: 'error', text: data2.error || 'Failed to send' })
-      }
-    } else {
-      const data = await res.json()
-      setMessageResult({ type: 'success', text: `Message sent! Cost: $${data.price_charged?.toFixed(2)}` })
+    const data = await res.json()
+    if (res.ok) {
+      setMessageResult({ type: 'success', text: `Message sent! Cost: $${data.price_charged?.toFixed(2)}. Balance: $${data.balance_remaining?.toFixed(2)}` })
       setMessageBody('')
       setTimeout(() => setMessageTarget(null), 2000)
+    } else {
+      setMessageResult({ type: 'error', text: data.error || 'Failed to send message' })
     }
     setMessageSending(false)
   }
