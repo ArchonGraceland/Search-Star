@@ -137,22 +137,38 @@ Earnings, stats, and profile rank.
 - [x] **Deployed and verified live**
 
 ### Phase 4 — Admin Panel
-**Status: ⚪ NOT STARTED**
+**Status: ✅ COMPLETE**
 
 System administration for operators.
 
-#### Phase 4a — Financial + User Management
-- [ ] Admin role + route protection (Supabase RLS)
-- [ ] Financial dashboard (pending settlements, platform balances, revenue)
-- [ ] User search + profile viewer
-- [ ] Trust score manual adjustment
-- [ ] Account suspend/unsuspend
+#### Phase 4a — Financial + User Management ✅
+- [x] Admin role setup — `is_admin()` SQL function, Alice (SS-TEST01) set to admin
+- [x] Admin route protection — `/admin` layout checks `profiles.role === 'admin'`, redirects non-admins to /dashboard
+- [x] Admin sidebar — dark (#1a1a1a) theme with red "Admin" badge, ticket count badge, links to user views
+- [x] Financial dashboard (`/admin`) — marketplace revenue, pending settlements, total settled, gross volume
+- [x] Quick stats — total profiles, active profiles, platform count, marketing message count
+- [x] Revenue by week — table with gross, fee, net per week
+- [x] Platform accounts — table with credit balance, auto-refill status, account status
+- [x] Recent transactions — latest 20 entries with profile, platform, tier, gross, fee, net, settled
+- [x] User management (`/admin/users`) — paginated list with search by name/handle/profile number
+- [x] User detail view (`/admin/users/[id]`) — full profile data, data extensions, pricing, earnings summary, message count
+- [x] Trust score adjustment — admin can set 0–100 with required reason field (`PATCH /api/admin/users`)
+- [x] Account suspend/unsuspend — toggle active/suspended with confirmation (`PUT /api/admin/users`)
+- [x] Admin RLS policies — migration applied for all admin-readable tables
+- [x] Dashboard sidebar updated — "Support" link for all users, "Admin" link for admin-role users only
 
-#### Phase 4b — Support Tickets
-- [ ] Ticket submission form (user-facing)
-- [ ] Ticket queue (admin-facing)
-- [ ] Status tracking (open → in progress → resolved)
-- [ ] Admin response thread
+#### Phase 4b — Support Tickets ✅
+- [x] User-facing ticket submission (`/support`) — form with subject, priority (normal/urgent), body
+- [x] User ticket list — own tickets with status badges, admin reply indicator
+- [x] User ticket detail (`/support/[id]`) — full message thread, reply form (hidden when resolved)
+- [x] Ticket creation API (`POST /api/tickets`) — creates ticket + initial message
+- [x] User reply API (`PATCH /api/tickets`) — adds reply, updates ticket timestamp
+- [x] Admin ticket queue (`/admin/tickets`) — all tickets with status/priority filters
+- [x] Admin ticket detail (`/admin/tickets/[id]`) — conversation thread, reply form, status buttons
+- [x] Admin reply API (`POST /api/admin/tickets`) — creates admin message, auto-sets in_progress
+- [x] Status management (`PATCH /api/admin/tickets`) — open / in_progress / resolved
+- [x] Unresolved ticket count shown in admin sidebar badge
+- [x] **Deployed and verified live**
 
 ### Phase 5 — Platform Portal
 **Status: ⚪ NOT STARTED**
@@ -207,6 +223,11 @@ Demand-side dashboard for platforms (advertisers, recruiters, dating apps, brand
 | Mar 31, 2026 | Phase 3 | POST /api/seed-earnings (216 ledger entries, 3 weeks, 5 platforms, 3 tiers, 90/10 split) |
 | Mar 31, 2026 | Phase 3 | **Deployed and verified live** |
 | Mar 31, 2026 | Phase 1b | Refactor: two-path profile builder (AI prompt primary, manual fallback), endpoint URL registration, JSON-LD validation |
+| Mar 31, 2026 | Phase 4a | Admin layout (dark sidebar, role check), financial dashboard, user management with search/pagination |
+| Mar 31, 2026 | Phase 4a | Trust score adjustment, account suspend/unsuspend, admin RLS policies + is_admin() function |
+| Mar 31, 2026 | Phase 4b | User-facing /support page with ticket form, own-ticket list, ticket detail with reply |
+| Mar 31, 2026 | Phase 4b | Admin /admin/tickets queue with filters, ticket detail with reply + status management |
+| Mar 31, 2026 | Phase 4 | Sidebar updated: Support for all, Admin for admins. **Deployed and verified live** |
 
 ---
 
