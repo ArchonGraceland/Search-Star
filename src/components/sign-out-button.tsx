@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 
 export function SignOutButton() {
   const router = useRouter()
-  const supabase = createClient()
 
   const handleSignOut = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
