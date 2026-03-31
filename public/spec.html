@@ -1323,6 +1323,8 @@ Platform                Search Star              User's Hosting
       <h4>Recommended self-hosting options</h4>
       <p>Users need a domain they control and a place to serve static files (JSON-LD, images). Most Search Star users are not developers, so the default recommendation prioritizes simplicity.</p>
 
+      <div class="callout callout-info"><strong>Endpoint URL is never exposed to platforms.</strong> When a user registers a self-hosted endpoint URL, that URL is stored in the Search Star directory as an internal field. It is never returned in any API response to querying platforms. When a platform executes a paid query via <code>POST /v1/query/{id}</code>, Search Star's backend fetches the profile from the user's endpoint server-side, filters the response to the requested tier, and serves the result. The platform receives only the filtered profile data — never the raw endpoint URL. This means a plain static JSON-LD file works with no authentication required on the user's hosting. The payment layer cannot be bypassed because platforms cannot discover the endpoint to query it directly. Upgrade path: OAuth 2.0 token-based authentication between Search Star and user endpoints is planned for v1.0.</div>
+
       <div class="callout callout-green"><strong>Our recommendation: Cloudflare Pages + R2.</strong> Free tier covers everything a single profile needs — unlimited bandwidth, 10GB photo storage, global CDN, and custom domain support. Setup is entirely dashboard-based — no terminal, no git, no code. Cloudflare is critical internet infrastructure that isn't going anywhere. For most users, this is the right choice. <a href="setup.html" style="color:var(--green); font-weight:700;">See the step-by-step setup guide →</a></div>
 
       <table>
