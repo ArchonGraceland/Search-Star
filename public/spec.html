@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search Star — Specification v0.7</title>
+<title>Search Star — Specification v0.8</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -94,7 +94,7 @@
   <div class="wrap">
 
     <div class="spec-meta">
-      <span><strong>Version</strong> 0.7.0</span>
+      <span><strong>Version</strong> 0.8.0</span>
       <span><strong>Date</strong> March 2026</span>
       <span><strong>Status</strong> Draft</span>
       <span><strong>License</strong> MIT</span>
@@ -139,7 +139,7 @@
         <a class="toc-indent" href="#queryflow">7.5 Full Query Flow</a>
         <a href="#tech">8. Technical Stack</a>
         <a class="toc-indent" href="#selfhost">8.1 Self-Hosting &amp; Data Sovereignty <span class="new-badge">New in v0.3</span></a>
-        <a href="#platform-portal">9. Platform Portal <span class="new-badge">New in v0.5</span></a>
+        <a href="#platform-portal">9. Platform Portal <span class="new-badge">Implemented in v0.8</span></a>
         <a class="toc-indent" href="#platform-accounts">9.1 Platform Accounts</a>
         <a class="toc-indent" href="#platform-credits">9.2 Credit Management</a>
         <a class="toc-indent" href="#platform-directory">9.3 Directory &amp; Messaging</a>
@@ -1355,11 +1355,13 @@ Platform                Search Star              User's Hosting
 
       <!-- ═══════════ 9. PLATFORM PORTAL ═══════════ -->
 
-      <h2 id="platform-portal">9. Platform Portal <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.5</span></h2>
+      <h2 id="platform-portal">9. Platform Portal <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">Implemented in v0.8</span></h2>
       <p>The Platform Portal is the demand side of Search Star. While profile owners manage their data and earnings from the owner dashboard, <strong>platforms</strong> — dating apps, recruiters, brands, investment networks, and any entity that wants to query profiles or send marketing messages — manage their operations from a separate portal.</p>
       <p>The portal exists because the spec (sections 4.4, 7.4, 7.5) defines a complete platform-side workflow — prepaid credits, API keys, directory search, per-query billing, marketing messages — but without a management interface, that workflow is headless. The Platform Portal provides the UI for every action a querying platform needs to take.</p>
 
       <div class="callout callout-info"><strong>Two-sided marketplace, two separate experiences.</strong> Profile owners and platforms never share a login or a dashboard. An owner's dashboard shows earnings, messages received, and profile stats. A platform's portal shows spending, queries executed, messages sent, and credit balance. The data is the same ledger viewed from opposite sides.</div>
+
+      <div class="callout callout-green"><strong>Implementation status (v0.8):</strong> The Platform Portal is live at <code>searchstar.com/platform</code>. Platform signup at <code>/platform-signup</code>. The portal uses a teal accent (<code>#0d9488</code>) on a dark teal sidebar (<code>#0f2e2b</code>) to visually distinguish it from the owner dashboard (navy) and admin panel (dark). All features described in sections 9.1–9.4 are implemented in the MVP, with Stripe integration deferred to a mock deposit system. The directory browser, paid query execution (with 90/10 revenue split), marketing message composer, and spending analytics are fully functional.</div>
 
       <h3 id="platform-accounts">9.1 Platform Accounts</h3>
       <p>A platform account is distinct from a profile owner account. Platforms sign up with a company name, billing email, and company URL. They do not create Search Star profiles — they query them.</p>
@@ -1447,6 +1449,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.5</code></td><td>March 2026</td><td>Referral validation &amp; revenue sharing: recruiter staking, 5% perpetual share, Validator Reputation Score</td></tr>
         <tr><td><code>v0.6</code></td><td>March 2026</td><td>Platform Portal spec (section 9), server-side endpoint proxy, endpoint access control</td></tr>
         <tr><td><code>v0.7</code></td><td>March 2026</td><td>Admin panel spec: operator financial dashboard, user management, support ticket system, admin RLS</td></tr>
+        <tr><td><code>v0.8</code></td><td>March 2026</td><td>Platform Portal implementation: platform signup, credit management, directory browser, marketing composer, spending analytics, teal design system</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -1457,16 +1460,14 @@ Platform                Search Star              User's Hosting
         <tr><td>Phase 2</td><td>✅ Complete</td><td>Unified messaging feed, marketing/feed/system messages, real-time delivery, 90/10 revenue split API</td></tr>
         <tr><td>Phase 3</td><td>✅ Complete</td><td>Account dashboard with earnings, revenue breakdown by tier/platform, settlement tracking, endpoint URL management</td></tr>
         <tr><td>Phase 4</td><td>✅ Complete</td><td>Admin panel: financial dashboard, user management, trust score adjustment, support ticket system</td></tr>
-        <tr><td>Phase 5</td><td>🔲 Next</td><td>Platform Portal: platform auth, credit deposits, directory browser, marketing message composer, spending analytics</td></tr>
+        <tr><td>Phase 5</td><td>✅ Complete</td><td>Platform Portal: platform signup + auth, credit deposits, API key management, directory browser with search/filters, paid query execution (90/10 split), marketing message composer, sent messages with block rate, spending analytics with forecast</td></tr>
       </table>
 
       <h4>Future milestones</h4>
       <table>
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
-        <tr><td><code>v0.7</code></td><td>Q2 2026</td><td>Stripe Connect integration, per-query metering live, platform API keys</td></tr>
-        <tr><td><code>v0.8</code></td><td>Q3 2026</td><td>Response likelihood scoring, profile verification partnerships</td></tr>
-        <tr><td><code>v0.9</code></td><td>Q4 2026</td><td>Platform Portal launch, directory search API live</td></tr>
-        <tr><td><code>v1.0</code></td><td>2027</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth</td></tr>
+        <tr><td><code>v0.9</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting</td></tr>
+        <tr><td><code>v1.0</code></td><td>Q3 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, response likelihood scoring</td></tr>
       </table>
 
     </div>
@@ -1477,7 +1478,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v0.7 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v0.8 · MIT License</div>
       <div class="footer-links">
         <a href="index.html">Directory</a>
         <a href="profile.html">Sample</a>
