@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════
+   PROJECT GRACELAND — Design System
+   Crimson Text + Roboto · Navy #1a3a6b · 3px radius
+   ═══════════════════════════════════════════════════ */
+
+@theme {
+  --color-navy: #1a3a6b;
+  --color-navy-dark: #112a4f;
+  --color-navy-light: #2a5a8f;
+  --color-cream: #eef2f8;
+  --color-border: #d4d4d4;
+  --color-muted: #767676;
+  --color-green: #166534;
+  --color-green-bg: #f0fdf4;
+  --color-amber: #92400e;
+  --color-amber-bg: #fffbeb;
+  --color-red: #991b1b;
+  --color-red-bg: #fef2f2;
+  --radius-graceland: 3px;
+}
+
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+body {
+  font-family: 'Crimson Text', Georgia, serif;
+  color: #1a1a1a;
+  background: #f5f5f5;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+/* Utility classes for the design system */
+.font-heading {
+  font-family: 'Crimson Text', Georgia, serif;
+}
+
+.font-body {
+  font-family: 'Roboto', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Graceland label style — used for badges, section labels, uppercase micro-text */
+.label-grace {
+  font-family: 'Roboto', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Card base */
+.card-grace {
+  background: white;
+  border: 1px solid #d4d4d4;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* Button styles */
+.btn-primary {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 12px 32px;
+  background: #1a3a6b;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #2a5a8f;
+}
+
+.btn-secondary {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 12px 32px;
+  background: transparent;
+  color: #1a3a6b;
+  border: 1px solid #1a3a6b;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #1a3a6b;
+  color: white;
+}
+
+/* Callout styles matching spec */
+.callout {
+  padding: 16px 20px;
+  border-radius: 3px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-family: 'Roboto', sans-serif;
+}
+
+.callout-info { background: #eef2f8; border-left: 3px solid #1a3a6b; }
+.callout-warn { background: #fffbeb; border-left: 3px solid #92400e; }
+.callout-green { background: #f0fdf4; border-left: 3px solid #166534; }
+.callout-red { background: #fef2f2; border-left: 3px solid #991b1b; }

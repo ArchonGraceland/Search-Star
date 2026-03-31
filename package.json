@@ -1,7 +1,25 @@
 {
-  "name": "searchstar",
-  "version": "0.1.0",
-  "description": "Search Star — Sovereign Personal Data Standard. Own your data, set your price, get paid when platforms access your profile.",
+  "name": "search-star",
+  "version": "0.5.0",
   "private": true,
-  "license": "MIT"
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.0",
+    "@supabase/supabase-js": "^2.101.0",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "next": "^16.2.1",
+    "postcss": "^8.5.8",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^6.0.2"
+  }
 }
