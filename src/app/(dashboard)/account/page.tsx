@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { EndpointManager } from '@/components/endpoint-manager'
 
 // ─── Types ───
 interface EarningsRow {
@@ -302,6 +303,15 @@ export default async function Account() {
               />
             </div>
           </div>
+        </div>
+
+        {/* ═══ Hosting ═══ */}
+        <div className="card-grace p-6 mb-4">
+          <h2 className="font-heading text-xl font-bold mb-5">Hosting</h2>
+          <EndpointManager
+            currentUrl={profile.endpoint_url || null}
+            currentDomain={profile.domain || null}
+          />
         </div>
 
         {/* ═══ Pricing ═══ */}
