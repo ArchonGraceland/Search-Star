@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 
-export default async function DashboardLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
@@ -15,20 +15,29 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  // Fetch profile for role check + display name
+  // Check admin role
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, display_name')
     .eq('user_id', user.id)
     .single()
 
-  const displayName = profile?.display_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
-  const isAdmin = profile?.role === 'admin'
+  if (!profile || profile.role !== 'admin') {
+    redirect('/dashboard')
+  }
+
+  const displayName = profile.display_name || user.email?.split('@')[0] || 'Admin'
+
+  // Get unresolved ticket count for badge
+  const { count: openTickets } = await supabase
+    .from('support_tickets')
+    .select('id', { count: 'exact', head: true })
+    .neq('status', 'resolved')
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex">
-      {/* Sidebar */}
-      <aside className="w-[240px] bg-[#1a3a6b] text-white flex flex-col min-h-screen fixed">
+      {/* Admin Sidebar */}
+      <aside className="w-[240px] bg-[#1a1a1a] text-white flex flex-col min-h-screen fixed">
         {/* Logo */}
         <div className="px-6 py-5 border-b border-white/10">
           <div className="flex items-center gap-2.5">
@@ -45,22 +54,31 @@ export default async function DashboardLayout({
               Search Star
             </span>
           </div>
+          <div className="mt-2 inline-block bg-[#991b1b] text-white font-body text-[9px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 rounded-[2px]">
+            Admin
+          </div>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4">
-          <NavLink href="/dashboard" label="Dashboard" icon="📊" />
-          <NavLink href="/profile-builder" label="Register Profile" icon="⚡" />
-          <NavLink href="/feed" label="Feed" icon="💬" />
-          <NavLink href="/account" label="Account" icon="👤" />
-          <NavLink href="/support" label="Support" icon="🎫" />
+          <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-white/30 px-3 mb-2">
+            Administration
+          </div>
+          <AdminNavLink href="/admin" label="Financial Dashboard" icon="💰" />
+          <AdminNavLink href="/admin/users" label="User Management" icon="👥" />
+          <AdminNavLink
+            href="/admin/tickets"
+            label="Support Tickets"
+            icon="🎫"
+            badge={openTickets && openTickets > 0 ? openTickets : undefined}
+          />
 
-          {isAdmin && (
-            <>
-              <div className="my-3 mx-3 border-t border-white/10" />
-              <NavLink href="/admin" label="Admin" icon="🛡️" />
-            </>
-          )}
+          <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-white/30 px-3 mb-2 mt-6">
+            User Views
+          </div>
+          <AdminNavLink href="/dashboard" label="Dashboard" icon="📊" />
+          <AdminNavLink href="/feed" label="Feed" icon="💬" />
+          <AdminNavLink href="/account" label="Account" icon="👤" />
         </nav>
 
         {/* User */}
@@ -79,14 +97,19 @@ export default async function DashboardLayout({
   )
 }
 
-function NavLink({ href, label, icon }: { href: string; label: string; icon: string }) {
+function AdminNavLink({ href, label, icon, badge }: { href: string; label: string; icon: string; badge?: number }) {
   return (
     <Link
       href={href}
       className="flex items-center gap-3 px-3 py-2.5 rounded-[3px] text-white/70 no-underline font-body text-sm transition-all hover:bg-white/10 hover:text-white mb-0.5"
     >
       <span className="text-base">{icon}</span>
-      {label}
+      <span className="flex-1">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="bg-[#991b1b] text-white font-body text-[10px] font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5">
+          {badge}
+        </span>
+      )}
     </Link>
   )
 }

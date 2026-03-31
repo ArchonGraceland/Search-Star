@@ -40,7 +40,8 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/profile-builder') ||
       request.nextUrl.pathname.startsWith('/feed') ||
       request.nextUrl.pathname.startsWith('/account') ||
-      request.nextUrl.pathname.startsWith('/admin'))
+      request.nextUrl.pathname.startsWith('/admin') ||
+      request.nextUrl.pathname.startsWith('/support'))
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
