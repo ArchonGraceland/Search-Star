@@ -139,7 +139,12 @@
         <a class="toc-indent" href="#queryflow">7.5 Full Query Flow</a>
         <a href="#tech">8. Technical Stack</a>
         <a class="toc-indent" href="#selfhost">8.1 Self-Hosting &amp; Data Sovereignty <span class="new-badge">New in v0.3</span></a>
-        <a href="#roadmap">9. Roadmap</a>
+        <a href="#platform-portal">9. Platform Portal <span class="new-badge">New in v0.5</span></a>
+        <a class="toc-indent" href="#platform-accounts">9.1 Platform Accounts</a>
+        <a class="toc-indent" href="#platform-credits">9.2 Credit Management</a>
+        <a class="toc-indent" href="#platform-directory">9.3 Directory &amp; Messaging</a>
+        <a class="toc-indent" href="#platform-analytics">9.4 Spending Analytics</a>
+        <a href="#roadmap">10. Roadmap</a>
       </div>
 
       <!-- ═══════════ 1. OVERVIEW ═══════════ -->
@@ -1346,9 +1351,89 @@ Platform                Search Star              User's Hosting
 
       <div class="callout callout-warn"><strong>Search Star never stores your photos.</strong> When the AI builder recommends photos during profile creation, the analysis happens in the AI session (e.g., Claude analyzing uploaded images). The photos are then placed on your hosting by you. Search Star's directory stores only the URL and the hash — if you delete a photo from your hosting, it disappears from your profile. You maintain full control at all times.</div>
 
-      <!-- ═══════════ 9. ROADMAP ═══════════ -->
+      <!-- ═══════════ 9. PLATFORM PORTAL ═══════════ -->
 
-      <h2 id="roadmap">9. Roadmap</h2>
+      <h2 id="platform-portal">9. Platform Portal <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.5</span></h2>
+      <p>The Platform Portal is the demand side of Search Star. While profile owners manage their data and earnings from the owner dashboard, <strong>platforms</strong> — dating apps, recruiters, brands, investment networks, and any entity that wants to query profiles or send marketing messages — manage their operations from a separate portal.</p>
+      <p>The portal exists because the spec (sections 4.4, 7.4, 7.5) defines a complete platform-side workflow — prepaid credits, API keys, directory search, per-query billing, marketing messages — but without a management interface, that workflow is headless. The Platform Portal provides the UI for every action a querying platform needs to take.</p>
+
+      <div class="callout callout-info"><strong>Two-sided marketplace, two separate experiences.</strong> Profile owners and platforms never share a login or a dashboard. An owner's dashboard shows earnings, messages received, and profile stats. A platform's portal shows spending, queries executed, messages sent, and credit balance. The data is the same ledger viewed from opposite sides.</div>
+
+      <h3 id="platform-accounts">9.1 Platform Accounts</h3>
+      <p>A platform account is distinct from a profile owner account. Platforms sign up with a company name, billing email, and company URL. They do not create Search Star profiles — they query them.</p>
+
+      <h4>Registration flow</h4>
+      <ol>
+        <li><strong>Platform signs up.</strong> Company name, billing email, password. Supabase Auth with a <code>role: 'platform'</code> flag in user metadata to distinguish from profile owners.</li>
+        <li><strong>Company verification.</strong> Domain ownership via DNS TXT record or email verification at the company domain. This satisfies the "sender must verify identity" requirement from spec 4.3.</li>
+        <li><strong>API key issued.</strong> Upon verification, the platform receives a live API key (<code>sk_live_platform_xxx</code>) for use in the <code>Authorization: Bearer</code> header (see spec 7.4).</li>
+        <li><strong>Initial credit deposit.</strong> Platform deposits a minimum of $50.00 via Stripe to activate their account (see spec 4.4). Queries and marketing messages are not available until the balance is funded.</li>
+      </ol>
+
+      <h4>Account states</h4>
+      <table>
+        <tr><th>State</th><th>Meaning</th><th>Can query?</th><th>Can message?</th></tr>
+        <tr><td><code>pending</code></td><td>Registered but not verified or funded</td><td>No</td><td>No</td></tr>
+        <tr><td><code>active</code></td><td>Verified, funded, operational</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td><code>depleted</code></td><td>Credit balance is $0, auto-refill disabled or failed</td><td>No</td><td>No</td></tr>
+        <tr><td><code>suspended</code></td><td>Admin-suspended for policy violation</td><td>No</td><td>No</td></tr>
+      </table>
+
+      <h4>API key management</h4>
+      <p>Platforms can rotate their API key from the portal at any time. The old key is revoked immediately. Platforms may also generate read-only keys for analytics integrations that should not have query or messaging permissions.</p>
+
+      <h3 id="platform-credits">9.2 Credit Management</h3>
+      <p>The credit system is defined in spec 4.4. The Platform Portal provides the UI for managing it:</p>
+
+      <h4>Portal credit features</h4>
+      <table>
+        <tr><th>Feature</th><th>Detail</th></tr>
+        <tr><td>Current balance</td><td>Real-time display of prepaid credit balance</td></tr>
+        <tr><td>Deposit funds</td><td>Add credits via Stripe (credit card, ACH, wire). Minimum $50.00 per deposit.</td></tr>
+        <tr><td>Auto-refill settings</td><td>Configure threshold and target. Example: refill to $500 when balance drops below $100. Toggle on/off.</td></tr>
+        <tr><td>Transaction history</td><td>Every debit (queries and messages) with timestamp, profile queried, tier, and amount. Exportable as CSV.</td></tr>
+        <tr><td>Spending projections</td><td>Based on trailing 7-day average query volume, projected days until balance reaches $0.</td></tr>
+        <tr><td>Refund requests</td><td>Unused credits are refundable minus 2% processing fee (per spec 4.4). Initiated from the portal, processed by admin.</td></tr>
+      </table>
+
+      <h3 id="platform-directory">9.3 Directory &amp; Messaging</h3>
+      <p>The Platform Portal includes a web-based interface for the same operations available via API (spec 7.4, 7.5), so that non-technical platform operators can browse and message profiles without writing code.</p>
+
+      <h4>Directory browser</h4>
+      <p>A searchable, filterable view of the Search Star directory. Mirrors the search API parameters: full-text search, location, age cohort, Presence score range, skills, interests, dating availability, financial percentile ranges, and content feed topics. Results show the same directory metadata returned by <code>GET /v1/search</code>: profile number, handle, display name, Presence score, trust score, tier pricing, and interest tags.</p>
+
+      <h4>Profile query</h4>
+      <p>From a search result, a platform can execute a paid query (Public or Private tier) directly from the portal. The response displays the profile data returned by the user's endpoint, and the platform's credit balance is debited accordingly. This is the same flow as a programmatic <code>POST /v1/query/{id}</code> but executed via the web UI.</p>
+
+      <h4>Marketing message composer</h4>
+      <p>A form for sending Marketing tier messages directly from the portal:</p>
+      <ul>
+        <li>Select recipient from directory search results</li>
+        <li>Compose message (500 character limit enforced in UI, per spec 4.3)</li>
+        <li>Review price (recipient's marketing tier price) before sending</li>
+        <li>Confirmation step showing total cost, no-refund policy, and remaining balance after send</li>
+        <li>Delivery confirmation with message ID and timestamp</li>
+      </ul>
+      <div class="callout callout-warn">All Marketing tier rules from spec 4.3 apply in the portal exactly as they apply via API. No refunds. Message costs what it costs. The portal is a convenience layer, not a policy bypass.</div>
+
+      <h3 id="platform-analytics">9.4 Spending Analytics</h3>
+      <p>The portal provides a dashboard for platforms to understand their Search Star spending:</p>
+      <table>
+        <tr><th>Metric</th><th>Detail</th></tr>
+        <tr><td>Total spend</td><td>Lifetime and by period (week, month, quarter)</td></tr>
+        <tr><td>Spend by tier</td><td>Breakdown across Public, Private, and Marketing</td></tr>
+        <tr><td>Query volume</td><td>Total queries executed, grouped by tier and time period</td></tr>
+        <tr><td>Cost per query</td><td>Average cost per query by tier (varies because profile owners set their own prices)</td></tr>
+        <tr><td>Top profiles queried</td><td>Most-queried profiles by this platform, with spend per profile</td></tr>
+        <tr><td>Marketing message stats</td><td>Messages sent, total spend, block rate (percentage of messages where the recipient blocked the platform)</td></tr>
+        <tr><td>Credit usage forecast</td><td>Projected balance over the next 30 days based on trailing query volume</td></tr>
+      </table>
+
+      <div class="callout callout-info"><strong>Design principle: platforms see their own data, never another platform's.</strong> A platform's portal shows only its own queries, spend, and message history. There is no competitive intelligence — a platform cannot see how many queries another platform has made or how much they've spent. The only cross-platform data visible to anyone is the profile owner's earnings (visible only to the owner) and the admin panel's aggregate metrics (visible only to Search Star operators).</div>
+
+      <!-- ═══════════ 10. ROADMAP ═══════════ -->
+
+      <h2 id="roadmap">10. Roadmap</h2>
       <table>
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
         <tr><td><code>v0.1</code></td><td>March 2026</td><td>Schema spec, sample profile, static prototype, Presence Composite methodology</td></tr>
@@ -1359,6 +1444,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.6</code></td><td>Q2 2026</td><td>Profile creation flow (Next.js + Supabase), user authentication, dynamic profiles, API endpoint generation</td></tr>
         <tr><td><code>v0.7</code></td><td>Q3 2026</td><td>Stripe Connect integration, per-query metering, platform API keys, revenue dashboard</td></tr>
         <tr><td><code>v0.8</code></td><td>Q4 2026</td><td>Marketing tier messaging, response likelihood scoring, platform directory</td></tr>
+        <tr><td><code>v0.9</code></td><td>Q1 2027</td><td>Platform Portal: platform signup &amp; auth, credit deposits via Stripe, API key management, directory browser, marketing message composer, spending analytics dashboard</td></tr>
         <tr><td><code>v1.0</code></td><td>2027</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, third-party verification partnerships</td></tr>
       </table>
 
@@ -1370,7 +1456,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v0.5 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v0.6 · MIT License</div>
       <div class="footer-links">
         <a href="index.html">Directory</a>
         <a href="profile.html">Sample</a>

@@ -136,6 +136,38 @@ System administration for operators.
 - [ ] Status tracking (open → in progress → resolved)
 - [ ] Admin response thread
 
+### Phase 5 — Platform Portal
+**Status: ⚪ NOT STARTED**
+
+Demand-side dashboard for platforms (advertisers, recruiters, dating apps, brands) to manage their Search Star operations. Spec section 9 (v0.6).
+
+#### Phase 5a — Platform Auth + Credit Management
+- [ ] Platform signup flow (company name, billing email, company URL)
+- [ ] Separate auth role (`role: 'platform'` in user_metadata)
+- [ ] Company verification (domain DNS TXT or email verification)
+- [ ] API key generation and rotation
+- [ ] Stripe integration for credit deposits ($50 minimum)
+- [ ] Auto-refill configuration (threshold + target)
+- [ ] Real-time credit balance display
+- [ ] Transaction history with CSV export
+- [ ] Schema: add `user_id` to `platform_accounts`, add `platform_users` table or role flag
+
+#### Phase 5b — Directory Browser + Messaging
+- [ ] Searchable directory UI (mirrors GET /v1/search parameters)
+- [ ] Profile query from browser (paid, debits balance)
+- [ ] Marketing message composer (500 char, price preview, confirmation)
+- [ ] Sent message history
+- [ ] Block rate tracking (how often recipients block the platform)
+
+#### Phase 5c — Spending Analytics
+- [ ] Total spend (lifetime + by period)
+- [ ] Spend breakdown by tier (Public, Private, Marketing)
+- [ ] Query volume over time
+- [ ] Average cost per query by tier
+- [ ] Top profiles queried with spend per profile
+- [ ] Credit usage forecast (30-day projection)
+- [ ] Marketing message stats (sent, spend, block rate)
+
 ---
 
 ## Completed Work
@@ -163,6 +195,7 @@ System administration for operators.
 4. **Design system: Project Graceland** — Crimson Text headings, Roboto body, navy #1a3a6b, 3px border-radius, institutional restraint
 5. **Guided form over AI-only** — Profile builder uses a guided multi-step form for reliability; AI-assisted creation (Anthropic API) planned as enhancement
 6. **Profile number is random** — SS-XXXXXX assigned randomly at creation; sequential assignment deferred until directory registration API
+7. **Platform Portal is post-MVP** — Spec section 9 (v0.6) defines the demand-side platform experience. Building after the owner-side MVP (Phases 0–4) is complete so the owner experience is solid before onboarding platforms. Schema implications noted: `platform_accounts` needs `user_id` column for platform login.
 
 ---
 
