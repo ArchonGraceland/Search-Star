@@ -59,21 +59,32 @@ New user experience: learn, estimate earnings, create profile.
 - [x] Responsive design matching Graceland system
 - [x] **Deployed and verified live**
 
-#### Phase 1b — Profile Builder ✅
-- [x] Multi-step profile builder at /profile-builder (7 steps: identity, financial, presence, skills, interests, pricing, review)
+#### Phase 1b — Profile Registration (Two-Path Flow) ✅
+- [x] **Path A (primary): AI-generated profile import**
+  - User copies AI prompt from /create.html, builds profile in Claude/Grok/ChatGPT
+  - Pastes JSON-LD output → validates structure (@context, identity, presenceComposite)
+  - Extracts profile data for directory index (name, handle, presence, skills, financials)
+  - Optional endpoint URL entry for self-hosted profiles (links to /setup.html guide)
+  - Pricing pre-filled from JSON accessPolicy if present
+  - Confirm & register → SS-XXXXXX assigned, endpoint_url + domain saved
+- [x] **Path B (fallback): Manual guided form**
+  - 7-step form preserved (identity, financial, presence, skills, interests, pricing, review)
+  - Nudges toward AI path with tips and links to /create.html
+  - Post-registration note to self-host for full sovereignty
+- [x] Path chooser screen at /profile-builder entry
+- [x] Sidebar label: "Register Profile" (was "Build Profile")
 - [x] Identity collection (name, handle, tagline, location, age)
 - [x] Financial standing as age-cohort percentiles (no raw dollars) with all 5 metrics from spec
 - [x] Presence Composite self-assessment (Rizz/Vibe/Drip sliders, 0.85 confidence discount shown)
 - [x] Skills with level selection (beginner/intermediate/advanced/expert) + add/remove
 - [x] Interests across 3 domains (athletic/social/intellectual) + add/remove
 - [x] Access tier pricing with suggested ranges from spec and market comps
-- [x] Review step showing full profile summary before creation
 - [x] Profile number assignment (SS-XXXXXX)
 - [x] Saves to Supabase profiles table with full JSON-LD in profile_json column
+- [x] Saves endpoint_url and domain columns (for self-hosted profiles)
 - [x] Sets onboarding_completed flag
-- [x] "Build Profile" link added to dashboard sidebar
 - [x] Auth middleware protects /profile-builder
-- [x] Supabase migration: added tagline, age, profile_json columns
+- [x] Links to /create.html (AI prompt) and /setup.html (hosting guide) throughout
 - [x] **Deployed and verified live**
 
 ### Phase 2 — Messaging Feed
@@ -195,6 +206,7 @@ Demand-side dashboard for platforms (advertisers, recruiters, dating apps, brand
 | Mar 31, 2026 | Phase 3 | Profile stats, completeness bar, pricing cards, feed stats, quick actions |
 | Mar 31, 2026 | Phase 3 | POST /api/seed-earnings (216 ledger entries, 3 weeks, 5 platforms, 3 tiers, 90/10 split) |
 | Mar 31, 2026 | Phase 3 | **Deployed and verified live** |
+| Mar 31, 2026 | Phase 1b | Refactor: two-path profile builder (AI prompt primary, manual fallback), endpoint URL registration, JSON-LD validation |
 
 ---
 
@@ -204,7 +216,7 @@ Demand-side dashboard for platforms (advertisers, recruiters, dating apps, brand
 2. **Supabase Auth** for MVP — simpler than DID:web for initial launch, upgrade path to full W3C identity later
 3. **Static pages preserved** — spec, profile sample, create, setup pages migrate as-is into `/app` routes
 4. **Design system: Project Graceland** — Crimson Text headings, Roboto body, navy #1a3a6b, 3px border-radius, institutional restraint
-5. **Guided form over AI-only** — Profile builder uses a guided multi-step form for reliability; AI-assisted creation (Anthropic API) planned as enhancement
+5. **AI prompt is primary, manual form is fallback** — Profile builder offers two paths: (A) paste AI-generated JSON-LD from any AI + register endpoint URL, or (B) manual guided form. AI path is recommended and linked to /create.html prompt and /setup.html hosting guide. Self-hosting is the spec's default; Search Star indexes only directory metadata.
 6. **Profile number is random** — SS-XXXXXX assigned randomly at creation; sequential assignment deferred until directory registration API
 7. **Platform Portal is post-MVP** — Spec section 9 (v0.6) defines the demand-side platform experience. Building after the owner-side MVP (Phases 0–4) is complete so the owner experience is solid before onboarding platforms. Schema implications noted: `platform_accounts` needs `user_id` column for platform login.
 
