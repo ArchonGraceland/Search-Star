@@ -443,7 +443,7 @@
         <tr><td>Indexing</td><td>Search Star indexes only the existence of an adult extension (boolean flag) and the URL. Never the content.</td></tr>
         <tr><td>Content</td><td>Defined by the user. May include sexual preferences, kink taxonomy, explicit photos, body measurements, role preferences, or any other adult content.</td></tr>
         <tr><td>Schema</td><td>Freeform JSON at the user's endpoint. Search Star does not define or validate the adult extension schema — only the URL reference.</td></tr>
-        <tr><td>Access</td><td>Controlled entirely by the user's hosting. Platforms must authenticate directly with the user's endpoint. Search Star is not involved in the access flow.</td></tr>
+        <tr><td>Access</td><td>Controlled entirely by the user's hosting via an individual access list. The user grants and revokes access to specific people. Search Star is not involved in the access flow. See <em>Access control</em> below.</td></tr>
         <tr><td>Payment</td><td>Queries to the adult extension are <strong>not metered through Search Star</strong>. The user may charge for access independently or provide it free — this is outside Search Star's payment infrastructure.</td></tr>
       </table>
       <pre>{
@@ -452,11 +452,82 @@
     "adultExtension": {
       "exists": true,
       "endpoint": "https://yourname.com/api/v1/adult",
-      "auth": "OAuth2",
+      "auth": "token",
+      "status": "active",
       "disclaimer": "Content at this endpoint is self-hosted and not indexed, moderated, or verified by Search Star."
     }
   }
 }</pre>
+
+      <h4>Access control</h4>
+      <p>The adult extension uses a person-level access list managed entirely by the user on their own hosting. The user decides exactly who can see the content, and can revoke any individual's access instantly for any reason — no explanation required, no appeals process, no cooling-off period.</p>
+
+      <h4>How it works</h4>
+      <ol>
+        <li><strong>User grants access.</strong> The user adds a person to their access list by email, phone number, or Search Star profile number (SS-XXXXXX). A unique access token is generated for that person and delivered however the user chooses — Marketing tier message, direct message, email, in person. One token per person, scoped to that individual.</li>
+        <li><strong>Person views content.</strong> The person includes their token when requesting the adult extension endpoint. The edge function on the user's hosting checks the token against the access list. Valid token → content served. Invalid or missing token → <code>403 Forbidden</code>.</li>
+        <li><strong>User revokes access.</strong> The user removes the person from the access list. The token is invalidated immediately. The next request with that token returns <code>403</code>. No grace period, no notification to the revoked person, no refund if they paid for access. Done.</li>
+      </ol>
+
+      <h4>Access list schema</h4>
+      <p>The access list is a JSON file on the user's hosting, managed through a simple UI provided by the Search Star self-hosting toolkit. The user never needs to edit JSON directly.</p>
+      <pre>{
+  "adultAccess": {
+    "status": "active",
+    "grantedAccess": [
+      {
+        "identifier": "SS-000047",
+        "type": "searchstar",
+        "token": "aat_x8k2mN9pQ4...",
+        "grantedAt": "2026-03-15T20:00:00Z",
+        "expiresAt": null,
+        "note": "Optional private note for the user's own reference"
+      },
+      {
+        "identifier": "jane@example.com",
+        "type": "email",
+        "token": "aat_r3vL7wE1j9...",
+        "grantedAt": "2026-03-20T14:00:00Z",
+        "expiresAt": "2026-06-20T14:00:00Z",
+        "note": null
+      }
+    ],
+    "revokedTokens": [
+      "aat_old1Token...",
+      "aat_old2Token..."
+    ]
+  }
+}</pre>
+
+      <h4>Access parameters</h4>
+      <table>
+        <tr><th>Parameter</th><th>Detail</th></tr>
+        <tr><td>Identifier</td><td>How the user identifies the person: Search Star profile number, email, or phone. Used for the user's own record-keeping — the endpoint authenticates by token, not by identifier.</td></tr>
+        <tr><td>Token</td><td>A unique, cryptographically random string (<code>aat_</code> prefix for adult access token). Generated on grant, checked on every request, invalidated on revoke.</td></tr>
+        <tr><td>Expiration</td><td>Optional. If set, the token automatically becomes invalid after this datetime. Useful for time-limited access. If <code>null</code>, access continues until explicitly revoked.</td></tr>
+        <tr><td>Revoked tokens</td><td>A deny-list of previously valid tokens. The edge function checks this list first — a revoked token is rejected even if it hasn't been removed from the granted list yet (defense in depth).</td></tr>
+      </table>
+
+      <h4>Kill switch</h4>
+      <p>The <code>status</code> field at the top level provides a global on/off toggle:</p>
+      <table>
+        <tr><th>Status</th><th>Effect</th></tr>
+        <tr><td><code>active</code></td><td>Normal operation. Access list is checked, valid tokens are served.</td></tr>
+        <tr><td><code>disabled</code></td><td>All requests return <code>403 Forbidden</code> regardless of token validity. The access list is preserved — no one is removed. When the user flips it back to <code>active</code>, everyone who was on the list regains access. Use this for "I want to go dark temporarily."</td></tr>
+      </table>
+      <p>Separately, the user can remove the <code>adultExtension</code> object from their profile JSON-LD entirely, which flips the directory boolean to <code>false</code> on the next crawl and makes the extension undiscoverable. This is the nuclear option — to restore it, they re-add the object and wait for re-indexing.</p>
+
+      <h4>Reference implementation</h4>
+      <p>Search Star's self-hosting toolkit (see section 8.1) includes a ready-to-deploy access control module for the adult extension. It consists of:</p>
+      <ul>
+        <li>An edge function (Cloudflare Worker or Vercel serverless function) that checks tokens against the access list on every request.</li>
+        <li>A simple management UI where the user can add people, remove people, set expirations, flip the kill switch, and see a log of who accessed what and when.</li>
+        <li>No code required from the user. Deploy the template, manage the list through the UI.</li>
+      </ul>
+      <p>Users who prefer to build their own access control can ignore the reference implementation and use any auth mechanism they want — OAuth2, HTTP basic auth, IP allowlists, or anything else. The only requirement is that the endpoint returns content for authorized requests and <code>403</code> for unauthorized ones. Search Star doesn't care how the user implements access control — only that the user has it.</p>
+
+      <div class="callout callout-red"><strong>Your content, your rules.</strong> Revoking access is instant and unilateral. The user owes no explanation. There is no dispute process, no appeal, and no refund. This is not a bug — it is the core design principle. The person granted access accepted these terms by requesting access in the first place. If the user wants to shut someone out at 3am because they feel like it, the system supports that with a single tap.</div>
+
       <div class="callout callout-warn"><strong>Why the separation?</strong> Keeping adult content off Search Star's infrastructure protects the core platform's payment processing (Stripe prohibits explicit content on managed accounts), app store compliance, and mainstream platform partnerships. Users maintain full freedom to host whatever they want on their own domain — the spec simply doesn't route that content through Search Star's systems.</div>
 
       <!-- ═══════════ 3.8 CONTENT FEED — NEW ═══════════ -->
