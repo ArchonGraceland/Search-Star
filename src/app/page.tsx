@@ -35,12 +35,18 @@ export default async function Home() {
           <p className="font-body text-sm text-white/70 max-w-[640px] leading-relaxed">
             The sovereign personal data standard. You host your profile, platforms query your API, and you get paid per query.
           </p>
-          <div className="flex gap-2 mt-5">
+          <div className="flex flex-wrap gap-2 mt-5">
             <Link
               href="/signup"
               className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] bg-white text-[#1a3a6b] rounded-[3px] no-underline transition-all hover:bg-white/90"
             >
               Create Profile
+            </Link>
+            <Link
+              href="/onboarding/estimate"
+              className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] border border-white/25 text-white/70 rounded-[3px] no-underline transition-all hover:bg-white/10 hover:text-white"
+            >
+              Estimate Earnings
             </Link>
             <Link
               href="/login"
@@ -93,6 +99,21 @@ export default async function Home() {
             <p className="font-body text-sm text-[#5a5a5a] leading-relaxed m-0">
               <strong className="text-[#1a1a1a]">Search Star inverts the data economy.</strong> Instead of platforms harvesting your data for free and selling it to advertisers, you own, host, price, and monetize your own data directly.
             </p>
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-3 justify-center">
+            <Link
+              href="/onboarding"
+              className="btn-secondary inline-block no-underline"
+            >
+              Learn More
+            </Link>
+            <Link
+              href="/onboarding/estimate"
+              className="btn-primary inline-block no-underline"
+            >
+              Estimate Your Earnings
+            </Link>
           </div>
         </div>
       </main>
