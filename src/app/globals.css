@@ -19,6 +19,10 @@
   --color-amber-bg: #fffbeb;
   --color-red: #991b1b;
   --color-red-bg: #fef2f2;
+  --color-teal: #0d9488;
+  --color-teal-dark: #0f2e2b;
+  --color-teal-light: #14b8a6;
+  --color-teal-bg: #f0fdfa;
   --radius-graceland: 3px;
 }
 
@@ -113,3 +117,45 @@ body {
 .callout-warn { background: #fffbeb; border-left: 3px solid #92400e; }
 .callout-green { background: #f0fdf4; border-left: 3px solid #166534; }
 .callout-red { background: #fef2f2; border-left: 3px solid #991b1b; }
+
+/* Platform teal buttons */
+.btn-platform {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 12px 32px;
+  background: #0d9488;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-platform:hover {
+  background: #14b8a6;
+}
+
+.btn-platform-secondary {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 12px 32px;
+  background: transparent;
+  color: #0d9488;
+  border: 1px solid #0d9488;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-platform-secondary:hover {
+  background: #0d9488;
+  color: white;
+}
+
+.callout-teal { background: #f0fdfa; border-left: 3px solid #0d9488; }

@@ -27,7 +27,23 @@ export default function Login() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      // Check if platform user and redirect accordingly
+      const { data: { user: loggedInUser } } = await supabase.auth.getUser()
+      if (loggedInUser?.user_metadata?.role === 'platform') {
+        router.push('/platform')
+      } else {
+        // Check profile role from database
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', loggedInUser?.id)
+          .single()
+        if (profile?.role === 'platform') {
+          router.push('/platform')
+        } else {
+          router.push('/dashboard')
+        }
+      }
       router.refresh()
     }
   }

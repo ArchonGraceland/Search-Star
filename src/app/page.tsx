@@ -60,6 +60,12 @@ export default async function Home() {
             >
               Specification
             </Link>
+            <Link
+              href="/platform-signup"
+              className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] bg-[#0d9488] text-white rounded-[3px] no-underline transition-all hover:bg-[#14b8a6]"
+            >
+              For Platforms
+            </Link>
           </div>
         </div>
       </header>

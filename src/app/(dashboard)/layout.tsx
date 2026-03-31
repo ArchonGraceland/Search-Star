@@ -24,6 +24,7 @@ export default async function DashboardLayout({
 
   const displayName = profile?.display_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
   const isAdmin = profile?.role === 'admin'
+  const isPlatform = profile?.role === 'platform'
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex">
@@ -59,6 +60,13 @@ export default async function DashboardLayout({
             <>
               <div className="my-3 mx-3 border-t border-white/10" />
               <NavLink href="/admin" label="Admin" icon="🛡️" />
+            </>
+          )}
+
+          {(isPlatform || isAdmin) && (
+            <>
+              <div className="my-3 mx-3 border-t border-white/10" />
+              <NavLink href="/platform" label="Platform Portal" icon="🏢" />
             </>
           )}
         </nav>
