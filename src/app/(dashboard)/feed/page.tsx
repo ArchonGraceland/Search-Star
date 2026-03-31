@@ -7,7 +7,7 @@ type Message = {
   id: string
   recipient_id: string
   sender_id: string | null
-  type: 'marketing' | 'feed' | 'system'
+  type: 'marketing' | 'feed_item' | 'system'
   subject: string | null
   body: string | null
   price_paid: number | null
@@ -26,7 +26,7 @@ type Message = {
   feed_source_handle?: string
 }
 
-type FilterTab = 'all' | 'marketing' | 'feed' | 'system'
+type FilterTab = 'all' | 'marketing' | 'feed_item' | 'system'
 
 export default function Feed() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -183,7 +183,7 @@ export default function Feed() {
   const tabs: { key: FilterTab; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'marketing', label: 'Marketing' },
-    { key: 'feed', label: 'Feed' },
+    { key: 'feed_item', label: 'Feed' },
     { key: 'system', label: 'System' },
   ]
 
@@ -248,7 +248,7 @@ export default function Feed() {
                   ? 'Paid messages from platforms, content from your subscriptions, and system notifications will appear here.'
                   : activeTab === 'marketing'
                     ? 'Paid messages from platforms and recruiters will appear here.'
-                    : activeTab === 'feed'
+                    : activeTab === 'feed_item'
                       ? 'Content from your subscriptions will appear here.'
                       : 'System notifications about earnings, profile views, and settlements will appear here.'}
               </p>
@@ -296,7 +296,7 @@ function MessageCard({
       bg: '#fffbeb',
       borderColor: '#f0d9b8',
     },
-    feed: {
+    feed_item: {
       icon: '📰',
       label: 'Feed',
       color: '#1a3a6b',
@@ -358,7 +358,7 @@ function MessageCard({
         {/* Subject / Title */}
         <div className="flex-1 min-w-0">
           <span className={`font-body text-sm truncate block ${!message.read ? 'font-medium text-[#1a1a1a]' : 'text-[#555]'}`}>
-            {message.type === 'feed'
+            {message.type === 'feed_item'
               ? message.feed_item_title || 'Untitled'
               : message.subject || 'No subject'}
           </span>
@@ -371,7 +371,7 @@ function MessageCard({
               {message.sender_display_name || 'Unknown sender'}
             </span>
           )}
-          {message.type === 'feed' && (
+          {message.type === 'feed_item' && (
             <span className="font-body text-xs text-[#767676]">
               {message.feed_source_display_name || 'Unknown source'}
             </span>
@@ -417,7 +417,7 @@ function MessageCard({
           )}
 
           {/* Feed item content */}
-          {message.type === 'feed' && (
+          {message.type === 'feed_item' && (
             <div className="mt-3">
               <div className="font-body text-xs text-[#767676] mb-2">
                 From: <span className="font-medium text-[#1a1a1a]">{message.feed_source_display_name || 'Unknown'}</span>

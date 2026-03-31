@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const messages = subscriptions.map(sub => ({
       recipient_id: sub.subscriber_id,
       sender_id: null,
-      type: 'feed' as const,
+      type: 'feed_item' as const,
       subject: title,
       body: itemBody || null,
       price_paid: null,
