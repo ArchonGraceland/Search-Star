@@ -129,6 +129,7 @@
         <a class="toc-indent" href="#automated">5.2 Automated Verification</a>
         <a class="toc-indent" href="#trustscore">5.3 Trust Score</a>
         <a class="toc-indent" href="#disputes">5.4 Dispute Resolution</a>
+        <a class="toc-indent" href="#referrals">5.5 Referral Validation &amp; Revenue Sharing <span class="new-badge">New in v0.5</span></a>
         <a href="#numbering">6. Profile Numbering</a>
         <a href="#directory">7. Directory, Registration &amp; Search API <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#registration">7.1 Profile Registration</a>
@@ -726,7 +727,7 @@
         <li>Authenticate the platform's API key and determine the requested tier (public, private, or marketing).</li>
         <li>Look up the profile owner's price for that tier.</li>
         <li>Check the platform's credit balance ≥ the query price.</li>
-        <li>If yes: debit the platform's balance, credit 90% to the owner's earnings ledger, credit 10% to Search Star's revenue account, serve the profile data, and log the transaction.</li>
+        <li>If yes: debit the platform's balance, credit 10% to Search Star's revenue account, credit 5% to the referring validator's earnings ledger (if a referral relationship exists, see section 5.5), credit the remainder (85% or 90%) to the owner's earnings ledger, serve the profile data, and log the transaction.</li>
         <li>If no: return <code>402 Payment Required</code> with the platform's current balance and the query price in the response headers. If auto-refill is enabled, trigger a refill and retry once.</li>
       </ol>
       <div class="callout callout-info">All debits are atomic. If the profile data cannot be served (e.g., the owner's hosting is down), the debit is not executed. Platforms are never charged for failed queries.</div>
@@ -745,7 +746,7 @@
       </table>
 
       <h4>Earnings ledger</h4>
-      <p>Every query that generates revenue creates a ledger entry with: timestamp, querying platform ID, profile owner ID, tier, gross query price, Search Star fee (10%), net owner earnings (90%), and a reference to the access log entry. The ledger is append-only and immutable — entries are never modified or deleted. Profile owners can export their full ledger as CSV or JSON at any time.</p>
+      <p>Every query that generates revenue creates a ledger entry with: timestamp, querying platform ID, profile owner ID, tier, gross query price, Search Star fee (10%), referral validator share (5% if applicable, see section 5.5), net owner earnings, and a reference to the access log entry. The ledger is append-only and immutable — entries are never modified or deleted. Profile owners can export their full ledger as CSV or JSON at any time.</p>
 
       <h3 id="revshare">4.6 Revenue Share &amp; Fee Structure <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.3</span></h3>
       <table>
@@ -755,6 +756,7 @@
         <tr><td>Stripe payout</td><td>$0.25 per payout</td><td>Deducted from settlement</td><td>Stripe's fee for each weekly payout to profile owners. Instant payouts: 1% of payout amount.</td></tr>
         <tr><td>Credit refund processing</td><td>2% of refunded amount</td><td>Platform</td><td>Fee for refunding unused prepaid credits back to the platform.</td></tr>
         <tr><td>Dispute filing (bad faith)</td><td>$5.00</td><td>Disputing party</td><td>Charged only when a dispute is rejected as unfounded (see section 5.4).</td></tr>
+        <tr><td>Referral validator share</td><td>5% of query price</td><td>Deducted from owner's share</td><td>Paid to the referring validator who recruited and staked the profile owner (see section 5.5). Only applies to profiles with an active referral relationship. Owner receives 85% instead of 90%.</td></tr>
       </table>
 
       <h4>Example transaction</h4>
@@ -766,6 +768,7 @@
         <tr><td>Profile owner earnings (90%)</td><td>$0.45</td><td>Owner's earnings ledger</td></tr>
         <tr><td>Weekly settlement (Monday)</td><td>$0.45 (minus $0.25 Stripe payout fee, batched)</td><td>Owner's bank account</td></tr>
       </table>
+      <p>If this profile has an active referring validator (see section 5.5), the owner's 90% is split further: 85% ($0.425) to the owner and 5% ($0.025) to the recruiter. Search Star's 10% is unchanged.</p>
       <p>At scale, the Stripe payout fee ($0.25/week) is negligible. An owner earning $100/week pays $0.25 in payout fees — 0.25%. An owner earning $10/week pays 2.5%. The minimum payout threshold of $1.00 prevents uneconomical micro-payouts.</p>
 
       <h3 id="bulkquery">4.7 Bulk Queries &amp; Volume Pricing <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.3</span></h3>
@@ -880,6 +883,70 @@
         <li><strong>Bad-faith dispute penalty.</strong> If a dispute is rejected (the profile data was accurate), the disputing party pays a $5 filing fee to deter frivolous disputes.</li>
       </ol>
       <div class="callout callout-info">The profile owner may update any disputed field and request re-verification. The trust score is recalculated after every dispute resolution.</div>
+
+      <h3 id="referrals">5.5 Referral Validation &amp; Revenue Sharing <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.5</span></h3>
+      <p>Existing users can recruit new users into the Search Star network and earn a perpetual 5% share of the recruited user's query revenue — in exchange for staking money against the accuracy of that user's profile. This creates a decentralized growth engine: recruiters are financially incentivized to bring in real people with truthful profiles, and penalized for onboarding fraudulent ones.</p>
+
+      <h4>How referral validation works</h4>
+      <ol>
+        <li><strong>Recruiter invites a new user.</strong> Any existing Search Star user with a Validator Reputation Score ≥ 60 (see below) can generate a referral link from their dashboard. The link is tied to the recruiter's profile number.</li>
+        <li><strong>New user signs up via the referral link.</strong> The new user completes normal registration (section 7.1) — account creation, profile hosting, domain verification, endpoint validation. The referral link associates the recruiter as the <code>referringValidator</code> in the new user's directory record.</li>
+        <li><strong>Recruiter validates the new user's profile.</strong> The recruiter must complete a full validation of the new user's profile — reviewing sections they have personal knowledge of and staking money against the accuracy of those claims (minimum $5.00 for referral validations, higher than the standard $1.00 minimum). This is not optional: the referral revenue share does not activate until the recruiter has completed validation and staking.</li>
+        <li><strong>Revenue share activates.</strong> Once the recruiter's validation stake is in place, the recruiter begins earning 5% of the new user's net query revenue (after Search Star's 10% marketplace fee). This 5% comes from the profile owner's 90% share — the owner receives 85%, the recruiter receives 5%, and Search Star's 10% remains unchanged.</li>
+      </ol>
+
+      <h4>Revenue split with referral</h4>
+      <table>
+        <tr><th>Recipient</th><th>Without referral</th><th>With active referral</th></tr>
+        <tr><td>Search Star marketplace fee</td><td>10%</td><td>10%</td></tr>
+        <tr><td>Profile owner</td><td>90%</td><td>85%</td></tr>
+        <tr><td>Referring validator</td><td>—</td><td>5%</td></tr>
+      </table>
+      <div class="callout callout-info"><strong>The owner's price doesn't change.</strong> If a profile owner sets their Private tier at $0.50/query, the platform still pays $0.50. The 5% referral share is carved from the owner's portion — Search Star does not increase the query price or take a larger cut. The owner was earning $0.45 before; now they earn $0.425 and the recruiter earns $0.025.</div>
+
+      <h4>Example transaction (with referral)</h4>
+      <table>
+        <tr><th>Step</th><th>Amount</th><th>Recipient</th></tr>
+        <tr><td>Platform credit balance debited</td><td>$0.50</td><td>—</td></tr>
+        <tr><td>Search Star marketplace fee (10%)</td><td>$0.05</td><td>Search Star</td></tr>
+        <tr><td>Referring validator share (5%)</td><td>$0.025</td><td>Recruiter's earnings ledger</td></tr>
+        <tr><td>Profile owner earnings (85%)</td><td>$0.425</td><td>Owner's earnings ledger</td></tr>
+      </table>
+
+      <h4>Referral revenue is perpetual but conditional</h4>
+      <p>The 5% share continues indefinitely — as long as the recruiter maintains an active validation stake on the recruited user's profile. If the recruiter withdraws their stake, the revenue share stops immediately and the owner reverts to the standard 90% split. The recruiter can re-stake and reactivate the share at any time.</p>
+
+      <h4>Penalties for bad referral validation</h4>
+      <p>The referral system is explicitly designed to punish recruiters who validate incorrect information. Because the recruiter has a financial incentive to onboard as many users as possible, the penalty structure must be severe enough to make fraudulent validation unprofitable.</p>
+      <table>
+        <tr><th>Event</th><th>Consequence</th></tr>
+        <tr><td>Dispute upheld on a field the recruiter validated</td><td>Recruiter forfeits their entire stake on that user (same as standard validator penalties — 70% to advertisers, 20% platform, 10% disputing party). Revenue share is suspended until the recruiter re-stakes.</td></tr>
+        <tr><td>Second upheld dispute on the same recruited user</td><td>Full stake forfeiture. Revenue share permanently terminated for that user. Recruiter's Validator Reputation Score reduced by 15 points.</td></tr>
+        <tr><td>Three or more upheld disputes across any recruited users</td><td>Recruiter's Validator Reputation Score drops below the referral threshold (60). Recruiter loses the ability to generate new referral links until their score recovers. Existing revenue shares on clean profiles continue.</td></tr>
+        <tr><td>Validator Reputation Score drops below 30</td><td>All referral revenue shares are frozen. All active validation stakes are flagged for review. The recruiter is suspended from all validation activity (not just referrals) until manual review is completed.</td></tr>
+      </table>
+
+      <h4>Validator Reputation Score</h4>
+      <p>Every user who participates in validation (whether as a standard validator or as a referring validator) has a Validator Reputation Score (0–100). This is distinct from the profile Trust Score — it measures the validator's track record, not the profile's credibility.</p>
+      <table>
+        <tr><th>Component</th><th>Weight</th><th>Scoring</th></tr>
+        <tr><td>Validation accuracy</td><td>0–50 points</td><td>Percentage of validated fields that have never been disputed. Starts at 50 for new validators.</td></tr>
+        <tr><td>Stake history</td><td>0–25 points</td><td>Total amount staked over time (logarithmic). Higher lifetime stakes = higher score.</td></tr>
+        <tr><td>Dispute history</td><td>0–25 points</td><td>Inverse of upheld disputes. Each upheld dispute reduces this component by 5 points. Starts at 25.</td></tr>
+      </table>
+      <p>New users start with a Validator Reputation Score of 75 (50 + 0 + 25). They can begin referring immediately. The score adjusts over time based on their validation track record.</p>
+
+      <h4>Limits and guardrails</h4>
+      <ul>
+        <li><strong>One recruiter per user.</strong> A profile can only have one referring validator. The first referral link used during registration is permanent. This prevents referral-stacking or referral hijacking.</li>
+        <li><strong>No self-referral.</strong> A user cannot refer themselves or any profile they own.</li>
+        <li><strong>No chain referrals.</strong> Referral revenue is single-tier only. If User A recruits User B, and User B recruits User C, User A earns nothing from User C. This is not an MLM — it is a flat, single-layer incentive for validated recruitment.</li>
+        <li><strong>Minimum stake for referral validation.</strong> $5.00, higher than the standard $1.00 validator minimum. The recruiter must have skin in the game proportional to their ongoing revenue benefit.</li>
+        <li><strong>Owner can terminate referral relationship.</strong> The profile owner can request removal of the referral association at any time. If removed, the recruiter's revenue share ends permanently and cannot be reinstated. The recruiter's stake is returned (minus any penalties). This gives the owner an escape valve if they feel the arrangement is unfair after their profile grows in value.</li>
+        <li><strong>Referral share is visible to the owner.</strong> The profile owner's earnings dashboard clearly shows the 5% referral deduction, the recruiter's identity, and the option to terminate. There is no hidden revenue sharing.</li>
+      </ul>
+
+      <div class="callout callout-warn"><strong>This is not multi-level marketing.</strong> Search Star's referral system is a single-tier, stake-backed validation incentive. There is exactly one layer — the person who recruited and validated you earns 5% of your revenue. There are no uplines, downlines, recruitment bonuses, or compounding tiers. The recruiter must stake real money and is financially penalized for validating bad data. The owner can terminate the relationship at any time. If the recruiter's validation track record deteriorates, they lose the ability to recruit entirely.</div>
 
       <!-- ═══════════ 6. NUMBERING ═══════════ -->
 
@@ -1288,9 +1355,10 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.2</code></td><td>March 2026</td><td>Advertising profile section, expanded age cohort tables, builder methodology</td></tr>
         <tr><td><code>v0.3</code></td><td>March 2026</td><td>Validation &amp; trust layer: validator staking, automated verification, dispute resolution, trust score</td></tr>
         <tr><td><code>v0.4</code></td><td>March 2026</td><td>Content feed: sovereign publishing, per-item queries, feed subscriptions, feed discovery in directory search</td></tr>
-        <tr><td><code>v0.5</code></td><td>Q2 2026</td><td>Profile creation flow (Next.js + Supabase), user authentication, dynamic profiles, API endpoint generation</td></tr>
-        <tr><td><code>v0.6</code></td><td>Q3 2026</td><td>Stripe Connect integration, per-query metering, platform API keys, revenue dashboard</td></tr>
-        <tr><td><code>v0.7</code></td><td>Q4 2026</td><td>Marketing tier messaging, response likelihood scoring, platform directory</td></tr>
+        <tr><td><code>v0.5</code></td><td>March 2026</td><td>Referral validation &amp; revenue sharing: recruiter staking, 5% perpetual revenue share, Validator Reputation Score, penalty escalation, anti-MLM guardrails</td></tr>
+        <tr><td><code>v0.6</code></td><td>Q2 2026</td><td>Profile creation flow (Next.js + Supabase), user authentication, dynamic profiles, API endpoint generation</td></tr>
+        <tr><td><code>v0.7</code></td><td>Q3 2026</td><td>Stripe Connect integration, per-query metering, platform API keys, revenue dashboard</td></tr>
+        <tr><td><code>v0.8</code></td><td>Q4 2026</td><td>Marketing tier messaging, response likelihood scoring, platform directory</td></tr>
         <tr><td><code>v1.0</code></td><td>2027</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, third-party verification partnerships</td></tr>
       </table>
 
@@ -1302,7 +1370,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v0.4 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v0.5 · MIT License</div>
       <div class="footer-links">
         <a href="index.html">Directory</a>
         <a href="profile.html">Sample</a>
