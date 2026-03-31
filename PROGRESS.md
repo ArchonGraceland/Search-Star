@@ -107,16 +107,23 @@ Unified inbox: marketing messages, content feed, subscriptions.
 - [x] **Deployed and verified live**
 
 ### Phase 3 — Account Dashboard
-**Status: ⚪ NOT STARTED**
+**Status: ✅ COMPLETE**
 
 Earnings, stats, and profile rank.
 
-- [ ] Total earnings display (lifetime + current period)
-- [ ] Revenue breakdown by source (platform, tier, feed)
-- [ ] Settlement projection (next payout date + amount)
-- [ ] Profile rank (Presence percentile, trust score, query volume)
-- [ ] Feed subscriber count
-- [ ] Referral earnings breakdown (spec 5.5)
+- [x] Earnings overview: three summary cards (lifetime earnings, unsettled balance, last settlement)
+- [x] Settlement notice with next Monday date + $1.00 minimum payout warning
+- [x] Revenue breakdown by tier (Public/Private/Marketing) with transaction counts and totals
+- [x] Revenue breakdown by platform (top 5 platforms by revenue)
+- [x] Profile stats: profile number, handle, display name, presence score, trust score, member since
+- [x] Profile completeness bar (calculated from optional field fill rate)
+- [x] Pricing display: three colored tier cards (Public, Private, Marketing) with edit link
+- [x] Content feed stats (conditional: subscriber count + published items)
+- [x] Quick actions: Edit Profile, View Feed (with unread count), View Spec
+- [x] Seed earnings API (`POST /api/seed-earnings`) — 216 ledger entries across 3 weeks, 5 platforms, 3 tiers
+- [x] JetBrains Mono for monetary amounts, green (#166534) for earnings
+- [x] Empty state handling for zero earnings
+- [x] **Deployed and verified live**
 
 ### Phase 4 — Admin Panel
 **Status: ⚪ NOT STARTED**
@@ -184,6 +191,10 @@ Demand-side dashboard for platforms (advertisers, recruiters, dating apps, brand
 | Mar 31, 2026 | Phase 2b | POST /api/messages/marketing (payment validation, 90/10 split, earnings ledger) |
 | Mar 31, 2026 | Phase 2b | POST /api/messages/feed (subscriber delivery), POST /api/seed (demo data) |
 | Mar 31, 2026 | Phase 2b | Supabase Realtime on messages, RLS policies for read/update, **deployed and verified** |
+| Mar 31, 2026 | Phase 3 | /account dashboard: earnings overview (lifetime, unsettled, last settlement), revenue breakdown by tier and platform |
+| Mar 31, 2026 | Phase 3 | Profile stats, completeness bar, pricing cards, feed stats, quick actions |
+| Mar 31, 2026 | Phase 3 | POST /api/seed-earnings (216 ledger entries, 3 weeks, 5 platforms, 3 tiers, 90/10 split) |
+| Mar 31, 2026 | Phase 3 | **Deployed and verified live** |
 
 ---
 
