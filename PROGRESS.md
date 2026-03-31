@@ -37,40 +37,44 @@ Convert to Next.js + Supabase, deploy the shell.
 - [x] Set up Project Graceland design system (globals, fonts, variables)
 - [x] Migrate static pages into Next.js (spec, profile, create, setup → /public)
 - [x] Connect Supabase Auth (email sign-up/login)
-- [x] Create core database tables:
-  - [x] `profiles` (extends directory schema from spec 7.3)
-  - [x] `earnings_ledger` (from spec 4.5, includes referral_share from 5.5)
-  - [x] `messages` (Marketing tier + feed items + system notifications)
-  - [x] `feed_subscriptions` (from spec 4.8)
-  - [x] `support_tickets` + `ticket_messages` (admin support system)
-  - [x] `referrals` (referral validation from spec 5.5)
-  - [x] `validator_stakes` (from spec 5.1)
-  - [x] `platform_accounts` (API access + prepaid credits)
-- [x] Set up Row Level Security policies (all 9 tables)
+- [x] Create core database tables (9 tables with RLS)
 - [x] Auto-profile-creation trigger on user signup
 - [x] Configure Vercel deployment (env vars + framework preset)
 - [x] Landing page, login, signup, auth callback
 - [x] Dashboard layout with sidebar (Dashboard, Feed, Account)
-- [x] Dashboard, Feed, Account page shells
 - [x] Auth middleware protecting dashboard routes
 - [x] **Deployed and verified live at searchstar.com**
 
 ### Phase 1 — Onboarding
-**Status: ⚪ NOT STARTED**
+**Status: ✅ COMPLETE**
 
 New user experience: learn, estimate earnings, create profile.
 
-#### Phase 1a — Earnings Estimator + Walkthrough
-- [ ] Earnings estimator calculator (interactive, based on profile attributes)
-- [ ] "How it works" walkthrough (three tiers, content feed, hosting explained)
-- [ ] Responsive design matching Graceland system
+#### Phase 1a — Earnings Estimator + Walkthrough ✅
+- [x] "How it works" walkthrough at /onboarding (6-step guide: profile, tiers, payments, feed, hosting, trust)
+- [x] Interactive earnings estimator at /onboarding/estimate (age, income, interests, dating/advertising toggles)
+- [x] Projected earnings breakdown by tier (Public, Private, Marketing) with revenue math
+- [x] PublicHeader and PublicFooter shared components
+- [x] Landing page updated with "Estimate Earnings" and "Learn More" CTAs
+- [x] Responsive design matching Graceland system
+- [x] **Deployed and verified live**
 
-#### Phase 1b — Profile Builder
-- [ ] AI-powered profile creation flow (Anthropic API integration)
-- [ ] OR guided form that collects profile data and generates JSON-LD
-- [ ] Profile number assignment (SS-XXXXXX)
-- [ ] Directory entry creation in Supabase
-- [ ] Access tier pricing setup
+#### Phase 1b — Profile Builder ✅
+- [x] Multi-step profile builder at /profile-builder (7 steps: identity, financial, presence, skills, interests, pricing, review)
+- [x] Identity collection (name, handle, tagline, location, age)
+- [x] Financial standing as age-cohort percentiles (no raw dollars) with all 5 metrics from spec
+- [x] Presence Composite self-assessment (Rizz/Vibe/Drip sliders, 0.85 confidence discount shown)
+- [x] Skills with level selection (beginner/intermediate/advanced/expert) + add/remove
+- [x] Interests across 3 domains (athletic/social/intellectual) + add/remove
+- [x] Access tier pricing with suggested ranges from spec and market comps
+- [x] Review step showing full profile summary before creation
+- [x] Profile number assignment (SS-XXXXXX)
+- [x] Saves to Supabase profiles table with full JSON-LD in profile_json column
+- [x] Sets onboarding_completed flag
+- [x] "Build Profile" link added to dashboard sidebar
+- [x] Auth middleware protects /profile-builder
+- [x] Supabase migration: added tagline, age, profile_json columns
+- [x] **Deployed and verified live**
 
 ### Phase 2 — Messaging Feed
 **Status: ⚪ NOT STARTED**
@@ -125,14 +129,12 @@ System administration for operators.
 
 | Date | Phase | What was done |
 |------|-------|---------------|
-| Mar 31, 2026 | Phase 0 | Created progress document, pulled latest spec v0.5 |
-| Mar 31, 2026 | Phase 0 | Created Supabase project (qgjyfcqgnuamgymonblj) |
-| Mar 31, 2026 | Phase 0 | Scaffolded Next.js app, Graceland design system, Supabase client/server config |
-| Mar 31, 2026 | Phase 0 | Built landing page, login, signup, auth callback, dashboard layout + shells |
-| Mar 31, 2026 | Phase 0 | Applied database migration: 9 tables, indexes, RLS, triggers |
-| Mar 31, 2026 | Phase 0 | Merged Next.js app into main repo, pushed to GitHub |
-| Mar 31, 2026 | Phase 0 | Set Vercel env vars, fixed prerender errors, fixed CSS import order |
-| Mar 31, 2026 | Phase 0 | Fixed Vercel framework preset + output directory → **app live at searchstar.com** |
+| Mar 31, 2026 | Phase 0 | Full foundation: Supabase project, Next.js scaffold, Graceland design, auth, 9 tables, RLS, dashboard shell |
+| Mar 31, 2026 | Phase 0 | **App live at searchstar.com** |
+| Mar 31, 2026 | Phase 1a | /onboarding walkthrough + /onboarding/estimate earnings calculator |
+| Mar 31, 2026 | Phase 1a | PublicHeader/PublicFooter components, landing page CTAs |
+| Mar 31, 2026 | Phase 1b | /profile-builder 7-step form (identity, financial, presence, skills, interests, pricing, review) |
+| Mar 31, 2026 | Phase 1b | Supabase migration (tagline, age, profile_json), sidebar nav, auth middleware |
 
 ---
 
@@ -142,6 +144,8 @@ System administration for operators.
 2. **Supabase Auth** for MVP — simpler than DID:web for initial launch, upgrade path to full W3C identity later
 3. **Static pages preserved** — spec, profile sample, create, setup pages migrate as-is into `/app` routes
 4. **Design system: Project Graceland** — Crimson Text headings, Roboto body, navy #1a3a6b, 3px border-radius, institutional restraint
+5. **Guided form over AI-only** — Profile builder uses a guided multi-step form for reliability; AI-assisted creation (Anthropic API) planned as enhancement
+6. **Profile number is random** — SS-XXXXXX assigned randomly at creation; sequential assignment deferred until directory registration API
 
 ---
 
