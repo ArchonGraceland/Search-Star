@@ -3,16 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search Star — Create Your Profile</title>
+<title>Search Star — Create &amp; Host Your Profile</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --navy: #1a3a6b; --navy-dk: #112a4f; --white: #ffffff; --black: #1a1a1a;
-    --gray-2: #5a5a5a; --gray-3: #767676; --gray-4: #b8b8b8; --gray-5: #e8e8e8; --gray-6: #f5f5f5;
+    --gray-2: #5a5a5a; --gray-3: #767676; --gray-4: #b8b8b4; --gray-5: #e8e8e8; --gray-6: #f5f5f5;
     --border: #d4d4d4; --cream: #eef2f8; --green: #166534; --green-bg: #f0fdf4;
     --amber: #92400e; --amber-bg: #fffbeb;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08); --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --teal: #0d9488; --teal-bg: #f0fdfa;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
     --radius: 6px;
   }
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -28,9 +29,7 @@
   .header-nav a { font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 7px 16px; border: 1px solid rgba(255,255,255,0.25); border-radius: 3px; background: transparent; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.2s; }
   .header-nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
   .header-nav a.active { background: var(--white); color: var(--navy); }
-
   main { padding: 48px 0 80px; }
-
   .doc { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 48px 56px; box-shadow: var(--shadow-sm); margin-bottom: 32px; }
   .doc h2 { font-family: 'Crimson Text', Georgia, serif; font-size: 28px; font-weight: 700; margin-top: 40px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--gray-5); }
   .doc h2:first-child { margin-top: 0; }
@@ -41,34 +40,37 @@
   .doc li { margin-bottom: 6px; }
   .doc code { font-family: 'JetBrains Mono', monospace; font-size: 14px; background: var(--cream); padding: 2px 6px; border-radius: 3px; }
   .doc pre { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #1a1a1a; color: #e0ddd5; padding: 24px; border-radius: var(--radius); overflow-x: auto; margin-bottom: 16px; line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; }
+  .doc table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 16px; }
+  .doc th { font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-3); text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--gray-5); }
+  .doc td { padding: 10px 12px; border-bottom: 1px solid var(--gray-5); }
   .callout { padding: 16px 20px; border-radius: var(--radius); margin-bottom: 16px; font-size: 16px; }
   .callout-info { background: var(--cream); border-left: 3px solid var(--navy); }
   .callout-warn { background: var(--amber-bg); border-left: 3px solid var(--amber); }
   .callout-green { background: var(--green-bg); border-left: 3px solid var(--green); }
-
-  .step-flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  .step-flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
   .step-box { padding: 20px; border: 1px solid var(--gray-5); border-radius: var(--radius); }
-  .step-box .snum { font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; color: var(--white); background: var(--navy); width: 24px; height: 24px; border-radius: 3px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-  .step-box .stitle { font-family: 'Crimson Text', Georgia, serif; font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-  .step-box .sdesc { font-family: 'Roboto', sans-serif; font-size: 12px; color: var(--gray-3); line-height: 1.5; }
-
-  .prompt-block { background: #1a1a1a; color: #e0ddd5; border-radius: var(--radius); padding: 24px; margin-bottom: 24px; position: relative; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; max-height: 600px; overflow-y: auto; }
-  .copy-btn { position: sticky; top: 0; float: right; font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 14px; background: var(--navy); color: var(--white); border: none; border-radius: 3px; cursor: pointer; transition: background 0.2s; z-index: 2; }
+  .step-box .snum { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 500; color: var(--navy); margin-bottom: 6px; }
+  .step-box .stitle { font-family: 'Roboto', sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .step-box .sdesc { font-family: 'Roboto', sans-serif; font-size: 13px; color: var(--gray-2); line-height: 1.5; }
+  .source-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+  .source-item { padding: 16px; background: var(--gray-6); border-radius: var(--radius); }
+  .source-name { font-family: 'Roboto', sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .source-feeds { font-family: 'Roboto', sans-serif; font-size: 13px; color: var(--gray-3); line-height: 1.5; }
+  .prompt-block { position: relative; background: var(--gray-6); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 24px; max-height: 600px; overflow-y: auto; }
+  .copy-btn { position: sticky; top: 0; float: right; font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 16px; background: var(--navy); color: var(--white); border: none; border-radius: 3px; cursor: pointer; z-index: 2; }
   .copy-btn:hover { background: #2a5a8f; }
-
-  .source-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
-  .source-item { padding: 12px 16px; border: 1px solid var(--gray-5); border-radius: var(--radius); }
-  .source-item .source-name { font-family: 'Roboto', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 2px; }
-  .source-item .source-feeds { font-family: 'Roboto', sans-serif; font-size: 11px; color: var(--gray-3); }
-
+  .file-tree { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #1a1a1a; color: #e0ddd5; padding: 20px 24px; border-radius: var(--radius); margin-bottom: 16px; white-space: pre; line-height: 1.8; overflow-x: auto; }
+  .file-tree .dir { color: #7ec8e3; }
+  .file-tree .file { color: #e0ddd5; }
+  .file-tree .comment { color: #767676; }
   .site-footer { background: var(--black); color: rgba(255,255,255,0.55); padding: 32px 0; }
   .footer-inner { font-family: 'Roboto', sans-serif; font-size: 12px; display: flex; justify-content: space-between; }
   .footer-inner strong { color: rgba(255,255,255,0.8); }
   .footer-links { display: flex; gap: 24px; }
   .footer-links a { color: rgba(255,255,255,0.5); text-decoration: none; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; }
   .footer-links a:hover { color: rgba(255,255,255,0.8); }
-
-  @media (max-width: 800px) { .wrap { padding: 0 20px; } .doc { padding: 24px; } .step-flow { grid-template-columns: 1fr; } .source-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 800px) { .wrap { padding: 0 20px; } .doc { padding: 24px; } .step-flow { grid-template-columns: 1fr 1fr; } .source-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 500px) { .step-flow { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -79,13 +81,13 @@
       <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"/><polygon points="32,6 36,24 32,20 28,24" fill="#fff"/><polygon points="32,6 36,24 32,28 28,24" fill="rgba(255,255,255,0.6)"/><polygon points="58,32 40,28 44,32 40,36" fill="#fff" opacity="0.6"/><polygon points="32,58 28,40 32,44 36,40" fill="#fff" opacity="0.6"/><polygon points="6,32 24,36 20,32 24,28" fill="#fff" opacity="0.6"/><circle cx="32" cy="32" r="3" fill="#fff"/></svg>
       Search Star
     </div>
-    <h1>Create Your Profile</h1>
-    <div class="header-sub">Use any AI to auto-build your Search Star profile from your existing data. Copy the prompt below, paste it into Claude, Grok, or ChatGPT, and let it do the work.</div>
+    <h1>Create &amp; Host Your Profile</h1>
+    <div class="header-sub">Use any AI to build your sovereign profile, then host it on your own domain. The AI creates two files: your structured data (JSON-LD) and your personal page (HTML). You own both.</div>
     <div class="header-nav">
-      <a href="index.html">Directory</a>
+      <a href="/">Home</a>
       <a href="profile.html">Sample Profile</a>
       <a href="spec.html">Specification</a>
-      <a href="create.html" class="active">Create Profile</a>
+      <a href="create.html" class="active">Create &amp; Host</a>
     </div>
   </div>
 </header>
@@ -95,28 +97,42 @@
 
     <div class="doc">
 
-      <h2>How It Works</h2>
+      <h2>How it works</h2>
       <div class="step-flow">
         <div class="step-box">
           <div class="snum">1</div>
           <div class="stitle">Copy the prompt</div>
-          <div class="sdesc">Copy the AI prompt package below. It contains the full Search Star schema and instructions for building your profile.</div>
+          <div class="sdesc">Copy the AI prompt below. It contains the full schema and build instructions.</div>
         </div>
         <div class="step-box">
           <div class="snum">2</div>
-          <div class="stitle">Paste into any AI</div>
-          <div class="sdesc">Open Claude, Grok, ChatGPT, or Gemini. Paste the prompt. The AI will walk you through building your profile by searching your data or asking questions.</div>
+          <div class="stitle">Build with AI</div>
+          <div class="sdesc">Paste into Claude, ChatGPT, or Grok. The AI interviews you and produces two files.</div>
         </div>
         <div class="step-box">
           <div class="snum">3</div>
-          <div class="stitle">Review &amp; submit</div>
-          <div class="sdesc">The AI outputs a completed JSON-LD profile. Review it, make edits, then paste it into the submission form below to claim your SS number.</div>
+          <div class="stitle">Host the files</div>
+          <div class="sdesc">Upload your folder to Cloudflare Pages, Vercel, or any host. Free, 20 minutes.</div>
+        </div>
+        <div class="step-box">
+          <div class="snum">4</div>
+          <div class="stitle">Register</div>
+          <div class="sdesc">Sign up at Search Star, enter your URL, set pricing, get your SS number.</div>
         </div>
       </div>
 
-      <h3>What the AI can search</h3>
-      <p>The more data sources you give the AI access to, the richer your profile. Here's what feeds into each section:</p>
+      <div class="callout callout-green"><strong>What Search Star stores vs. what you host.</strong> Search Star's database holds only directory metadata: your profile number, handle, presence score, trust score, tier pricing, and endpoint URL. Your full profile data, photos, and personal page live on your domain. If you delete them, they're gone — Search Star has nothing to fall back on. That's the point.</div>
 
+      <h3>What the AI produces</h3>
+      <p>The prompt tells the AI to create <strong>two files</strong> that you host together:</p>
+      <table>
+        <tr><th>File</th><th>What it is</th><th>Who reads it</th></tr>
+        <tr><td><code>profile.json</code></td><td>Your Search Star profile in JSON-LD format. Structured data: identity, financial percentiles, Presence Composite, skills, interests, pricing.</td><td>Machines — Search Star's crawler indexes your metadata. Platforms query it via the API.</td></tr>
+        <tr><td><code>index.html</code></td><td>A self-contained HTML page displaying your profile visually. Photos, bio, scores, interests — a personal landing page you own.</td><td>Humans — anyone who visits your domain sees this.</td></tr>
+      </table>
+
+      <h3>What the AI can search</h3>
+      <p>The more data sources you give the AI access to, the richer your profile:</p>
       <div class="source-grid">
         <div class="source-item">
           <div class="source-name">Financial percentiles</div>
@@ -139,40 +155,47 @@
           <div class="source-feeds">Goodreads, Kindle highlights, podcast subscriptions, Spotify/Apple Music, course certificates</div>
         </div>
         <div class="source-item">
-          <div class="source-name">Presence Composite</div>
-          <div class="source-feeds">Photos (outfit analysis), home/workspace photos, social media content, peer reviews (manual)</div>
+          <div class="source-name">Presence Composite &amp; photos</div>
+          <div class="source-feeds">Outfit photos, home/workspace photos, social media, travel photos — the AI selects the best ones for scoring</div>
         </div>
       </div>
 
-      <div class="callout callout-warn">You control what data the AI sees. You can share everything for a comprehensive profile, or just answer questions manually for the sections you want. The AI never sends data anywhere — the profile JSON stays in your conversation until you choose to submit it.</div>
+      <div class="callout callout-warn">You control what the AI sees. Share everything for a comprehensive profile, or just answer questions manually. The files stay in your AI conversation until you download and host them.</div>
+
+      <!-- ═══ THE PROMPT ═══ -->
 
       <h2>The Prompt</h2>
-      <p>Copy this entire block and paste it as your first message to any AI. If the AI has access to your files (like Claude Projects, Grok on X, or ChatGPT with file upload), it can search them automatically. Otherwise, it will ask you questions.</p>
+      <p>Copy this entire block and paste it as your first message to any AI (Claude, ChatGPT, Grok, Gemini). If the AI has file access, it can search your data automatically. Otherwise, it will interview you.</p>
 
-      <div class="prompt-block" id="prompt-text"><button class="copy-btn" onclick="copyPrompt()">Copy</button>You are a Search Star profile builder. Your job is to help the user create a complete Search Star profile — a sovereign personal data profile in JSON-LD format that they will own and host.
+      <div class="prompt-block" id="prompt-text"><button class="copy-btn" onclick="copyPrompt()">Copy</button>You are a Search Star profile builder. Your job is to help the user create a complete Search Star profile — a sovereign personal data profile that they will own and host on their own domain.
+
+You will produce TWO files:
+1. **profile.json** — the structured JSON-LD data file (read by Search Star's crawler and platform APIs)
+2. **index.html** — a beautiful, self-contained HTML page that displays the profile visually (read by humans who visit the user's domain)
 
 IMPORTANT: Be conversational. Don't dump a form. Work through each section naturally, pulling from any data the user has shared (files, emails, documents) and asking questions for gaps.
 
 ## What is Search Star?
 
-Search Star is an open-source standard for self-sovereign personal data. The user hosts their profile at a domain they control. Platforms (dating apps, recruiters, investors, brands) query the profile API and pay per query at a price the user sets.
+Search Star is an open-source standard for self-sovereign personal data. The user hosts their profile at a domain they control. Platforms (dating apps, recruiters, investors, brands) query the profile via Search Star's API and pay per query at a price the user sets. Search Star's database stores only directory metadata — the full profile lives on the user's hosting.
 
-## Profile schema
+## profile.json schema
 
 Build a JSON-LD document with this structure:
 
 ```json
 {
-  "@context": "https://schema.searchstar.org/v0.1",
-  "@type": "SearchStar",
-  "version": "0.1.0",
+  "@context": "https://schema.searchstar.org/v0.8",
+  "@type": "SearchStarProfile",
+  "version": "0.8.0",
 
   "identity": {
     "displayName": "",
     "handle": "",
     "tagline": "",
     "location": "",
-    "age": null
+    "age": null,
+    "ageCohort": ""
   },
 
   "financial": {
@@ -208,11 +231,13 @@ Build a JSON-LD document with this structure:
     "intellectual": []
   },
 
+  "photos": [],
+
   "accessPolicy": {
     "tiers": {
-      "public": { "pricePerQuery": null },
-      "private": { "pricePerQuery": null },
-      "marketing": { "pricePerMessage": null }
+      "public": { "pricePerQuery": 0.02 },
+      "private": { "pricePerQuery": 0.50 },
+      "marketing": { "pricePerMessage": 5.00 }
     }
   }
 }
@@ -221,64 +246,109 @@ Build a JSON-LD document with this structure:
 ## How to build each section
 
 ### 1. Identity
-Ask for: full name, preferred handle, one-line tagline, current city, age.
+Ask for: full name, preferred handle (e.g. @firstname.lastname), one-line tagline, current city, age. Determine the 5-year age cohort (18-24, 25-34, 35-44, etc.).
 
 ### 2. Financial (age-percentile model)
 CRITICAL: Never ask for or store raw dollar amounts. All financial data is expressed as percentiles within the user's 5-year age cohort.
 
-Use these approximate US percentile benchmarks (from Federal Reserve SCF):
+Use these approximate US percentile benchmarks (Federal Reserve SCF):
 - Age 25-29: 50th pctl net worth ~$10K, 75th ~$40K, 90th ~$150K, 95th ~$300K
 - Age 30-34: 50th ~$50K, 75th ~$150K, 90th ~$400K, 95th ~$800K, 99th ~$3M
 - Age 35-39: 50th ~$90K, 75th ~$250K, 90th ~$700K, 95th ~$1.5M, 99th ~$5M
 - Age 40-44: 50th ~$130K, 75th ~$400K, 90th ~$1M, 95th ~$2.5M, 99th ~$8M
 - Age 45-49: 50th ~$170K, 75th ~$500K, 90th ~$1.5M, 95th ~$3.5M, 99th ~$12M
+- Age 50-54: 50th ~$240K, 75th ~$700K, 90th ~$1.8M, 95th ~$3.8M, 99th ~$14M
+- Age 55-59: 50th ~$300K, 75th ~$800K, 90th ~$2M, 95th ~$4M, 99th ~$15M
 
 If the user shares financial documents, calculate their percentile. If not, ask: "Without sharing exact numbers, which range best describes your net worth relative to people your age?" and offer percentile bands.
 
-Same approach for income, savings rate, credit score, and debt-to-income.
-
 ### 3. Presence Composite
-This is the hardest section — it's subjective. Score each dimension 0-100.
+Score each dimension 0-100. The scoring is BRAND-BLIND.
 
-**Rizz** (interpersonal magnetism): Ask about their social confidence, conversation style, ability to command a room, humor. If they share social content or conversation samples, assess from those.
+**Rizz** (interpersonal magnetism): Ask about social confidence, conversation style, humor, ability to command a room.
 
-**Vibe** (aesthetic taste & curation): Look at their photos, home/workspace, music taste, cultural consumption. If they share Spotify data, Goodreads, or photos of their space, use those.
+**Vibe** (aesthetic taste & curation): Look at photos, home/workspace, music taste, cultural consumption.
 
-**Drip** (visual style): Look at outfit photos if shared. Key: the scoring is BRAND-BLIND. Penalize visible logos (-15%), brand homogeneity (-10%), price-as-personality (-20%). Boost originality (+20%), coherence (+15%), range (+10%), cultural fluency (+15%).
+**Drip** (visual style): Look at outfit photos. Penalize visible logos (-15%), brand homogeneity (-10%), price-as-personality (-20%). Boost originality (+20%), coherence (+15%), range (+10%), cultural fluency (+15%).
 
-If they can't share photos, ask them to self-assess honestly on each factor, then apply a modest confidence discount (multiply by 0.85).
+If no photos are available, apply a 0.85 confidence discount to all scores.
 
 ### 4. Skills
-Ask about their professional skills. For each one, capture:
-- Name
-- Level (beginner, intermediate, advanced, expert)
-- Score (0-100)
-- Any verifiable credential (certification, GitHub, portfolio link)
-
-Search their resume, LinkedIn export, or GitHub if available.
+For each skill: name, level (beginner/intermediate/advanced/expert), score (0-100), and any verifiable credential.
 
 ### 5. Interests
-Build three lists:
+Build three lists — athletic, social, intellectual. For each: name, category, description, level/frequency.
 
-**Athletic**: sports, fitness activities, competitions. For each: name, category (primary sport, endurance, strength, flexibility, outdoor), level/ranking, years of experience, frequency, whether they compete.
+### 6. Photos
+Ask the user to share 6-12 photos. For each, determine:
+- Filename and label: primary, full_body, activity, social, space, formal, candid
+- Which Presence dimension it serves (Rizz, Vibe, or Drip)
+- Caption for display on the HTML page
 
-**Social**: community involvement, cultural activities, travel, hosting. For each: name, category, description, their role.
+In the JSON, reference photos by relative path (e.g., "photos/primary.webp"). In the HTML, display them in a gallery with captions.
 
-**Intellectual**: research areas, languages, reading habits, courses, creative pursuits. For each: name, category, description, output or level.
+### 7. Access pricing
+Help them set per-query prices:
+- Public tier: $0.01 - $0.10/query (identity + skills + interests)
+- Private tier: $0.10 - $2.00/query (full profile)
+- Marketing tier: $1.00 - $50.00/message (pay to message)
 
-Search Goodreads, Strava, calendar events, email, course platforms if available.
+## Output: TWO files
 
-### 6. Access pricing
-Help them set per-query prices. Show comparable ranges:
-- Public tier (identity + skills + interests): $0.01 - $0.10/query
-- Private tier (full profile): $0.10 - $2.00/query
-- Marketing tier (pay to message): $1.00 - $50.00/message
+### File 1: profile.json
+The complete JSON-LD document as specified above. Photos referenced by relative path.
 
-Higher Presence scores and verified financials justify higher prices. Dating platforms pay more per query than recruiters.
+### File 2: index.html
+A self-contained HTML page (all CSS inline in a style tag, no external dependencies except Google Fonts) that displays the profile visually. Design guidelines:
 
-## Output format
+- **Fonts**: Crimson Text for headings, Roboto for body text, JetBrains Mono for data/numbers
+- **Colors**: Navy #1a3a6b primary, #f5f5f5 page background, white cards with 1px #d4d4d4 border, 3px border-radius
+- **Layout**: Clean, institutional, not flashy. Think financial prospectus meets personal portfolio.
+- **Sections**:
+  - Header with name, handle, tagline, location, and the compass rose logo SVG
+  - Photo gallery displaying photos from the ./photos/ folder with captions
+  - Presence Composite with Rizz/Vibe/Drip scores shown as visual bars
+  - Financial standing as percentile bars (never dollar amounts)
+  - Skills list with level indicators
+  - Interests organized by category (athletic, social, intellectual)
+  - Access pricing tiers displayed as cards
+  - Footer with "Powered by Search Star" and a link to searchstar.com
+- **Photos**: Use relative paths `<img src="photos/primary.webp">` that work when hosted
+- **Responsive**: Must work on mobile and desktop
+- **Self-contained**: One HTML file. No external JS. All CSS in a `<style>` tag.
 
-When complete, output the full JSON-LD document. Then tell the user: "Your Search Star profile is ready. Copy this JSON and paste it at searchstar.com/create to claim your profile number (SS-XXXXXX)."
+The page should look professional and distinctive — this is the user's personal presence on the web.
+
+## After building both files
+
+Tell the user:
+
+"Your Search Star profile is ready! You have two files:
+
+1. **profile.json** — your structured data (machines read this)
+2. **index.html** — your personal page (humans see this)
+
+Next steps:
+1. Save both files to a folder called `my-searchstar-profile`
+2. Add a `photos/` subfolder with your images (rename to match the filenames in the JSON)
+3. Host the folder at your own domain — we recommend Cloudflare Pages (free, ~20 minutes). Full guide: searchstar.com/create.html
+4. Sign up at searchstar.com/signup and register your endpoint URL (e.g. https://yourname.com/profile.json)
+5. Search Star assigns your permanent profile number (SS-XXXXXX) and adds you to the directory
+6. Platforms start querying your profile and you start earning
+
+Your folder should look like this:
+```
+my-searchstar-profile/
+├── index.html        ← your personal page (visitors see this)
+├── profile.json      ← your structured data (Search Star reads this)
+└── photos/
+    ├── primary.webp
+    ├── full-body.webp
+    ├── activity.webp
+    ├── social.webp
+    ├── space.webp
+    └── formal.webp
+```"
 
 ## Rules
 
@@ -286,40 +356,74 @@ When complete, output the full JSON-LD document. Then tell the user: "Your Searc
 2. Never fabricate data. If you can't determine something, mark it null and flag it.
 3. Be honest about Presence scoring — don't inflate. A realistic 72 is better than a flattering 90.
 4. The profile belongs to the user. They approve every field before it's finalized.
-5. Work conversationally. This should feel like a thoughtful interview, not a form.</div>
+5. Work conversationally. This should feel like a thoughtful interview, not a form.
+6. The index.html must be beautiful and professional — this is the user's personal page on the web.
+7. Photos are referenced by relative path (photos/filename.webp) so they work when hosted together.</div>
 
-      <h2>After the AI builds your profile</h2>
-      <p>Once the AI generates your JSON-LD profile, you host it on your own infrastructure and register the endpoint URL with Search Star. Your profile lives on a domain you control — Search Star indexes only the metadata in the directory.</p>
+      <!-- ═══ HOSTING ═══ -->
 
-      <div class="callout callout-green"><strong>You own the data.</strong> Search Star never stores your raw financial information, photos, or profile content — only the percentile bands, endpoint URL, and attestation references that you publish. If you delete the files from your hosting, your profile disappears instantly.</div>
+      <h2>Host your profile</h2>
+      <p>After the AI creates your two files, you need to put them on the internet at a domain you control. We recommend Cloudflare Pages — it's free, takes about 20 minutes, and requires no technical knowledge.</p>
 
-      <h3>Host your profile</h3>
-      <p>You need a domain and a place to serve your JSON-LD file and photos. Our recommended setup takes about 20 minutes and costs nothing:</p>
+      <h3>Your folder structure</h3>
+      <div class="file-tree">
+<span class="dir">my-searchstar-profile/</span>
+├── <span class="file">index.html</span>        <span class="comment">← your personal page (visitors see this)</span>
+├── <span class="file">profile.json</span>      <span class="comment">← your structured data (Search Star reads this)</span>
+└── <span class="dir">photos/</span>
+    ├── <span class="file">primary.webp</span>    <span class="comment">← main profile photo</span>
+    ├── <span class="file">full-body.webp</span>  <span class="comment">← full-length photo</span>
+    ├── <span class="file">activity.webp</span>   <span class="comment">← doing something you love</span>
+    ├── <span class="file">social.webp</span>     <span class="comment">← with friends or in a group</span>
+    ├── <span class="file">space.webp</span>      <span class="comment">← your home or workspace</span>
+    └── <span class="file">formal.webp</span>     <span class="comment">← dressed up / event</span>
+      </div>
 
+      <h3>Step 1: Create a Cloudflare account</h3>
+      <p>Go to <code>dash.cloudflare.com/sign-up</code> and create a free account. Verify your email.</p>
+
+      <h3>Step 2: Get a domain</h3>
+      <p>You need a domain you control. Register one through Cloudflare (Registrar → Register Domain) for ~$10/year — something like <code>yourname.com</code> or <code>yourname.id</code>. If you already own a domain, point its nameservers to Cloudflare.</p>
+
+      <h3>Step 3: Deploy to Cloudflare Pages</h3>
+      <ol>
+        <li>In the Cloudflare dashboard, go to <strong>Workers &amp; Pages → Create → Pages → Upload assets</strong>.</li>
+        <li>Name your project (e.g., <code>my-profile</code>).</li>
+        <li>Drag your <code>my-searchstar-profile</code> folder into the upload area.</li>
+        <li>Click <strong>Deploy</strong>.</li>
+      </ol>
+      <p>Your profile is now live at <code>my-profile.pages.dev</code>. Visit it to see your personal page. Visit <code>/profile.json</code> to see the structured data.</p>
+
+      <h3>Step 4: Connect your domain</h3>
+      <ol>
+        <li>In your Pages project, go to <strong>Custom domains</strong>.</li>
+        <li>Enter your domain (e.g., <code>yourname.com</code>).</li>
+        <li>If on Cloudflare DNS, it connects automatically. Otherwise, add the CNAME record.</li>
+        <li>Wait a few minutes for SSL. Your profile is live at your domain with HTTPS.</li>
+      </ol>
+
+      <h3>Step 5: Register with Search Star</h3>
+      <ol>
+        <li><strong>Sign up</strong> at <a href="/signup" style="color:var(--navy); font-weight:700;">searchstar.com/signup</a>.</li>
+        <li>Go to <strong>Register Profile</strong> in the dashboard sidebar.</li>
+        <li>Choose <strong>Path A: Import JSON-LD</strong> and paste the contents of your <code>profile.json</code>.</li>
+        <li>Enter your endpoint URL: <code>https://yourname.com/profile.json</code></li>
+        <li>Set your pricing for each access tier.</li>
+        <li>Register — you get your permanent profile number (SS-XXXXXX) and you're live in the directory.</li>
+      </ol>
+
+      <div class="callout callout-green"><strong>Done.</strong> Your personal page is live at your domain for anyone to visit. Your structured data is at the same domain for platforms to query through Search Star. You own every file. Search Star indexes only the metadata and handles payments. You get paid weekly.</div>
+
+      <h3>Other hosting options</h3>
       <table>
         <tr><th>Option</th><th>Difficulty</th><th>Cost</th><th>Best for</th></tr>
-        <tr><td><strong>Cloudflare Pages + R2 ⭐</strong></td><td>Easy</td><td>Free</td><td>Most users — dashboard-based, no code, global CDN</td></tr>
-        <tr><td><strong>Vercel + GitHub</strong></td><td>Easy (developers)</td><td>Free</td><td>Developers who already use git</td></tr>
+        <tr><td><strong>Cloudflare Pages ⭐</strong></td><td>Easy</td><td>Free</td><td>Most users — dashboard upload, global CDN, no code</td></tr>
+        <tr><td><strong>Vercel + GitHub</strong></td><td>Easy (developers)</td><td>Free</td><td>Developers who use git</td></tr>
         <tr><td><strong>Netlify</strong></td><td>Easy</td><td>Free</td><td>Drag-and-drop deploy</td></tr>
         <tr><td><strong>Self-hosted VPS</strong></td><td>Hard</td><td>€4/month</td><td>Maximum sovereignty (Hetzner, DigitalOcean)</td></tr>
       </table>
 
-      <div style="text-align:center; margin:24px 0;">
-        <a href="setup.html" style="font-family:'Roboto',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:12px 32px; background:var(--navy); color:var(--white); border:none; border-radius:3px; cursor:pointer; text-decoration:none; display:inline-block;">Step-by-Step Hosting Guide →</a>
-      </div>
-
-      <h3>Register with Search Star</h3>
-      <p>Once your profile is live at your domain (e.g., <code>https://yourname.com/profile.json</code>):</p>
-      <ol>
-        <li><strong>Sign up</strong> at <a href="/signup" style="color:var(--navy); font-weight:700;">searchstar.com/signup</a> — this creates your Search Star account for managing your directory listing and earnings.</li>
-        <li><strong>Go to Register Profile</strong> in the dashboard sidebar and choose <strong>Path A: Import JSON-LD</strong>.</li>
-        <li><strong>Paste your JSON-LD</strong> into the form — Search Star validates the structure and extracts directory metadata.</li>
-        <li><strong>Enter your endpoint URL</strong> — the URL where your profile.json is hosted.</li>
-        <li><strong>Set your pricing</strong> — choose what platforms pay per query for each access tier (Public, Private, Marketing).</li>
-        <li><strong>Register</strong> — Search Star assigns your permanent profile number (SS-XXXXXX) and publishes your listing to the directory.</li>
-      </ol>
-
-      <div class="callout callout-info"><strong>That's the full flow:</strong> AI builds your profile → you host it on your domain → you register the endpoint with Search Star → platforms discover and query you through the directory → you get paid weekly.</div>
+      <div class="callout callout-info"><strong>Updating your profile.</strong> Edit the files on your computer, re-upload to Cloudflare Pages (or push to git), and Search Star's crawler picks up changes within 24 hours. Or trigger a manual re-index from your dashboard.</div>
 
     </div>
 
@@ -331,9 +435,9 @@ When complete, output the full JSON-LD document. Then tell the user: "Your Searc
     <div class="footer-inner">
       <div><strong>Search Star</strong> — Sovereign Personal Data Standard · v0.8 · MIT License</div>
       <div class="footer-links">
-        <a href="index.html">Directory</a>
+        <a href="/">Home</a>
         <a href="spec.html">Spec</a>
-        <a href="#">GitHub</a>
+        <a href="https://github.com/ArchonGraceland/Search-Star">GitHub</a>
       </div>
     </div>
   </div>
