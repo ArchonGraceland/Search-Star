@@ -28,26 +28,32 @@ The MVP converts the current static HTML marketing site into a full Next.js appl
 ## Build Phases
 
 ### Phase 0 — Foundation
-**Status: 🔵 IN PROGRESS**
+**Status: 🟡 NEARLY COMPLETE (pending Vercel framework config)**
 
 Convert to Next.js + Supabase, deploy the shell.
 
-- [ ] Create Supabase project for Search Star
-- [ ] Scaffold Next.js 15 app with App Router
-- [ ] Set up Project Graceland design system (globals, fonts, variables)
-- [ ] Migrate static pages into Next.js (spec, profile, create, setup, index)
-- [ ] Connect Supabase Auth (email sign-up/login)
-- [ ] Create core database tables:
-  - [ ] `profiles` (extends directory schema from spec 7.3)
-  - [ ] `earnings_ledger` (from spec 4.5)
-  - [ ] `messages` (Marketing tier + feed items + system notifications)
-  - [ ] `subscriptions` (feed subscriptions from spec 4.8)
-  - [ ] `support_tickets` (admin support system)
-  - [ ] `referrals` (referral validation from spec 5.5)
-  - [ ] `validator_stakes` (from spec 5.1)
-- [ ] Set up Row Level Security policies
-- [ ] Configure Vercel deployment (convert from static to Next.js)
-- [ ] Deploy and verify at searchstar.com
+- [x] Create Supabase project for Search Star (qgjyfcqgnuamgymonblj, us-east-1)
+- [x] Scaffold Next.js app with App Router (Next.js 16, TypeScript, Tailwind v4)
+- [x] Set up Project Graceland design system (globals, fonts, variables)
+- [x] Migrate static pages into Next.js (spec, profile, create, setup → /public)
+- [x] Connect Supabase Auth (email sign-up/login)
+- [x] Create core database tables:
+  - [x] `profiles` (extends directory schema from spec 7.3)
+  - [x] `earnings_ledger` (from spec 4.5, includes referral_share from 5.5)
+  - [x] `messages` (Marketing tier + feed items + system notifications)
+  - [x] `feed_subscriptions` (from spec 4.8)
+  - [x] `support_tickets` + `ticket_messages` (admin support system)
+  - [x] `referrals` (referral validation from spec 5.5)
+  - [x] `validator_stakes` (from spec 5.1)
+  - [x] `platform_accounts` (API access + prepaid credits)
+- [x] Set up Row Level Security policies (all 9 tables)
+- [x] Auto-profile-creation trigger on user signup
+- [x] Configure Vercel deployment (env vars set)
+- [ ] **Set Vercel framework to Next.js** (dashboard setting, pending)
+- [x] Landing page, login, signup, auth callback
+- [x] Dashboard layout with sidebar (Dashboard, Feed, Account)
+- [x] Dashboard, Feed, Account page shells
+- [x] Auth middleware protecting dashboard routes
 
 ### Phase 1 — Onboarding
 **Status: ⚪ NOT STARTED**
@@ -120,6 +126,13 @@ System administration for operators.
 | Date | Phase | What was done |
 |------|-------|---------------|
 | Mar 31, 2026 | Phase 0 | Created progress document, pulled latest spec v0.5 |
+| Mar 31, 2026 | Phase 0 | Created Supabase project (qgjyfcqgnuamgymonblj) |
+| Mar 31, 2026 | Phase 0 | Scaffolded Next.js app, Graceland design system, Supabase client/server config |
+| Mar 31, 2026 | Phase 0 | Built landing page, login, signup, auth callback, dashboard layout + shells |
+| Mar 31, 2026 | Phase 0 | Applied database migration: 9 tables, indexes, RLS, triggers |
+| Mar 31, 2026 | Phase 0 | Merged Next.js app into main repo, pushed to GitHub |
+| Mar 31, 2026 | Phase 0 | Set Vercel env vars, fixed prerender errors, fixed CSS import order |
+| Mar 31, 2026 | Phase 0 | Build succeeds — pending Vercel framework preset change to Next.js |
 
 ---
 
