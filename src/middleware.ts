@@ -37,6 +37,7 @@ export async function middleware(request: NextRequest) {
   if (
     !user &&
     (request.nextUrl.pathname.startsWith('/dashboard') ||
+      request.nextUrl.pathname.startsWith('/profile-builder') ||
       request.nextUrl.pathname.startsWith('/feed') ||
       request.nextUrl.pathname.startsWith('/account') ||
       request.nextUrl.pathname.startsWith('/admin'))
