@@ -77,21 +77,34 @@ New user experience: learn, estimate earnings, create profile.
 - [x] **Deployed and verified live**
 
 ### Phase 2 — Messaging Feed
-**Status: ⚪ NOT STARTED**
+**Status: ✅ COMPLETE**
 
 Unified inbox: marketing messages, content feed, subscriptions.
 
-#### Phase 2a — Feed UI + Message Schema
-- [ ] Unified feed view component
-- [ ] Message type visual treatments (marketing, feed, system)
-- [ ] Block sender functionality
-- [ ] Subscription management from feed
+#### Phase 2a — Feed UI + Message Schema ✅
+- [x] Unified feed view component at /feed (replaces empty shell)
+- [x] Three message types with distinct visual treatments (marketing=amber, feed=navy, system=green)
+- [x] Filter tabs: All, Marketing, Feed, System with live unread counts
+- [x] Message expand/collapse with full content view
+- [x] Read/unread state toggle (auto-marks read on expand, manual toggle in actions)
+- [x] Block sender functionality (blocks all messages from sender, hides from feed)
+- [x] Empty state per filter tab with contextual descriptions
+- [x] Responsive layout matching Graceland design system
 
-#### Phase 2b — API + Real-time Delivery
-- [ ] Marketing tier message delivery API
-- [ ] Content feed subscription wiring
-- [ ] Real-time updates (Supabase Realtime)
-- [ ] Message read/unread state
+#### Phase 2b — API + Real-time Delivery ✅
+- [x] Marketing tier message delivery API (`POST /api/messages/marketing`)
+  - Validates platform API key, 500 char limit, recipient existence
+  - Checks platform credit balance ≥ recipient's marketing price
+  - Debits platform balance with optimistic lock
+  - Credits 90/10 split to earnings ledger (owner/marketplace)
+  - Delivers message to messages table
+  - Returns 402 with balance info on insufficient funds
+- [x] Content feed delivery API (`POST /api/messages/feed`)
+  - Delivers content to all active subscribers of a publisher
+- [x] Real-time updates via Supabase Realtime (messages table subscription)
+- [x] Seed data API (`POST /api/seed`) — 8 demo messages + platform account
+- [x] Supabase migration: Realtime enabled, RLS policies for message read/update
+- [x] **Deployed and verified live**
 
 ### Phase 3 — Account Dashboard
 **Status: ⚪ NOT STARTED**
@@ -135,6 +148,10 @@ System administration for operators.
 | Mar 31, 2026 | Phase 1a | PublicHeader/PublicFooter components, landing page CTAs |
 | Mar 31, 2026 | Phase 1b | /profile-builder 7-step form (identity, financial, presence, skills, interests, pricing, review) |
 | Mar 31, 2026 | Phase 1b | Supabase migration (tagline, age, profile_json), sidebar nav, auth middleware |
+| Mar 31, 2026 | Phase 2a | /feed unified inbox: 3 message types, filter tabs, expand/collapse, read/unread, block sender |
+| Mar 31, 2026 | Phase 2b | POST /api/messages/marketing (payment validation, 90/10 split, earnings ledger) |
+| Mar 31, 2026 | Phase 2b | POST /api/messages/feed (subscriber delivery), POST /api/seed (demo data) |
+| Mar 31, 2026 | Phase 2b | Supabase Realtime on messages, RLS policies for read/update, **deployed and verified** |
 
 ---
 
