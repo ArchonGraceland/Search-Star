@@ -139,6 +139,9 @@
         <a class="toc-indent" href="#queryflow">7.5 Full Query Flow</a>
         <a href="#tech">8. Technical Stack</a>
         <a class="toc-indent" href="#selfhost">8.1 Self-Hosting &amp; Data Sovereignty <span class="new-badge">New in v0.3</span></a>
+        <a class="toc-indent" href="#personal-page">8.2 Personal Page &amp; Visibility Modes <span class="new-badge">New in v0.8</span></a>
+        <a class="toc-indent" href="#contact-cta">8.3 Contact via Search Star <span class="new-badge">New in v0.8</span></a>
+        <a class="toc-indent" href="#profile-creation">8.4 AI-Assisted Profile Creation <span class="new-badge">New in v0.8</span></a>
         <a href="#platform-portal">9. Platform Portal <span class="new-badge">Implemented in v0.8</span></a>
         <a class="toc-indent" href="#platform-accounts">9.1 Platform Accounts</a>
         <a class="toc-indent" href="#platform-credits">9.2 Credit Management</a>
@@ -1353,6 +1356,87 @@ Platform                Search Star              User's Hosting
 
       <div class="callout callout-warn"><strong>Search Star never stores your photos.</strong> When the AI builder recommends photos during profile creation, the analysis happens in the AI session (e.g., Claude analyzing uploaded images). The photos are then placed on your hosting by you. Search Star's directory stores only the URL and the hash — if you delete a photo from your hosting, it disappears from your profile. You maintain full control at all times.</div>
 
+      <!-- ═══════════ 8.2 PERSONAL PAGE ═══════════ -->
+
+      <h3 id="personal-page">8.2 Personal Page &amp; Visibility Modes <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.8</span></h3>
+      <p>Each user hosts two files at their domain: <code>profile.json</code> (structured data for machines) and <code>index.html</code> (a personal page for humans). The JSON-LD file is the API endpoint that Search Star crawls and platforms query. The HTML page is a self-contained personal landing page that anyone can visit by navigating to the user's domain.</p>
+
+      <h4>Two files, two audiences</h4>
+      <table>
+        <tr><th>File</th><th>Audience</th><th>Purpose</th></tr>
+        <tr><td><code>profile.json</code></td><td>Machines</td><td>Search Star's crawler reads this to index directory metadata. Platforms query it through the paid API. The endpoint URL is internal to Search Star and never exposed to platforms.</td></tr>
+        <tr><td><code>index.html</code></td><td>Humans</td><td>Anyone who visits the user's domain sees this page. It displays the profile visually — photos, scores, interests — in the Graceland design system. The user controls how much it reveals.</td></tr>
+      </table>
+
+      <h4>Visibility modes</h4>
+      <p>The personal page supports two visibility modes, chosen at profile creation time. The AI builder asks the user which mode they prefer and generates the HTML accordingly.</p>
+
+      <table>
+        <tr><th>Mode</th><th>What visitors see</th><th>Best for</th></tr>
+        <tr><td><strong>Full</strong></td><td>Name, photos, Presence Composite (Rizz/Vibe/Drip with visual bars), financial percentiles, skills, interests, tagline, location. Everything in the profile except raw endpoint data and access pricing internals.</td><td>Users who want a public personal portfolio. Founders, creatives, public figures, anyone who benefits from visibility.</td></tr>
+        <tr><td><strong>Summary</strong></td><td>Name, tagline, one photo (optional). No detailed scores, no financial data, no skills breakdown. A "View Full Profile on Search Star" button links to the directory. The page confirms the user exists and directs all queries through the paid layer.</td><td>Privacy-conscious users. The page says "I exist, here's my name, go through Search Star to learn more or reach me."</td></tr>
+      </table>
+
+      <p>In both modes, the <code>profile.json</code> file at the same domain contains the full structured data. The visibility mode controls only what the <em>human-readable HTML page</em> displays. Platforms querying through the API always get the tier-appropriate data regardless of the personal page visibility mode — the two are independent.</p>
+
+      <div class="callout callout-info"><strong>Privacy is not obscurity.</strong> The <code>profile.json</code> file is technically accessible to anyone who knows the URL. However, Search Star never reveals the endpoint URL to platforms — they can only access profile data through the paid query API. The URL is stored as an internal field in the directory. For users who want stronger protection, the v1.0 roadmap includes OAuth 2.0 token-based authentication between Search Star and user endpoints, so the JSON file itself would reject unauthenticated requests.</div>
+
+      <!-- ═══════════ 8.3 CONTACT VIA SEARCH STAR ═══════════ -->
+
+      <h3 id="contact-cta">8.3 Contact via Search Star <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.8</span></h3>
+      <p>Every personal page — in both full and summary visibility modes — includes a prominent <strong>"Contact Me via Search Star"</strong> button. This is the only contact mechanism exposed on the page. No email address, no phone number, no social media DMs, no contact form.</p>
+
+      <h4>How it works</h4>
+      <p>The button links to Search Star's login page (in the MVP) or to a deep-link for the profile's marketing tier (in future versions). When someone clicks it, they are directed to create a Search Star platform account, fund it with credits, and send a marketing message at the profile owner's set price. The owner receives the message in their feed and gets paid the marketing tier price minus the 10% marketplace fee.</p>
+
+      <h4>Design principle</h4>
+      <p>The personal page is a <strong>storefront, not an open door</strong>. Visitors can see who the user is — as much or as little as the user chooses via the visibility mode — but the only way to make contact is through Search Star's paid messaging layer. The user's attention has a price. The button enforces it.</p>
+
+      <p>This solves three problems simultaneously:</p>
+      <ul>
+        <li><strong>Spam.</strong> Every message costs real money. The price filters out mass outreach, bots, and low-effort contact attempts.</li>
+        <li><strong>Privacy.</strong> No personal contact information is exposed on the public web. The user's email, phone, and other identifiers stay off the page entirely.</li>
+        <li><strong>Monetization.</strong> Every inbound contact generates revenue for the profile owner. The personal page becomes a revenue channel, not just a digital business card.</li>
+      </ul>
+
+      <div class="callout callout-warn"><strong>Required element.</strong> The "Contact Me via Search Star" button is a mandatory element of the personal page. The AI builder includes it automatically in both visibility modes. Users may style or position it however they like, but they may not remove it — a personal page without a Search Star contact path is not a valid Search Star profile page. This ensures that every profile in the directory has a functioning inbound contact channel.</div>
+
+      <!-- ═══════════ 8.4 AI-ASSISTED PROFILE CREATION ═══════════ -->
+
+      <h3 id="profile-creation">8.4 AI-Assisted Profile Creation <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.8</span></h3>
+      <p>Search Star profiles are built using an AI assistant. The user copies a prompt package from <code>searchstar.com/create.html</code>, pastes it into any AI (Claude, ChatGPT, Grok, Gemini), and the AI conducts a conversational interview that produces both the <code>profile.json</code> and <code>index.html</code> files.</p>
+
+      <h4>The creation flow</h4>
+      <ol>
+        <li><strong>Copy the prompt.</strong> The prompt package at <code>/create.html</code> contains the complete JSON-LD schema, scoring methodology, design guidelines for the HTML page, visibility mode instructions, and the "Contact via Search Star" button requirement.</li>
+        <li><strong>Paste into any AI.</strong> The user pastes the prompt into their AI of choice. If the AI has file access (e.g., Claude Projects with uploaded documents), it can search the user's existing data — financial exports, fitness apps, photos, resumes — to populate the profile automatically.</li>
+        <li><strong>Conversational interview.</strong> The AI walks through each section: identity, financial percentiles, Presence Composite (Rizz/Vibe/Drip), skills, interests, photos, pricing, and visibility mode. It asks questions, analyzes uploaded data, and builds both files incrementally.</li>
+        <li><strong>Review and approve.</strong> The user reviews every field before the AI finalizes. Nothing is published without explicit approval.</li>
+        <li><strong>Download two files.</strong> The AI outputs <code>profile.json</code> and <code>index.html</code>. The user saves both to a folder along with their selected photos.</li>
+        <li><strong>Host the folder.</strong> The user uploads the folder to Cloudflare Pages, Vercel, Netlify, or any static hosting. The hosting guide is integrated into the creation page.</li>
+        <li><strong>Register with Search Star.</strong> The user signs up at <code>searchstar.com</code>, enters their endpoint URL at <code>/profile-builder</code>, and Search Star validates the JSON-LD, extracts directory metadata, and assigns the permanent profile number (SS-XXXXXX).</li>
+      </ol>
+
+      <h4>What the AI produces</h4>
+      <table>
+        <tr><th>Output</th><th>Format</th><th>Contents</th></tr>
+        <tr><td><code>profile.json</code></td><td>JSON-LD (<code>@context: schema.searchstar.org/v0.8</code>)</td><td>Identity, financial percentiles, Presence Composite with factor breakdowns, skills array, interests (athletic/social/intellectual), photos array with relative paths, access policy with tier pricing</td></tr>
+        <tr><td><code>index.html</code></td><td>Self-contained HTML</td><td>Graceland design system (Crimson Text + Roboto + JetBrains Mono, navy #1a3a6b, 3px radius), responsive layout, photo gallery, score visualizations, "Contact Me via Search Star" button, visibility mode (full or summary)</td></tr>
+      </table>
+
+      <h4>Data sources the AI can search</h4>
+      <table>
+        <tr><th>Profile section</th><th>Data sources</th></tr>
+        <tr><td>Financial percentiles</td><td>Bank statements, brokerage exports, tax returns, credit reports, Plaid exports</td></tr>
+        <tr><td>Skills &amp; credentials</td><td>LinkedIn export, resume/CV, GitHub, certifications, portfolio links</td></tr>
+        <tr><td>Interests (athletic)</td><td>Strava, Whoop, Apple Health, gym apps, competition records</td></tr>
+        <tr><td>Interests (social)</td><td>Calendar, email invites, travel bookings, event history</td></tr>
+        <tr><td>Interests (intellectual)</td><td>Goodreads, Kindle highlights, podcast subscriptions, course certificates</td></tr>
+        <tr><td>Presence Composite</td><td>Outfit photos, home/workspace photos, social media content, travel photos</td></tr>
+      </table>
+
+      <div class="callout callout-info"><strong>Search Star is AI-agnostic.</strong> The prompt works with any AI assistant. It does not require Claude specifically — ChatGPT, Grok, Gemini, or any future model that can process the prompt and output JSON + HTML will work. The prompt is published openly at <code>/create.html</code> and is part of the open-source specification.</div>
+
       <!-- ═══════════ 9. PLATFORM PORTAL ═══════════ -->
 
       <h2 id="platform-portal">9. Platform Portal <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">Implemented in v0.8</span></h2>
@@ -1478,7 +1562,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.5</code></td><td>March 2026</td><td>Referral validation &amp; revenue sharing: recruiter staking, 5% perpetual share, Validator Reputation Score</td></tr>
         <tr><td><code>v0.6</code></td><td>March 2026</td><td>Platform Portal spec (section 9), server-side endpoint proxy, endpoint access control</td></tr>
         <tr><td><code>v0.7</code></td><td>March 2026</td><td>Admin panel spec: operator financial dashboard, user management, support ticket system, admin RLS</td></tr>
-        <tr><td><code>v0.8</code></td><td>March 2026</td><td>Platform Portal implementation: platform signup, credit management, directory browser, marketing composer, spending analytics, teal design system</td></tr>
+        <tr><td><code>v0.8</code></td><td>March 2026</td><td>Platform Portal implementation, personal page &amp; visibility modes (full/summary), "Contact via Search Star" button requirement, AI-assisted profile creation flow (two-file output: profile.json + index.html), profile registration desk</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
