@@ -128,8 +128,22 @@
       <table>
         <tr><th>File</th><th>What it is</th><th>Who reads it</th></tr>
         <tr><td><code>profile.json</code></td><td>Your Search Star profile in JSON-LD format. Structured data: identity, financial percentiles, Presence Composite, skills, interests, pricing.</td><td>Machines — Search Star's crawler indexes your metadata. Platforms query it via the API.</td></tr>
-        <tr><td><code>index.html</code></td><td>A self-contained HTML page displaying your profile visually. Photos, bio, scores, interests — a personal landing page you own.</td><td>Humans — anyone who visits your domain sees this.</td></tr>
+        <tr><td><code>index.html</code></td><td>A self-contained HTML page displaying your profile visually. You choose how much to show — full profile or just a summary with a link to Search Star.</td><td>Humans — anyone who visits your domain sees this.</td></tr>
       </table>
+
+      <h3>Privacy &amp; visibility</h3>
+      <p>Your <code>profile.json</code> is technically accessible to anyone who knows the URL, but Search Star never reveals the URL to platforms — they can only get your data through the paid query API. Your <code>index.html</code> is your public-facing page, and you control how much it shows.</p>
+      <p>The AI will ask you to choose a <strong>visibility mode</strong> for your personal page:</p>
+      <table>
+        <tr><th>Mode</th><th>What visitors see</th><th>Best for</th></tr>
+        <tr><td><strong>Full</strong></td><td>Name, photos, Presence scores, financial percentiles, skills, interests — everything</td><td>People who want a public personal portfolio. Founders, creatives, public figures.</td></tr>
+        <tr><td><strong>Summary</strong></td><td>Name, tagline, one photo (optional) — plus a "View full profile on Search Star" button. No detailed data displayed.</td><td>People who want privacy. The page says "I exist" and points to Search Star for everything else.</td></tr>
+      </table>
+
+      <h3>Contact via Search Star</h3>
+      <p>Every personal page includes a <strong>"Contact Me via Search Star"</strong> button. This is how people who find your page on the web can reach you — by paying your marketing tier price through Search Star. No email address, no phone number, no DMs exposed on your page. You get paid for your attention.</p>
+
+      <div class="callout callout-green"><strong>The design principle:</strong> your personal page is a storefront, not an open door. People can see who you are (as much or as little as you choose), and the only way to contact you is through Search Star's paid messaging tier. Your attention has a price. The button enforces it.</div>
 
       <h3>What the AI can search</h3>
       <p>The more data sources you give the AI access to, the richer your profile:</p>
@@ -304,15 +318,33 @@ A self-contained HTML page (all CSS inline in a style tag, no external dependenc
 - **Fonts**: Crimson Text for headings, Roboto for body text, JetBrains Mono for data/numbers
 - **Colors**: Navy #1a3a6b primary, #f5f5f5 page background, white cards with 1px #d4d4d4 border, 3px border-radius
 - **Layout**: Clean, institutional, not flashy. Think financial prospectus meets personal portfolio.
-- **Sections**:
+
+**IMPORTANT — Ask the user which visibility mode they want:**
+
+**Full mode** (default for users who want a public personal page):
   - Header with name, handle, tagline, location, and the compass rose logo SVG
   - Photo gallery displaying photos from the ./photos/ folder with captions
   - Presence Composite with Rizz/Vibe/Drip scores shown as visual bars
   - Financial standing as percentile bars (never dollar amounts)
   - Skills list with level indicators
   - Interests organized by category (athletic, social, intellectual)
-  - Access pricing tiers displayed as cards
+  - "Contact via Search Star" button (see below)
   - Footer with "Powered by Search Star" and a link to searchstar.com
+
+**Summary mode** (for users who want privacy — only public-tier data visible):
+  - Header with name, handle, and tagline only
+  - One primary photo (if the user wants), or no photos
+  - A brief description: "This is a Search Star sovereign profile. To view the full profile or send a message, query through the Search Star directory."
+  - "View Full Profile on Search Star" button linking to searchstar.com
+  - "Contact via Search Star" button (see below)
+  - No financial data, no Presence breakdown, no skills details, no interests
+  - The page essentially says: "I exist, here's my name, go through Search Star to learn more or reach me."
+
+**"Contact via Search Star" button — REQUIRED in both modes:**
+Every index.html must include a prominent call-to-action button that links to the Search Star marketing tier. The button text should be "Contact Me via Search Star" and it should link to `https://searchstar.com/login` (in the MVP; once deep-linking to a profile's marketing tier is supported, use that instead). Style it as a navy #1a3a6b button with white text, matching the Graceland design system. Place it in the header area or as a sticky/floating element so it's always visible.
+
+The purpose: anyone who finds this page on the web can reach the profile owner — but only by paying the marketing tier price through Search Star. No email address, no phone number, no DMs exposed. The user gets paid for their attention.
+
 - **Photos**: Use relative paths `<img src="photos/primary.webp">` that work when hosted
 - **Responsive**: Must work on mobile and desktop
 - **Self-contained**: One HTML file. No external JS. All CSS in a `<style>` tag.
