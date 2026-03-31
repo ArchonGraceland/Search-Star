@@ -28,7 +28,7 @@ The MVP converts the current static HTML marketing site into a full Next.js appl
 ## Build Phases
 
 ### Phase 0 — Foundation
-**Status: 🟡 NEARLY COMPLETE (pending Vercel framework config)**
+**Status: ✅ COMPLETE**
 
 Convert to Next.js + Supabase, deploy the shell.
 
@@ -48,12 +48,12 @@ Convert to Next.js + Supabase, deploy the shell.
   - [x] `platform_accounts` (API access + prepaid credits)
 - [x] Set up Row Level Security policies (all 9 tables)
 - [x] Auto-profile-creation trigger on user signup
-- [x] Configure Vercel deployment (env vars set)
-- [ ] **Set Vercel framework to Next.js** (dashboard setting, pending)
+- [x] Configure Vercel deployment (env vars + framework preset)
 - [x] Landing page, login, signup, auth callback
 - [x] Dashboard layout with sidebar (Dashboard, Feed, Account)
 - [x] Dashboard, Feed, Account page shells
 - [x] Auth middleware protecting dashboard routes
+- [x] **Deployed and verified live at searchstar.com**
 
 ### Phase 1 — Onboarding
 **Status: ⚪ NOT STARTED**
@@ -132,7 +132,7 @@ System administration for operators.
 | Mar 31, 2026 | Phase 0 | Applied database migration: 9 tables, indexes, RLS, triggers |
 | Mar 31, 2026 | Phase 0 | Merged Next.js app into main repo, pushed to GitHub |
 | Mar 31, 2026 | Phase 0 | Set Vercel env vars, fixed prerender errors, fixed CSS import order |
-| Mar 31, 2026 | Phase 0 | Build succeeds — pending Vercel framework preset change to Next.js |
+| Mar 31, 2026 | Phase 0 | Fixed Vercel framework preset + output directory → **app live at searchstar.com** |
 
 ---
 
@@ -151,3 +151,14 @@ System administration for operators.
 - Vercel auto-deploys on push to main
 - Supabase MCP connected for database operations
 - Spec is the source of truth — keep spec.html updated as we build
+
+## Infrastructure Reference
+
+| Service | ID | Notes |
+|---------|-----|-------|
+| Supabase project | `qgjyfcqgnuamgymonblj` | us-east-1, Search Star |
+| Supabase URL | `https://qgjyfcqgnuamgymonblj.supabase.co` | |
+| Vercel project | `prj_4naGexGhfiklNAPntvurIkFWH5Nh` | search-star |
+| Vercel team | `team_3QGOH2gaQBtEyFzCX7wtsP7X` | archon-graceland |
+| GitHub repo | `ArchonGraceland/Search-Star` | auto-deploy on push |
+| Live URL | `searchstar.com` | www redirects to bare domain |
