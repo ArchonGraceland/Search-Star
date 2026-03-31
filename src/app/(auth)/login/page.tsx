@@ -18,7 +18,7 @@ export default function Login() {
     setError(null)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -27,24 +27,16 @@ export default function Login() {
       setError(error.message)
       setLoading(false)
     } else {
-      // Check if platform user and redirect accordingly
-      const { data: { user: loggedInUser } } = await supabase.auth.getUser()
-      if (loggedInUser?.user_metadata?.role === 'platform') {
+      // Check role from the session user metadata first (fast, no extra query)
+      const role = data.user?.user_metadata?.role
+      if (role === 'platform') {
         router.push('/platform')
+        router.refresh()
       } else {
-        // Check profile role from database
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('user_id', loggedInUser?.id)
-          .single()
-        if (profile?.role === 'platform') {
-          router.push('/platform')
-        } else {
-          router.push('/dashboard')
-        }
+        // Default to dashboard — the dashboard layout will handle any further role checks
+        router.push('/dashboard')
+        router.refresh()
       }
-      router.refresh()
     }
   }
 
