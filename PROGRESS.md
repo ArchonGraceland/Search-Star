@@ -183,3 +183,4 @@ System administration for operators.
 | Vercel team | `team_3QGOH2gaQBtEyFzCX7wtsP7X` | archon-graceland |
 | GitHub repo | `ArchonGraceland/Search-Star` | auto-deploy on push |
 | Live URL | `searchstar.com` | www redirects to bare domain |
+
