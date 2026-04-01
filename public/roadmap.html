@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search Star — Roadmap</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1a3a6b; --navy-dk: #112a4f; --deep: #0f2340;
+    --gold: #C9A94E; --white: #ffffff; --black: #1a1a1a;
+    --gray-3: #767676; --border: rgba(255,255,255,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Crimson Text', Georgia, serif; background: var(--deep); color: #e8e2d6; min-height: 100vh; }
+  .font-body { font-family: 'Roboto', sans-serif; }
+  .label { font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  /* Header */
+  .site-header { padding: 36px 32px 32px; border-bottom: 1px solid rgba(201,169,78,0.2); }
+  .header-inner { max-width: 960px; margin: 0 auto; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.6); text-decoration: none; }
+  .logo svg { width: 22px; height: 22px; }
+  .nav-links { display: flex; gap: 6px; }
+  .nav-links a { font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 7px 16px; border: 1px solid rgba(255,255,255,0.25); border-radius: 3px; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.2s; }
+  .nav-links a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .nav-links a.active { background: var(--white); color: var(--navy); border-color: var(--white); }
+  h1 { font-size: 36px; font-weight: 700; color: var(--white); line-height: 1.2; margin-bottom: 8px; }
+  .header-sub { font-family: 'Roboto', sans-serif; font-size: 14px; color: rgba(255,255,255,0.5); max-width: 600px; line-height: 1.6; }
+
+  /* Content */
+  .content { max-width: 960px; margin: 0 auto; padding: 32px 40px; }
+
+  /* Completed grid */
+  .completed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .completed-card { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 3px; padding: 14px 16px; }
+  .completed-card .badge { display: inline-block; font-family: 'Roboto', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; background: rgba(22,101,52,0.3); color: #4ade80; }
+  .completed-card .title { font-weight: 700; font-size: 15px; color: rgba(255,255,255,0.6); }
+  .completed-card .desc { font-family: 'Roboto', sans-serif; font-size: 11px; color: rgba(255,255,255,0.35); line-height: 1.5; margin-top: 4px; }
+
+  /* Divider */
+  .divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(201,169,78,0.4), transparent); margin: 40px 0; }
+
+  /* Milestone cards */
+  .milestone { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 3px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; overflow: hidden; }
+  .milestone.expanded { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+  .milestone.next { border-color: rgba(201,169,78,0.2); }
+  .milestone.next.expanded { background: rgba(201,169,78,0.08); border-color: rgba(201,169,78,0.3); }
+  .milestone-header { padding: 16px 20px; display: flex; align-items: center; gap: 16px; }
+  .version-badge { font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; padding: 4px 10px; border-radius: 2px; min-width: 52px; text-align: center; }
+  .version-badge.next { background: var(--gold); color: var(--deep); }
+  .version-badge.planned { background: var(--navy); color: var(--white); }
+  .milestone-title { font-size: 20px; font-weight: 700; color: var(--white); flex: 1; }
+  .milestone-target { font-family: 'Roboto', sans-serif; font-size: 12px; color: rgba(255,255,255,0.4); }
+  .effort-badge { font-family: 'Roboto', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
+  .chevron { font-size: 16px; color: rgba(255,255,255,0.3); transition: transform 0.2s; }
+  .expanded .chevron { transform: rotate(180deg); }
+
+  /* Expanded content */
+  .milestone-body { padding: 0 20px 20px; border-top: 1px solid rgba(255,255,255,0.06); display: none; }
+  .expanded .milestone-body { display: block; }
+  .milestone-grid { padding-top: 16px; display: grid; grid-template-columns: 1fr 280px; gap: 24px; }
+  .task-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+  .task-checkbox { width: 16px; height: 16px; border-radius: 2px; flex-shrink: 0; margin-top: 2px; border: 1.5px solid rgba(255,255,255,0.2); }
+  .task-text { font-family: 'Roboto', sans-serif; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+  .meta-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 3px; padding: 16px; align-self: start; }
+  .meta-label { font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 8px; }
+  .meta-text { font-family: 'Roboto', sans-serif; font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.5; }
+  .meta-count { font-size: 22px; font-weight: 700; color: var(--gold); }
+  .start-here { margin-top: 16px; padding: 8px 12px; background: rgba(201,169,78,0.15); border: 1px solid rgba(201,169,78,0.25); border-radius: 2px; font-family: 'Roboto', sans-serif; font-size: 11px; color: var(--gold); font-weight: 600; }
+
+  /* Timeline */
+  .timeline-bar { display: flex; gap: 2px; height: 40px; margin-top: 48px; }
+  .timeline-seg { display: flex; align-items: center; justify-content: center; font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; }
+  .timeline-seg:first-child { border-radius: 3px 0 0 3px; }
+  .timeline-seg:last-child { border-radius: 0 3px 3px 0; }
+  .timeline-labels { display: flex; justify-content: space-between; margin-top: 6px; font-family: 'Roboto', sans-serif; font-size: 10px; color: rgba(255,255,255,0.3); }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 24px 0; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 32px; }
+  .stat { text-align: center; }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--gold); }
+  .stat-label { font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-top: 4px; }
+
+  /* Footer */
+  .site-footer { background: var(--black); color: rgba(255,255,255,0.55); padding: 32px 0; margin-top: 48px; }
+  .footer-inner { max-width: 960px; margin: 0 auto; padding: 0 40px; font-family: 'Roboto', sans-serif; font-size: 12px; display: flex; justify-content: space-between; }
+  .footer-inner strong { color: rgba(255,255,255,0.8); }
+  .footer-links a { color: rgba(255,255,255,0.5); text-decoration: none; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-left: 24px; }
+  .footer-links a:hover { color: rgba(255,255,255,0.8); }
+
+  @media (max-width: 800px) {
+    .completed-grid { grid-template-columns: 1fr; }
+    .milestone-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .nav-links { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-top">
+      <a href="index.html" class="logo">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"/><polygon points="32,6 36,24 32,20 28,24" fill="#fff"/><polygon points="32,6 36,24 32,28 28,24" fill="rgba(255,255,255,0.6)"/><polygon points="58,32 40,28 44,32 40,36" fill="#fff" opacity="0.6"/><polygon points="32,58 28,40 32,44 36,40" fill="#fff" opacity="0.6"/><polygon points="6,32 24,36 20,32 24,28" fill="#fff" opacity="0.6"/><circle cx="32" cy="32" r="3" fill="#fff"/></svg>
+        Search Star
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="profile.html">Sample Profile</a>
+        <a href="spec.html">Specification</a>
+        <a href="roadmap.html" class="active">Roadmap</a>
+      </div>
+    </div>
+    <h1>What's Left to Build</h1>
+    <p class="header-sub">From trust score engine to full release — the path from working MVP to a complete sovereign data platform with trust-based affiliate growth.</p>
+  </div>
+</header>
+
+<div class="content">
+  <!-- Completed -->
+  <div class="label" style="color: rgba(255,255,255,0.35); margin-bottom: 16px;">✓ COMPLETED</div>
+  <div class="completed-grid" id="completed"></div>
+
+  <div class="divider"></div>
+
+  <!-- Milestones -->
+  <div class="label" style="color: #C9A94E; margin-bottom: 20px;">REMAINING MILESTONES</div>
+  <div id="milestones"></div>
+
+  <!-- Timeline -->
+  <div class="label" style="color: rgba(255,255,255,0.3); margin-top: 48px; margin-bottom: 16px;">TIMELINE</div>
+  <div class="timeline-bar" id="timeline"></div>
+  <div class="timeline-labels"><span>Q2 2026</span><span>Q4 2026</span></div>
+
+  <!-- Stats -->
+  <div class="stats" id="stats"></div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div><strong>Search Star</strong> — Specification v0.9 · MIT License</div>
+    <div class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="spec.html">Spec</a>
+      <a href="https://github.com/ArchonGraceland/Search-Star">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+const completed = [
+  { v: "Phase 0", t: "Foundation", d: "Next.js + Supabase, auth, 9 tables, RLS, Graceland design, Vercel deploy" },
+  { v: "Phase 1", t: "Onboarding & Profiles", d: "Walkthrough, earnings estimator, AI profile builder, self-hosting registration" },
+  { v: "Phase 2", t: "Messaging Feed", d: "Unified feed, marketing/feed/system messages, real-time delivery, 90/10 split" },
+  { v: "Phase 3", t: "Dashboard", d: "Earnings, revenue breakdown, settlement tracking, endpoint management" },
+  { v: "Phase 4", t: "Admin Panel", d: "Financial dashboard, user management, trust adjustment, support tickets" },
+  { v: "Phase 5", t: "Platform Portal", d: "Platform signup, credits, directory browser, paid queries, marketing composer, analytics" },
+  { v: "v0.9", t: "Trust Architecture", d: "Trust-as-validation philosophy, trust layers, Depth/Breadth/Durability score, affiliate engine spec, anti-gaming, network value" },
+];
+
+const phases = [
+  { v: "v0.10", t: "Live Payments", target: "Q2 2026", status: "next", effort: "Medium",
+    depends: "Foundation for all revenue flows",
+    items: ["Stripe Connect integration", "Per-query metering (real money)", "Platform API keys with rate limiting", "Settlement engine (weekly payouts)"] },
+  { v: "v0.11", t: "Trust Score Engine", target: "Q2 2026", status: "planned", effort: "Large",
+    depends: "Requires v0.10 (staking needs payments)",
+    items: ["Depth / Breadth / Durability calculation", "Trust layer classification system", "Validator relationship types (10 types)", "Validation decay scheduler (18-month half-life)", "Minimum 90-day relationship period", "Trust Score display on profiles"] },
+  { v: "v0.12", t: "Affiliate Portal", target: "Q3 2026", status: "planned", effort: "Large",
+    depends: "Requires v0.11 (trust density needs scores)",
+    items: ["Organization signup flow", "Member onboarding tools & referral links", "Trust density dashboard (per affiliate)", "Cross-network verification bonus tracking", "Affiliate payout management", "School / church / club pitch materials"] },
+  { v: "v0.13", t: "Network Value", target: "Q3 2026", status: "planned", effort: "Medium",
+    depends: "Requires v0.12 (needs affiliate network data)",
+    items: ["Family & community cluster detection", "Network multiplier pricing engine", "Cross-network verification bonus", "Aggregate trust display for platforms", "Extended family linking (mutual opt-in)"] },
+  { v: "v1.0", t: "Full Release", target: "Q4 2026", status: "planned", effort: "Very Large",
+    depends: "All prior versions complete",
+    items: ["Open-source SDK & documentation", "Self-hosting toolkit", "ZK proof integration (financial verification)", "OAuth 2.0 endpoint authentication", "Anti-gaming enforcement (all protections live)", "Response likelihood scoring", "Public launch & marketing"] },
+];
+
+// Render completed
+document.getElementById('completed').innerHTML = completed.map(c =>
+  `<div class="completed-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span class="badge">✓ ${c.v}</span>
+      <span class="title">${c.t}</span>
+    </div>
+    <p class="desc">${c.d}</p>
+  </div>`
+).join('');
+
+// Render milestones
+let expanded = 0;
+function renderMilestones() {
+  document.getElementById('milestones').innerHTML = phases.map((p, i) => {
+    const isExp = expanded === i;
+    const isNext = p.status === 'next';
+    return `<div class="milestone ${isExp ? 'expanded' : ''} ${isNext ? 'next' : ''}" onclick="expanded=${isExp ? -1 : i};renderMilestones()">
+      <div class="milestone-header">
+        <span class="version-badge ${p.status}">${p.v}</span>
+        <span class="milestone-title">${p.t}</span>
+        <span class="milestone-target">${p.target}</span>
+        <span class="effort-badge">${p.effort}</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="milestone-body">
+        <div class="milestone-grid">
+          <div>
+            <div class="meta-label">DELIVERABLES</div>
+            ${p.items.map(item => `<div class="task-item"><span class="task-checkbox"></span><span class="task-text">${item}</span></div>`).join('')}
+          </div>
+          <div class="meta-box">
+            <div class="meta-label">DEPENDENCY</div>
+            <p class="meta-text">${p.depends}</p>
+            <div class="meta-label" style="margin-top:16px">ITEMS</div>
+            <div class="meta-count">${p.items.length}</div>
+            ${isNext ? '<div class="start-here">→ Start here</div>' : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+renderMilestones();
+
+// Timeline
+const widths = [15, 22, 22, 18, 23];
+document.getElementById('timeline').innerHTML = phases.map((p, i) =>
+  `<div class="timeline-seg" style="flex:0 0 ${widths[i]}%;background:${p.status === 'next' ? '#C9A94E' : `rgba(26,58,107,${0.9 - i * 0.12})`};color:${p.status === 'next' ? '#0f2340' : 'rgba(255,255,255,0.6)'}">${p.v}</div>`
+).join('');
+
+// Stats
+const totalItems = phases.reduce((s, p) => s + p.items.length, 0);
+document.getElementById('stats').innerHTML = [
+  { l: "Total deliverables", v: totalItems },
+  { l: "Milestones remaining", v: 5 },
+  { l: "Target completion", v: "Q4 '26" },
+  { l: "Phases shipped", v: "7 / 12" },
+].map(s => `<div class="stat"><div class="stat-value">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('');
+</script>
+</body>
+</html>

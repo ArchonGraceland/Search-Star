@@ -169,6 +169,7 @@ export default async function Home() {
             <div><strong className="text-white/80">Search Star</strong> — Specification v0.9 · MIT License</div>
             <div className="flex gap-6">
               <Link href="/spec.html" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">Spec</Link>
+              <Link href="/roadmap.html" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">Roadmap</Link>
               <a href="https://github.com/ArchonGraceland/Search-Star" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">GitHub</a>
             </div>
           </div>
