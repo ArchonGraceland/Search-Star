@@ -159,12 +159,16 @@ const completed = [
   { v: "Phase 3", t: "Dashboard", d: "Earnings, revenue breakdown, settlement tracking, endpoint management" },
   { v: "Phase 4", t: "Admin Panel", d: "Financial dashboard, user management, trust adjustment, support tickets" },
   { v: "Phase 5", t: "Platform Portal", d: "Platform signup, credits, directory browser, paid queries, marketing composer, analytics" },
-  { v: "v0.9", t: "Trust Architecture", d: "Trust-as-validation philosophy, trust layers, Depth/Breadth/Durability score, affiliate engine spec, anti-gaming, network value" },
-  { v: "v1.0", t: "Validator Cooperative", d: "LLC membership class, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance, qualification & termination rules" },
 ];
 
 const phases = [
-  { v: "v1.1", t: "Live Payments", target: "Q2 2026", status: "next", effort: "Medium",
+  { v: "v0.9", t: "Trust Architecture", target: "Q2 2026", status: "next", effort: "Large",
+    depends: "Foundation for trust scoring and validation",
+    items: ["Trust-as-validation philosophy", "Trust layers (Depth/Breadth/Durability)", "Affiliate engine spec", "Anti-gaming protections", "Network value model"] },
+  { v: "v1.0", t: "Validator Cooperative", target: "Q2 2026", status: "planned", effort: "Large",
+    depends: "Requires v0.9 (trust architecture defines validator roles)",
+    items: ["LLC membership class", "Stake-weighted revenue participation (20% of marketplace fees)", "Quarterly distributions", "Scoped governance over trust-layer policy", "Qualification & termination rules"] },
+  { v: "v1.1", t: "Live Payments", target: "Q2 2026", status: "planned", effort: "Medium",
     depends: "Foundation for all revenue flows",
     items: ["Stripe Connect integration", "Per-query metering (real money)", "Platform API keys with rate limiting", "Settlement engine (weekly payouts)"] },
   { v: "v1.2", t: "Trust Score Engine", target: "Q2 2026", status: "planned", effort: "Large",
