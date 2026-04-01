@@ -349,7 +349,6 @@ export default async function Account() {
           <div className="flex flex-wrap gap-3">
             <QuickAction href="/profile-builder" label="Edit Profile" />
             <QuickAction href="/feed" label={`View Feed${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`} />
-            <QuickAction href="/spec.html" label="View Spec" external />
           </div>
         </div>
       </div>
