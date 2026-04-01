@@ -1,7 +1,7 @@
 # Search Star MVP — Development Progress
 
 **Started:** March 31, 2026
-**Spec Version:** v0.10
+**Spec Version:** v1.0
 **Tech Stack:** Next.js 15 + Supabase + Vercel + Stripe Connect
 **Repo:** github.com/ArchonGraceland/Search-Star
 **Live:** searchstar.com
@@ -249,7 +249,7 @@ Demand-side dashboard for platforms (advertisers, recruiters, dating apps, brand
 5. **AI prompt is primary, manual form is fallback** — Profile builder offers two paths: (A) paste AI-generated JSON-LD from any AI + register endpoint URL, or (B) manual guided form. AI path is recommended and linked to /create.html prompt and /setup.html hosting guide. Self-hosting is the spec's default; Search Star indexes only directory metadata.
 6. **Profile number is random** — SS-XXXXXX assigned randomly at creation; sequential assignment deferred until directory registration API
 7. **Platform Portal is post-MVP** — Spec section 9 (v0.6) defines the demand-side platform experience. Building after the owner-side MVP (Phases 0–4) is complete so the owner experience is solid before onboarding platforms. Schema implications noted: `platform_accounts` needs `user_id` column for platform login.
-8. **Server-side proxy for endpoint queries** — The `endpoint_url` in the profiles table is internal-only and never exposed to platforms via any API response. When a platform queries a profile via `POST /v1/query/{id}`, Search Star's backend fetches the profile from the user's endpoint server-side, filters to the requested tier, and serves the result. Platforms never learn the raw endpoint URL. This prevents bypass of the payment layer without requiring users to configure auth on their hosting. The user's static JSON-LD file works as-is. Upgrade path: OAuth 2.0 token auth between Search Star and user endpoints for v1.0.
+8. **Server-side proxy for endpoint queries** — The `endpoint_url` in the profiles table is internal-only and never exposed to platforms via any API response. When a platform queries a profile via `POST /v1/query/{id}`, Search Star's backend fetches the profile from the user's endpoint server-side, filters to the requested tier, and serves the result. Platforms never learn the raw endpoint URL. This prevents bypass of the payment layer without requiring users to configure auth on their hosting. The user's static JSON-LD file works as-is. Upgrade path: OAuth 2.0 token auth between Search Star and user endpoints for v2.0.
 
 ---
 

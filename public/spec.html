@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search Star — Specification v0.10</title>
+<title>Search Star — Specification v1.0</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -135,7 +135,7 @@
         <a class="toc-indent" href="#referrals">5.8 Referral Validation &amp; Revenue Sharing</a>
         <a class="toc-indent" href="#antigaming">5.9 Anti-Gaming Protections <span class="new-badge">New in v0.9</span></a>
         <a class="toc-indent" href="#networkvalue">5.10 Network Value Multiplier <span class="new-badge">New in v0.9</span></a>
-        <a class="toc-indent" href="#cooperative">5.11 Validator Cooperative <span class="new-badge">New in v0.10</span></a>
+        <a class="toc-indent" href="#cooperative">5.11 Validator Cooperative <span class="new-badge">New in v1.0</span></a>
         <a href="#numbering">6. Profile Numbering</a>
         <a href="#directory">7. Directory, Registration &amp; Search API <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#registration">7.1 Profile Registration</a>
@@ -1027,7 +1027,7 @@
       <p>A family network where 15 members all have Trust Scores above 70 is worth more to a platform than 15 isolated profiles with the same scores. The network context tells platforms they're reaching a real, interconnected community — not isolated data points. This multiplier is reflected in suggested query pricing: profiles embedded in high-trust networks can justify premium pricing beyond what their individual score alone would warrant.</p>
       <p>This creates the ultimate virtuous cycle: the family reunion organizer who gets everyone's trust scores up by encouraging participation in real communities is literally increasing the economic value of every profile in the family. The affiliate incentive, the trust incentive, and the economic incentive all point in the same direction — do real things with real people over sustained periods of time.</p>
 
-      <h3 id="cooperative">5.11 Validator Cooperative <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.10</span></h3>
+      <h3 id="cooperative">5.11 Validator Cooperative <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v1.0</span></h3>
       <p>Validators are the backbone of Search Star's trust infrastructure. The Validator Cooperative formalizes this by granting qualifying validators revenue participation and governance rights — structured as an LLC membership class that avoids securities classification.</p>
 
       <h4>Legal structure</h4>
@@ -1464,7 +1464,7 @@ Platform                Search Star              User's Hosting
       <h4>Recommended self-hosting options</h4>
       <p>Users need a domain they control and a place to serve static files (JSON-LD, images). Most Search Star users are not developers, so the default recommendation prioritizes simplicity.</p>
 
-      <div class="callout callout-info"><strong>Endpoint URL is never exposed to platforms.</strong> When a user registers a self-hosted endpoint URL, that URL is stored in the Search Star directory as an internal field. It is never returned in any API response to querying platforms. When a platform executes a paid query via <code>POST /v1/query/{id}</code>, Search Star's backend fetches the profile from the user's endpoint server-side, filters the response to the requested tier, and serves the result. The platform receives only the filtered profile data — never the raw endpoint URL. This means a plain static JSON-LD file works with no authentication required on the user's hosting. The payment layer cannot be bypassed because platforms cannot discover the endpoint to query it directly. Upgrade path: OAuth 2.0 token-based authentication between Search Star and user endpoints is planned for v1.0.</div>
+      <div class="callout callout-info"><strong>Endpoint URL is never exposed to platforms.</strong> When a user registers a self-hosted endpoint URL, that URL is stored in the Search Star directory as an internal field. It is never returned in any API response to querying platforms. When a platform executes a paid query via <code>POST /v1/query/{id}</code>, Search Star's backend fetches the profile from the user's endpoint server-side, filters the response to the requested tier, and serves the result. The platform receives only the filtered profile data — never the raw endpoint URL. This means a plain static JSON-LD file works with no authentication required on the user's hosting. The payment layer cannot be bypassed because platforms cannot discover the endpoint to query it directly. Upgrade path: OAuth 2.0 token-based authentication between Search Star and user endpoints is planned for v2.0.</div>
 
       <div class="callout callout-green"><strong>Our recommendation: Cloudflare Pages + R2.</strong> Free tier covers everything a single profile needs — unlimited bandwidth, 10GB photo storage, global CDN, and custom domain support. Setup is entirely dashboard-based — no terminal, no git, no code. Cloudflare is critical internet infrastructure that isn't going anywhere. For most users, this is the right choice. <a href="setup.html" style="color:var(--green); font-weight:700;">See the step-by-step setup guide →</a></div>
 
@@ -1517,7 +1517,7 @@ Platform                Search Star              User's Hosting
 
       <p>In both modes, the <code>profile.json</code> file at the same domain contains the full structured data. The visibility mode controls only what the <em>human-readable HTML page</em> displays. Platforms querying through the API always get the tier-appropriate data regardless of the personal page visibility mode — the two are independent.</p>
 
-      <div class="callout callout-info"><strong>Privacy is not obscurity.</strong> The <code>profile.json</code> file is technically accessible to anyone who knows the URL. However, Search Star never reveals the endpoint URL to platforms — they can only access profile data through the paid query API. The URL is stored as an internal field in the directory. For users who want stronger protection, the v1.0 roadmap includes OAuth 2.0 token-based authentication between Search Star and user endpoints, so the JSON file itself would reject unauthenticated requests.</div>
+      <div class="callout callout-info"><strong>Privacy is not obscurity.</strong> The <code>profile.json</code> file is technically accessible to anyone who knows the URL. However, Search Star never reveals the endpoint URL to platforms — they can only access profile data through the paid query API. The URL is stored as an internal field in the directory. For users who want stronger protection, the v2.0 roadmap includes OAuth 2.0 token-based authentication between Search Star and user endpoints, so the JSON file itself would reject unauthenticated requests.</div>
 
       <!-- ═══════════ 8.3 CONTACT VIA SEARCH STAR ═══════════ -->
 
@@ -1702,7 +1702,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.7</code></td><td>March 2026</td><td>Admin panel spec: operator financial dashboard, user management, support ticket system, admin RLS</td></tr>
         <tr><td><code>v0.8</code></td><td>March 2026</td><td>Platform Portal implementation, personal page &amp; visibility modes (full/summary), "Contact via Search Star" button requirement, AI-assisted profile creation flow (two-file output: profile.json + index.html), profile registration desk</td></tr>
         <tr><td><code>v0.9</code></td><td>April 2026</td><td>Trust architecture rewrite: trust as validation (core philosophy), trust layers (family/community/practice/cross-network), three-pillar Trust Score (Depth/Breadth/Durability), affiliate growth engine (schools, churches, clubs, families), anti-gaming protections (reciprocity limits, velocity caps, decay), network value multiplier</td></tr>
-        <tr><td><code>v0.10</code></td><td>April 2026</td><td>Validator Cooperative: LLC membership class for qualifying validators, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance over trust-layer policy, membership qualification and termination rules</td></tr>
+        <tr><td><code>v1.0</code></td><td>April 2026</td><td>Validator Cooperative: LLC membership class for qualifying validators, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance over trust-layer policy, membership qualification and termination rules</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -1719,12 +1719,12 @@ Platform                Search Star              User's Hosting
       <h4>Future milestones</h4>
       <table>
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
-        <tr><td><code>v0.10</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting</td></tr>
-        <tr><td><code>v0.11</code></td><td>Q2 2026</td><td>Trust Score implementation: Depth/Breadth/Durability calculation engine, trust layer classification, validator relationship types, decay scheduler</td></tr>
-        <tr><td><code>v0.12</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
-        <tr><td><code>v0.13</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
-        <tr><td><code>v1.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
-        <tr><td><code>v1.1</code></td><td>Q1 2027</td><td>Validator Cooperative launch: LLC operating agreement finalized, automated qualification engine, first quarterly distribution, governance voting portal, cooperative member dashboard</td></tr>
+        <tr><td><code>v1.1</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting</td></tr>
+        <tr><td><code>v1.2</code></td><td>Q2 2026</td><td>Trust Score implementation: Depth/Breadth/Durability calculation engine, trust layer classification, validator relationship types, decay scheduler</td></tr>
+        <tr><td><code>v1.3</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
+        <tr><td><code>v1.4</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
+        <tr><td><code>v2.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
+        <tr><td><code>v2.1</code></td><td>Q1 2027</td><td>Validator Cooperative launch: LLC operating agreement finalized, automated qualification engine, first quarterly distribution, governance voting portal, cooperative member dashboard</td></tr>
       </table>
 
     </div>
@@ -1735,7 +1735,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v0.10 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v1.0 · MIT License</div>
       <div class="footer-links">
         <a href="index.html">Directory</a>
         <a href="profile.html">Sample</a>

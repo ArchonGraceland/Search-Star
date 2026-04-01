@@ -142,7 +142,7 @@
 
 <footer class="site-footer">
   <div class="footer-inner">
-    <div><strong>Search Star</strong> — Specification v0.10 · MIT License</div>
+    <div><strong>Search Star</strong> — Specification v1.0 · MIT License</div>
     <div class="footer-links">
       <a href="index.html">Home</a>
       <a href="spec.html">Spec</a>
@@ -160,27 +160,27 @@ const completed = [
   { v: "Phase 4", t: "Admin Panel", d: "Financial dashboard, user management, trust adjustment, support tickets" },
   { v: "Phase 5", t: "Platform Portal", d: "Platform signup, credits, directory browser, paid queries, marketing composer, analytics" },
   { v: "v0.9", t: "Trust Architecture", d: "Trust-as-validation philosophy, trust layers, Depth/Breadth/Durability score, affiliate engine spec, anti-gaming, network value" },
-  { v: "v0.10", t: "Validator Cooperative", d: "LLC membership class, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance, qualification & termination rules" },
+  { v: "v1.0", t: "Validator Cooperative", d: "LLC membership class, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance, qualification & termination rules" },
 ];
 
 const phases = [
-  { v: "v0.10", t: "Live Payments", target: "Q2 2026", status: "next", effort: "Medium",
+  { v: "v1.1", t: "Live Payments", target: "Q2 2026", status: "next", effort: "Medium",
     depends: "Foundation for all revenue flows",
     items: ["Stripe Connect integration", "Per-query metering (real money)", "Platform API keys with rate limiting", "Settlement engine (weekly payouts)"] },
-  { v: "v0.11", t: "Trust Score Engine", target: "Q2 2026", status: "planned", effort: "Large",
-    depends: "Requires v0.10 (staking needs payments)",
+  { v: "v1.2", t: "Trust Score Engine", target: "Q2 2026", status: "planned", effort: "Large",
+    depends: "Requires v1.1 (staking needs payments)",
     items: ["Depth / Breadth / Durability calculation", "Trust layer classification system", "Validator relationship types (10 types)", "Validation decay scheduler (18-month half-life)", "Minimum 90-day relationship period", "Trust Score display on profiles"] },
-  { v: "v0.12", t: "Affiliate Portal", target: "Q3 2026", status: "planned", effort: "Large",
-    depends: "Requires v0.11 (trust density needs scores)",
+  { v: "v1.3", t: "Affiliate Portal", target: "Q3 2026", status: "planned", effort: "Large",
+    depends: "Requires v1.2 (trust density needs scores)",
     items: ["Organization signup flow", "Member onboarding tools & referral links", "Trust density dashboard (per affiliate)", "Cross-network verification bonus tracking", "Affiliate payout management", "School / church / club pitch materials"] },
-  { v: "v0.13", t: "Network Value", target: "Q3 2026", status: "planned", effort: "Medium",
-    depends: "Requires v0.12 (needs affiliate network data)",
+  { v: "v1.4", t: "Network Value", target: "Q3 2026", status: "planned", effort: "Medium",
+    depends: "Requires v1.3 (needs affiliate network data)",
     items: ["Family & community cluster detection", "Network multiplier pricing engine", "Cross-network verification bonus", "Aggregate trust display for platforms", "Extended family linking (mutual opt-in)"] },
-  { v: "v1.0", t: "Full Release", target: "Q4 2026", status: "planned", effort: "Very Large",
+  { v: "v2.0", t: "Full Release", target: "Q4 2026", status: "planned", effort: "Very Large",
     depends: "All prior versions complete",
     items: ["Open-source SDK & documentation", "Self-hosting toolkit", "ZK proof integration (financial verification)", "OAuth 2.0 endpoint authentication", "Anti-gaming enforcement (all protections live)", "Response likelihood scoring", "Public launch & marketing"] },
-  { v: "v1.1", t: "Validator Cooperative Launch", target: "Q1 2027", status: "planned", effort: "Large",
-    depends: "Requires v1.0 (needs live payments and trust scores at scale)",
+  { v: "v2.1", t: "Validator Cooperative Launch", target: "Q1 2027", status: "planned", effort: "Large",
+    depends: "Requires v2.0 (needs live payments and trust scores at scale)",
     items: ["LLC operating agreement finalized", "Automated qualification engine (monthly evaluation)", "First quarterly distribution", "Governance voting portal", "Cooperative member dashboard", "1099-NEC tax reporting integration"] },
 ];
 
