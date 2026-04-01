@@ -115,7 +115,7 @@ export default async function Home() {
       </main>
 
       {/* For Platforms CTA */}
-      <section className="max-w-[860px] mx-auto px-8 pb-12">
+      <section className="max-w-[860px] mx-auto px-8 pb-6">
         <div className="bg-[#f0fdfa] border border-[#0d9488]/20 rounded-[3px] p-8 flex items-center justify-between">
           <div>
             <h3 className="font-heading text-xl font-bold mb-1">Are you a platform?</h3>
@@ -132,11 +132,41 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Trust as Validation Video */}
+      <section className="max-w-[860px] mx-auto px-8 pb-12">
+        <div className="bg-white border border-[#d4d4d4] rounded-[3px] shadow-sm p-10">
+          <div className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-2">
+            Watch
+          </div>
+          <h2 className="font-heading text-[24px] font-bold mb-2">
+            Trust as Validation
+          </h2>
+          <p className="font-body text-sm text-[#5a5a5a] leading-relaxed mb-6 max-w-[600px]">
+            How communities built on sustained effort create networks of people willing to vouch for each other — and why that destroys garbage culture.
+          </p>
+          <div className="rounded-[3px] overflow-hidden border border-[#d4d4d4] bg-black">
+            <video
+              controls
+              preload="metadata"
+              className="w-full block"
+              poster=""
+              style={{ aspectRatio: '16/9' }}
+            >
+              <source src="/SearchStar_Trust_as_Validation.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+          <p className="font-body text-xs text-[#767676] mt-3 text-center">
+            10 minutes · Sovereign data · Trust scoring · Affiliate growth · Anti-garbage architecture
+          </p>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-[#1a1a1a] text-white/55 py-8">
         <div className="max-w-[1120px] mx-auto px-8">
           <div className="font-body text-xs flex justify-between">
-            <div><strong className="text-white/80">Search Star</strong> — Specification v0.8 · MIT License</div>
+            <div><strong className="text-white/80">Search Star</strong> — Specification v0.9 · MIT License</div>
             <div className="flex gap-6">
               <Link href="/spec.html" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">Spec</Link>
               <a href="https://github.com/ArchonGraceland/Search-Star" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">GitHub</a>

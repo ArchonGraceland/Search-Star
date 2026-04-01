@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search Star — Specification v0.8</title>
+<title>Search Star — Specification v0.9</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -94,8 +94,8 @@
   <div class="wrap">
 
     <div class="spec-meta">
-      <span><strong>Version</strong> 0.8.0</span>
-      <span><strong>Date</strong> March 2026</span>
+      <span><strong>Version</strong> 0.9.0</span>
+      <span><strong>Date</strong> April 2026</span>
       <span><strong>Status</strong> Draft</span>
       <span><strong>License</strong> MIT</span>
     </div>
@@ -124,12 +124,17 @@
         <a class="toc-indent" href="#revshare">4.6 Revenue Share &amp; Fee Structure <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#bulkquery">4.7 Bulk Queries &amp; Volume Pricing <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#feedsubs">4.8 Feed Subscriptions <span class="new-badge">New in v0.4</span></a>
-        <a href="#validation">5. Validation &amp; Trust Layer <span class="new-badge">New in v0.3</span></a>
-        <a class="toc-indent" href="#validators">5.1 Validators &amp; Staking</a>
-        <a class="toc-indent" href="#automated">5.2 Automated Verification</a>
-        <a class="toc-indent" href="#trustscore">5.3 Trust Score</a>
-        <a class="toc-indent" href="#disputes">5.4 Dispute Resolution</a>
-        <a class="toc-indent" href="#referrals">5.5 Referral Validation &amp; Revenue Sharing <span class="new-badge">New in v0.5</span></a>
+        <a href="#validation">5. Trust, Validation &amp; Affiliate Growth <span class="new-badge">Rewritten in v0.9</span></a>
+        <a class="toc-indent" href="#trustphilosophy">5.1 Trust as Validation (Core Philosophy)</a>
+        <a class="toc-indent" href="#trustlayers">5.2 Trust Layers</a>
+        <a class="toc-indent" href="#trustscore">5.3 Individual Trust Score</a>
+        <a class="toc-indent" href="#validators">5.4 Validators &amp; Staking</a>
+        <a class="toc-indent" href="#automated">5.5 Automated Verification</a>
+        <a class="toc-indent" href="#disputes">5.6 Dispute Resolution</a>
+        <a class="toc-indent" href="#affiliates">5.7 Affiliate Growth Engine <span class="new-badge">New in v0.9</span></a>
+        <a class="toc-indent" href="#referrals">5.8 Referral Validation &amp; Revenue Sharing</a>
+        <a class="toc-indent" href="#antigaming">5.9 Anti-Gaming Protections <span class="new-badge">New in v0.9</span></a>
+        <a class="toc-indent" href="#networkvalue">5.10 Network Value Multiplier <span class="new-badge">New in v0.9</span></a>
         <a href="#numbering">6. Profile Numbering</a>
         <a href="#directory">7. Directory, Registration &amp; Search API <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#registration">7.1 Profile Registration</a>
@@ -840,27 +845,68 @@
       <!-- ═══════════ 5. VALIDATION — NEW ═══════════ -->
 
       <h2 id="validation">5. Validation &amp; Trust Layer <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h2>
-      <p>The validation system allows trusted third parties to vouch for the accuracy of a user's profile by staking money against it. This creates a trust signal for advertisers and querying platforms — a profile backed by real financial stakes is more credible than an unvalidated one.</p>
+      <p>Search Star's trust system is built on a single insight: <strong>trust is not a status — trust is an action.</strong> You demonstrate trust when you're willing to put your reputation on the line to validate someone else's information. Every member is a potential validator within their network. Trust is measured by what people are willing to vouch for. Reputation — not money alone — is the cost of endorsement.</p>
 
-      <h3 id="validators">5.1 Validators &amp; Staking</h3>
-      <p>Only people the profile owner explicitly approves can validate. Validators review specific sections they have personal knowledge of and choose how much to stake (minimum $1.00). Stakes are held in escrow via Stripe Connect.</p>
+      <div class="callout callout-warn"><strong>Architectural principle: Search Star is a directory and payment layer, not a hosting platform.</strong> Search Star never hosts, stores, or caches user profiles, photos, or media. The user hosts all of their own data on infrastructure they control (see section 8.1). Search Star's database contains only: the directory index (profile numbers, handles, endpoint URLs, trust scores, tier pricing), the earnings ledger (query transactions, revenue splits, settlement records), and the validation layer (validator relationships, trust scores, affiliate associations, disputes). If Search Star disappeared tomorrow, every user's profile would still exist at their own URL.</div>
+
+      <h3 id="trustphilosophy">5.1 Trust as Validation (Core Philosophy) <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.9</span></h3>
+      <p>Garbage culture — AI slop, influencer fraud, fake outrage, clickbait — is fundamentally a trust crisis. Every form of garbage is an unverified claim with no one willing to vouch for it. AI slop claims authorship it doesn't have. Influencers claim lifestyles never lived. Clickbait claims value it can't deliver. In every case, no human is willing to stake their reputation on the claim's accuracy.</p>
+      <p>Search Star's structural defense is that every meaningful claim on a profile can be validated by a real person who's willing to put their name on it. The cost of garbage isn't just monetary — it's reputational, because someone real had to vouch for it. This is enforced by architecture, not moderation policies or AI content filters.</p>
+      <p>The system produces trust through <strong>sustained effort in real communities</strong>. You can't validate someone you don't actually know. You can't know someone without spending time with them in shared activities. Therefore, the communities that produce the most valuable validators are those requiring ongoing effort and genuine participation: athletic clubs, intellectual societies, creative ensembles, religious congregations, and — most fundamentally — extended family networks.</p>
+
+      <h3 id="trustlayers">5.2 Trust Layers <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.9</span></h3>
+      <p>Validation radiates outward from the innermost circle of trust. Each layer produces people willing to vouch for different aspects of a profile, and validations from different layers are weighted accordingly.</p>
+      <table>
+        <tr><th>Layer</th><th>Examples</th><th>What they validate</th><th>Weight</th></tr>
+        <tr><td><strong>Family</strong></td><td>Cousins, grandparents, in-laws, siblings, extended family</td><td>Identity, history, character, life stage</td><td>5x base</td></tr>
+        <tr><td><strong>Community</strong></td><td>Churches, schools, neighborhood associations, civic groups</td><td>Presence, commitment, values, location</td><td>3x base</td></tr>
+        <tr><td><strong>Practice Groups</strong></td><td>Rowing clubs, chess leagues, reading groups, martial arts dojos, music ensembles</td><td>Skill, effort, competence, sustained commitment</td><td>2x base</td></tr>
+        <tr><td><strong>Cross-Network</strong></td><td>Independent institutions confirming the same person</td><td>Triangulated verification — the hardest thing to fake</td><td>Bonus multiplier</td></tr>
+      </table>
+      <p>Cross-network verification occurs when people from completely independent institutions vouch for the same profile. A person validated by their rowing club AND their church AND their cousin has a triangulated verification that is extremely difficult to fabricate. This is the highest-value form of trust and receives a bonus multiplier on the trust score.</p>
+      <div class="callout callout-info"><strong>High culture communities matter because they produce validators.</strong> A chess club doesn't just prove you play chess. It produces a group of people who know each other well enough to vouch for each other's claims. The sustained effort builds the knowledge of each other that makes validation meaningful. You can't validate someone's intellectual life unless you've sat across from them arguing ideas for months.</div>
+
+      <h3 id="trustscore">5.3 Individual Trust Score <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">Rewritten in v0.9</span></h3>
+      <p>Each profile receives a composite Trust Score (0–100) based on three sub-scores. The score requires real human effort to increase — there are no shortcuts.</p>
+      <table>
+        <tr><th>Sub-score</th><th>Range</th><th>What it measures</th><th>Key factors</th></tr>
+        <tr><td><strong>Depth</strong></td><td>0–40</td><td>Quality-weighted sum of validations received</td><td>Validator's own trust score weights their vouching; domain-relevant validators count more (chess president validating chess rating &gt; cousin validating chess rating); cross-layer validation beats same-layer</td></tr>
+        <tr><td><strong>Breadth</strong></td><td>0–30</td><td>Independent institutions with people willing to vouch</td><td>Three validations from one rowing club &lt; one validation each from rowing club, church, and cousin; diminishing returns prevent club-farming; independence matters more than quantity</td></tr>
+        <tr><td><strong>Durability</strong></td><td>0–30</td><td>Time-weighted persistence of validation network</td><td>How long validators have known you; validations decay without reconfirmation (18-month half-life); validator's ongoing community activity maintains their weight</td></tr>
+      </table>
+      <p>Trust Score directly influences query pricing. A profile with Trust Score 80+ can justify 3–5x the base query price. Platforms see the composite score and all three sub-scores when evaluating profiles.</p>
+
+      <h4>How to increase your Trust Score</h4>
+      <p>There are exactly three paths, and all require sustained effort with real people:</p>
+      <table>
+        <tr><th>Action</th><th>Sub-score affected</th><th>Mechanism</th></tr>
+        <tr><td>Deepen existing relationships</td><td>Durability</td><td>Keep showing up to your communities. The longer your validators have known you, the higher Durability climbs.</td></tr>
+        <tr><td>Join new sustained-effort communities</td><td>Breadth</td><td>A chess league, language group, running crew. Over time (minimum 90-day relationship before validation carries full weight), new validators increase Breadth.</td></tr>
+        <tr><td>Engage with high-trust individuals</td><td>Depth</td><td>Validations from people with high trust scores carry more weight. But they must be willing to vouch — you earn it through genuine participation.</td></tr>
+      </table>
+
+      <h3 id="validators">5.4 Validators &amp; Staking</h3>
+      <p>Only people the profile owner explicitly approves can validate. Validators review specific sections they have personal knowledge of and choose how much to stake (minimum $1.00). Stakes are held in escrow via Stripe Connect. Validators are classified by both their relationship type and their trust layer.</p>
 
       <h4>Validator relationship types</h4>
       <table>
-        <tr><th>Relationship</th><th>Best suited to validate</th></tr>
-        <tr><td><code>colleague</code></td><td>Skills, professional openness</td></tr>
-        <tr><td><code>friend</code></td><td>Interests, presence</td></tr>
-        <tr><td><code>family</code></td><td>Life stage signals</td></tr>
-        <tr><td><code>mentor</code></td><td>Skills, professional trajectory</td></tr>
-        <tr><td><code>collaborator</code></td><td>Skills, project output</td></tr>
-        <tr><td><code>acquaintance</code></td><td>General identity, location</td></tr>
-        <tr><td><code>professional_contact</code></td><td>Industry reputation, skills</td></tr>
+        <tr><th>Relationship</th><th>Trust layer</th><th>Best suited to validate</th></tr>
+        <tr><td><code>family_immediate</code></td><td>Family</td><td>Identity, character, life stage, financial bracket</td></tr>
+        <tr><td><code>family_extended</code></td><td>Family</td><td>Identity, history, character</td></tr>
+        <tr><td><code>congregation</code></td><td>Community</td><td>Presence, values, commitment</td></tr>
+        <tr><td><code>school_community</code></td><td>Community</td><td>Education, skills, location</td></tr>
+        <tr><td><code>civic_member</code></td><td>Community</td><td>Location, civic participation, values</td></tr>
+        <tr><td><code>athletic_teammate</code></td><td>Practice Group</td><td>Athletic interests, commitment, skill level</td></tr>
+        <tr><td><code>intellectual_peer</code></td><td>Practice Group</td><td>Intellectual interests, output, competence</td></tr>
+        <tr><td><code>creative_collaborator</code></td><td>Practice Group</td><td>Creative interests, skill, project output</td></tr>
+        <tr><td><code>colleague</code></td><td>Practice Group</td><td>Skills, professional reputation</td></tr>
+        <tr><td><code>acquaintance</code></td><td>—</td><td>General identity, location (lowest weight)</td></tr>
       </table>
       <p>Validators see only the sections selected for their review, in a read-only validation view. They never see raw financial data (only percentile bands) and never see access policy pricing.</p>
-      <p>A validator may withdraw at any time. Their stake is returned (minus any penalties from prior upheld disputes), their validation is removed, and the trust score is recalculated.</p>
+      <p>A validator may withdraw at any time. Their stake is returned (minus any penalties from prior upheld disputes), their validation is removed, and the Trust Score is recalculated.</p>
 
-      <h3 id="automated">5.2 Automated Verification</h3>
-      <p>For fields that can be verified programmatically, the system runs automated checks and records results. These do not require a human validator or staking.</p>
+      <h3 id="automated">5.5 Automated Verification</h3>
+      <p>For fields that can be verified programmatically, the system runs automated checks and records results. These do not require a human validator or staking. Automated checks contribute to the Depth sub-score but carry lower weight than human validation.</p>
       <table>
         <tr><th>Field</th><th>Source</th><th>Method</th></tr>
         <tr><td>Credit score percentile</td><td>Experian / TransUnion / Equifax</td><td>OAuth consent, returns percentile only</td></tr>
@@ -871,36 +917,56 @@
         <tr><td>Identity</td><td>Stripe Identity, Persona</td><td>Document scan, confirmed/denied</td></tr>
       </table>
 
-      <h3 id="trustscore">5.3 Trust Score</h3>
-      <p>Each profile receives a composite trust score (0–100) based on three inputs:</p>
-      <table>
-        <tr><th>Component</th><th>Weight</th><th>Scoring</th></tr>
-        <tr><td>Validator coverage</td><td>0–40 points</td><td>Percentage of profile sections with at least one human validator</td></tr>
-        <tr><td>Total stake</td><td>0–30 points</td><td>Logarithmic: $0 = 0 pts, $10 = 10, $100 = 20, $1,000+ = 30</td></tr>
-        <tr><td>Automated checks passed</td><td>0–30 points</td><td>Proportion of verifiable fields confirmed by automated sources</td></tr>
-      </table>
-      <p>Trust score directly influences suggested query pricing. A profile with a trust score of 80+ can justify 3–5x the base query price.</p>
-
-      <h3 id="disputes">5.4 Dispute Resolution</h3>
+      <h3 id="disputes">5.6 Dispute Resolution</h3>
       <p>When information is proven wrong, the following process applies:</p>
       <ol>
         <li><strong>Automated check fails.</strong> If a previously-passing automated check returns a contradictory result on re-verification, the system flags the field automatically.</li>
-        <li><strong>Advertiser dispute.</strong> A querying platform that paid for profile data can file a dispute with evidence of material inaccuracy.</li>
-        <li><strong>Review.</strong> Automated-source contradictions are upheld automatically. Subjective disputes (e.g., Presence score inflation) are flagged for manual review.</li>
-        <li><strong>Penalty on upheld dispute:</strong> The field is marked as disputed. Validators who vouched for it forfeit their stakes: 70% refunded to advertisers, 20% platform fee, 10% to the disputing party.</li>
+        <li><strong>Platform dispute.</strong> A querying platform that paid for profile data can file a dispute with evidence of material inaccuracy.</li>
+        <li><strong>Review.</strong> Automated-source contradictions are upheld automatically. Subjective disputes are flagged for manual review.</li>
+        <li><strong>Penalty on upheld dispute:</strong> The field is marked as disputed. Validators who vouched for it forfeit their stakes: 70% refunded to querying platforms, 20% platform fee, 10% to the disputing party. The validator's own Trust Score takes a hit via the accuracy tracking mechanism (see section 5.9).</li>
         <li><strong>Bad-faith dispute penalty.</strong> If a dispute is rejected (the profile data was accurate), the disputing party pays a $5 filing fee to deter frivolous disputes.</li>
       </ol>
-      <div class="callout callout-info">The profile owner may update any disputed field and request re-verification. The trust score is recalculated after every dispute resolution.</div>
+      <div class="callout callout-info">The profile owner may update any disputed field and request re-verification. The Trust Score is recalculated after every dispute resolution.</div>
 
-      <h3 id="referrals">5.5 Referral Validation &amp; Revenue Sharing <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.5</span></h3>
-      <p>Existing users can recruit new users into the Search Star network and earn a perpetual 5% share of the recruited user's query revenue — in exchange for staking money against the accuracy of that user's profile. This creates a decentralized growth engine: recruiters are financially incentivized to bring in real people with truthful profiles, and penalized for onboarding fraudulent ones.</p>
+      <h3 id="affiliates">5.7 Affiliate Growth Engine <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.9</span></h3>
+      <p>Search Star grows through trusted institutions, not paid advertising. Schools, churches, athletic clubs, neighborhood associations, and family networks sign up as affiliates and help their members create profiles. Affiliates are rewarded for <strong>trust density</strong> — not just sign-ups.</p>
+
+      <h4>Affiliate types</h4>
+      <table>
+        <tr><th>Type</th><th>Examples</th><th>Natural coordinator</th></tr>
+        <tr><td>Educational</td><td>Schools, PTAs, alumni associations</td><td>PTA president, school administrator</td></tr>
+        <tr><td>Religious</td><td>Churches, synagogues, mosques, temples</td><td>Parish council, church finance committee</td></tr>
+        <tr><td>Athletic</td><td>Rowing clubs, running crews, martial arts dojos, cycling clubs</td><td>Club president, head coach</td></tr>
+        <tr><td>Intellectual</td><td>Book clubs, debate societies, philosophy circles, chess leagues</td><td>Group organizer, league coordinator</td></tr>
+        <tr><td>Creative</td><td>Community theater, chamber music, ceramics collectives</td><td>Ensemble director, studio coordinator</td></tr>
+        <tr><td>Civic</td><td>Neighborhood associations, garden collectives, volunteer orgs</td><td>Board president, volunteer coordinator</td></tr>
+        <tr><td>Family</td><td>Extended family networks</td><td>Reunion organizer, family group chat maintainer</td></tr>
+      </table>
+
+      <h4>Affiliate pitch</h4>
+      <p>The core message to organizations: "Help your members get paid for data that Big Tech already takes for free, and your organization earns a referral share." This is not asking anyone to buy anything — it's helping people claim ownership of data that's already being harvested.</p>
+
+      <h4>Affiliate reward structure</h4>
+      <p>Affiliates earn based on two factors: the number of profiles they onboard AND the trust density those profiles achieve. The trust density bonus rewards affiliates whose members actively validate each other and achieve cross-network verification.</p>
+      <table>
+        <tr><th>Metric</th><th>Reward</th><th>Rationale</th></tr>
+        <tr><td>Profile onboarding</td><td>Flat referral fee per active profile (paid after first query revenue)</td><td>Baseline incentive for growth</td></tr>
+        <tr><td>Trust density bonus</td><td>Multiplier on referral share when affiliate's members achieve mean Trust Score above thresholds (50+, 65+, 80+)</td><td>Rewards building real validation networks, not just headcount</td></tr>
+        <tr><td>Cross-network bonus</td><td>Additional bonus when members are validated by people outside the affiliate's own network</td><td>The school whose families are also validated by their church and running club earns more than the school that just signed people up</td></tr>
+      </table>
+
+      <h4>Affiliate fundraising model</h4>
+      <p>For organizations like schools and churches, Search Star affiliate revenue functions as ongoing fundraising. Instead of selling candy bars or hosting car washes, the organization helps its community claim data sovereignty — and earns a share of the resulting query revenue. The incentives are clean: the organization isn't selling member data, it's helping members own their data and earn from it directly.</p>
+
+      <h3 id="referrals">5.8 Referral Validation &amp; Revenue Sharing</h3>
+      <p>Individual users (not just organizations) can recruit new users into the Search Star network and earn a perpetual 5% share of the recruited user's query revenue — in exchange for staking money against the accuracy of that user's profile. This creates a decentralized growth engine: recruiters are financially incentivized to bring in real people with truthful profiles, and penalized for onboarding fraudulent ones.</p>
 
       <h4>How referral validation works</h4>
       <ol>
-        <li><strong>Recruiter invites a new user.</strong> Any existing Search Star user with a Validator Reputation Score ≥ 60 (see below) can generate a referral link from their dashboard. The link is tied to the recruiter's profile number.</li>
-        <li><strong>New user signs up via the referral link.</strong> The new user completes normal registration (section 7.1) — account creation, profile hosting, domain verification, endpoint validation. The referral link associates the recruiter as the <code>referringValidator</code> in the new user's directory record.</li>
-        <li><strong>Recruiter validates the new user's profile.</strong> The recruiter must complete a full validation of the new user's profile — reviewing sections they have personal knowledge of and staking money against the accuracy of those claims (minimum $5.00 for referral validations, higher than the standard $1.00 minimum). This is not optional: the referral revenue share does not activate until the recruiter has completed validation and staking.</li>
-        <li><strong>Revenue share activates.</strong> Once the recruiter's validation stake is in place, the recruiter begins earning 5% of the new user's net query revenue (after Search Star's 10% marketplace fee). This 5% comes from the profile owner's 90% share — the owner receives 85%, the recruiter receives 5%, and Search Star's 10% remains unchanged.</li>
+        <li><strong>Recruiter invites a new user.</strong> Any existing Search Star user with a Validator Reputation Score ≥ 60 can generate a referral link. The link is tied to the recruiter's profile number.</li>
+        <li><strong>New user signs up via the referral link.</strong> Normal registration (section 7.1). The referral link associates the recruiter as the <code>referringValidator</code>.</li>
+        <li><strong>Recruiter validates the new user's profile.</strong> The recruiter must complete a full validation and stake minimum $5.00. Revenue share does not activate until staking is complete.</li>
+        <li><strong>Revenue share activates.</strong> Recruiter earns 5% of the new user's net query revenue. Owner receives 85%, Search Star 10%.</li>
       </ol>
 
       <h4>Revenue split with referral</h4>
@@ -910,51 +976,54 @@
         <tr><td>Profile owner</td><td>90%</td><td>85%</td></tr>
         <tr><td>Referring validator</td><td>—</td><td>5%</td></tr>
       </table>
-      <div class="callout callout-info"><strong>The owner's price doesn't change.</strong> If a profile owner sets their Private tier at $0.50/query, the platform still pays $0.50. The 5% referral share is carved from the owner's portion — Search Star does not increase the query price or take a larger cut. The owner was earning $0.45 before; now they earn $0.425 and the recruiter earns $0.025.</div>
-
-      <h4>Example transaction (with referral)</h4>
-      <table>
-        <tr><th>Step</th><th>Amount</th><th>Recipient</th></tr>
-        <tr><td>Platform credit balance debited</td><td>$0.50</td><td>—</td></tr>
-        <tr><td>Search Star marketplace fee (10%)</td><td>$0.05</td><td>Search Star</td></tr>
-        <tr><td>Referring validator share (5%)</td><td>$0.025</td><td>Recruiter's earnings ledger</td></tr>
-        <tr><td>Profile owner earnings (85%)</td><td>$0.425</td><td>Owner's earnings ledger</td></tr>
-      </table>
+      <div class="callout callout-info"><strong>The owner's price doesn't change.</strong> The 5% referral share is carved from the owner's portion — Search Star does not increase the query price or take a larger cut.</div>
 
       <h4>Referral revenue is perpetual but conditional</h4>
-      <p>The 5% share continues indefinitely — as long as the recruiter maintains an active validation stake on the recruited user's profile. If the recruiter withdraws their stake, the revenue share stops immediately and the owner reverts to the standard 90% split. The recruiter can re-stake and reactivate the share at any time.</p>
+      <p>The 5% share continues indefinitely as long as the recruiter maintains an active validation stake. If the recruiter withdraws their stake, revenue share stops immediately. The owner can terminate the referral relationship at any time.</p>
 
-      <h4>Penalties for bad referral validation</h4>
-      <p>The referral system is explicitly designed to punish recruiters who validate incorrect information. Because the recruiter has a financial incentive to onboard as many users as possible, the penalty structure must be severe enough to make fraudulent validation unprofitable.</p>
+      <div class="callout callout-warn"><strong>This is not multi-level marketing.</strong> Search Star's referral system is a single-tier, stake-backed validation incentive. There is exactly one layer. There are no uplines, downlines, recruitment bonuses, or compounding tiers. The recruiter must stake real money and is financially penalized for validating bad data.</div>
+
+      <h3 id="antigaming">5.9 Anti-Gaming Protections <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.9</span></h3>
+      <p>The Trust Score must resist manipulation. The following structural protections are enforced at the system level:</p>
       <table>
-        <tr><th>Event</th><th>Consequence</th></tr>
-        <tr><td>Dispute upheld on a field the recruiter validated</td><td>Recruiter forfeits their entire stake on that user (same as standard validator penalties — 70% to advertisers, 20% platform, 10% disputing party). Revenue share is suspended until the recruiter re-stakes.</td></tr>
-        <tr><td>Second upheld dispute on the same recruited user</td><td>Full stake forfeiture. Revenue share permanently terminated for that user. Recruiter's Validator Reputation Score reduced by 15 points.</td></tr>
-        <tr><td>Three or more upheld disputes across any recruited users</td><td>Recruiter's Validator Reputation Score drops below the referral threshold (60). Recruiter loses the ability to generate new referral links until their score recovers. Existing revenue shares on clean profiles continue.</td></tr>
-        <tr><td>Validator Reputation Score drops below 30</td><td>All referral revenue shares are frozen. All active validation stakes are flagged for review. The recruiter is suspended from all validation activity (not just referrals) until manual review is completed.</td></tr>
+        <tr><th>Protection</th><th>Mechanism</th><th>What it prevents</th></tr>
+        <tr><td><strong>Reciprocity limits</strong></td><td>If two people validate each other and no one else, both validations are discounted by 70%</td><td>Mutual-only validation rings</td></tr>
+        <tr><td><strong>Velocity caps</strong></td><td>Trust Score cannot increase by more than 5 points per month</td><td>Joining 10 clubs in a month and farming validations</td></tr>
+        <tr><td><strong>Minimum relationship period</strong></td><td>Validations carry 25% weight in the first 90 days, scaling to 100% at 12 months</td><td>Shallow "weekend workshop" validations</td></tr>
+        <tr><td><strong>Accuracy tracking</strong></td><td>Validators who vouch for claims later proven false lose trust score points (their own score, not the profile's)</td><td>Careless or fraudulent vouching</td></tr>
+        <tr><td><strong>Decay by default</strong></td><td>Validations not reconfirmed within 18 months lose 50% of their weight; at 36 months they contribute zero</td><td>Stale validation from defunct relationships</td></tr>
+        <tr><td><strong>Validator activity requirement</strong></td><td>If a validator stops participating in their community (no activity for 12+ months), their validations lose weight</td><td>Phantom validators who no longer have community standing</td></tr>
+        <tr><td><strong>Diminishing Breadth returns</strong></td><td>Going from 1 to 3 independent institutions is a large Breadth increase; going from 8 to 10 is marginal</td><td>Club-farming for Breadth score</td></tr>
       </table>
 
       <h4>Validator Reputation Score</h4>
-      <p>Every user who participates in validation (whether as a standard validator or as a referring validator) has a Validator Reputation Score (0–100). This is distinct from the profile Trust Score — it measures the validator's track record, not the profile's credibility.</p>
+      <p>Every user who participates in validation has a Validator Reputation Score (0–100). This is distinct from the profile Trust Score — it measures the validator's track record, not the profile's credibility.</p>
       <table>
         <tr><th>Component</th><th>Weight</th><th>Scoring</th></tr>
         <tr><td>Validation accuracy</td><td>0–50 points</td><td>Percentage of validated fields that have never been disputed. Starts at 50 for new validators.</td></tr>
         <tr><td>Stake history</td><td>0–25 points</td><td>Total amount staked over time (logarithmic). Higher lifetime stakes = higher score.</td></tr>
-        <tr><td>Dispute history</td><td>0–25 points</td><td>Inverse of upheld disputes. Each upheld dispute reduces this component by 5 points. Starts at 25.</td></tr>
+        <tr><td>Dispute history</td><td>0–25 points</td><td>Inverse of upheld disputes. Each upheld dispute reduces this component by 5 points.</td></tr>
       </table>
-      <p>New users start with a Validator Reputation Score of 75 (50 + 0 + 25). They can begin referring immediately. The score adjusts over time based on their validation track record.</p>
 
-      <h4>Limits and guardrails</h4>
-      <ul>
-        <li><strong>One recruiter per user.</strong> A profile can only have one referring validator. The first referral link used during registration is permanent. This prevents referral-stacking or referral hijacking.</li>
-        <li><strong>No self-referral.</strong> A user cannot refer themselves or any profile they own.</li>
-        <li><strong>No chain referrals.</strong> Referral revenue is single-tier only. If User A recruits User B, and User B recruits User C, User A earns nothing from User C. This is not an MLM — it is a flat, single-layer incentive for validated recruitment.</li>
-        <li><strong>Minimum stake for referral validation.</strong> $5.00, higher than the standard $1.00 validator minimum. The recruiter must have skin in the game proportional to their ongoing revenue benefit.</li>
-        <li><strong>Owner can terminate referral relationship.</strong> The profile owner can request removal of the referral association at any time. If removed, the recruiter's revenue share ends permanently and cannot be reinstated. The recruiter's stake is returned (minus any penalties). This gives the owner an escape valve if they feel the arrangement is unfair after their profile grows in value.</li>
-        <li><strong>Referral share is visible to the owner.</strong> The profile owner's earnings dashboard clearly shows the 5% referral deduction, the recruiter's identity, and the option to terminate. There is no hidden revenue sharing.</li>
-      </ul>
+      <h3 id="networkvalue">5.10 Network Value Multiplier <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.9</span></h3>
+      <p>A profile's economic value is a function of both the individual Trust Score and the aggregate trust of the network the person is embedded in. High-trust clusters — extended families, practice groups, community networks where members actively validate each other — are worth more to platforms than isolated profiles.</p>
 
-      <div class="callout callout-warn"><strong>This is not multi-level marketing.</strong> Search Star's referral system is a single-tier, stake-backed validation incentive. There is exactly one layer — the person who recruited and validated you earns 5% of your revenue. There are no uplines, downlines, recruitment bonuses, or compounding tiers. The recruiter must stake real money and is financially penalized for validating bad data. The owner can terminate the relationship at any time. If the recruiter's validation track record deteriorates, they lose the ability to recruit entirely.</div>
+      <h4>What platforms see</h4>
+      <p>When a platform queries a profile, the response includes network context alongside the Trust Score:</p>
+      <table>
+        <tr><th>Field</th><th>Example value</th><th>Significance</th></tr>
+        <tr><td>Trust Score</td><td>78 / 100</td><td>Composite credibility</td></tr>
+        <tr><td>Depth / Breadth / Durability</td><td>82 / 71 / 80</td><td>Sub-score breakdown</td></tr>
+        <tr><td>Independent institutions</td><td>4</td><td>Cross-network verification breadth</td></tr>
+        <tr><td>Median validator relationship</td><td>2.3 years</td><td>How well validators actually know this person</td></tr>
+        <tr><td>Mean validator trust score</td><td>72</td><td>Quality of the people vouching</td></tr>
+        <tr><td>Family network size</td><td>15 members</td><td>Verified extended family cluster</td></tr>
+        <tr><td>Family network mean score</td><td>70+</td><td>Cluster quality</td></tr>
+      </table>
+
+      <h4>Network multiplier mechanics</h4>
+      <p>A family network where 15 members all have Trust Scores above 70 is worth more to a platform than 15 isolated profiles with the same scores. The network context tells platforms they're reaching a real, interconnected community — not isolated data points. This multiplier is reflected in suggested query pricing: profiles embedded in high-trust networks can justify premium pricing beyond what their individual score alone would warrant.</p>
+      <p>This creates the ultimate virtuous cycle: the family reunion organizer who gets everyone's trust scores up by encouraging participation in real communities is literally increasing the economic value of every profile in the family. The affiliate incentive, the trust incentive, and the economic incentive all point in the same direction — do real things with real people over sustained periods of time.</p>
 
       <!-- ═══════════ 6. NUMBERING ═══════════ -->
 
@@ -1563,6 +1632,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.6</code></td><td>March 2026</td><td>Platform Portal spec (section 9), server-side endpoint proxy, endpoint access control</td></tr>
         <tr><td><code>v0.7</code></td><td>March 2026</td><td>Admin panel spec: operator financial dashboard, user management, support ticket system, admin RLS</td></tr>
         <tr><td><code>v0.8</code></td><td>March 2026</td><td>Platform Portal implementation, personal page &amp; visibility modes (full/summary), "Contact via Search Star" button requirement, AI-assisted profile creation flow (two-file output: profile.json + index.html), profile registration desk</td></tr>
+        <tr><td><code>v0.9</code></td><td>April 2026</td><td>Trust architecture rewrite: trust as validation (core philosophy), trust layers (family/community/practice/cross-network), three-pillar Trust Score (Depth/Breadth/Durability), affiliate growth engine (schools, churches, clubs, families), anti-gaming protections (reciprocity limits, velocity caps, decay), network value multiplier</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -1579,8 +1649,11 @@ Platform                Search Star              User's Hosting
       <h4>Future milestones</h4>
       <table>
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
-        <tr><td><code>v0.9</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting</td></tr>
-        <tr><td><code>v1.0</code></td><td>Q3 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, response likelihood scoring</td></tr>
+        <tr><td><code>v0.10</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting</td></tr>
+        <tr><td><code>v0.11</code></td><td>Q2 2026</td><td>Trust Score implementation: Depth/Breadth/Durability calculation engine, trust layer classification, validator relationship types, decay scheduler</td></tr>
+        <tr><td><code>v0.12</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
+        <tr><td><code>v0.13</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
+        <tr><td><code>v1.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
       </table>
 
     </div>
@@ -1591,7 +1664,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v0.8 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v0.9 · MIT License</div>
       <div class="footer-links">
         <a href="index.html">Directory</a>
         <a href="profile.html">Sample</a>
