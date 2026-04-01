@@ -142,7 +142,7 @@
 
 <footer class="site-footer">
   <div class="footer-inner">
-    <div><strong>Search Star</strong> — Specification v0.9 · MIT License</div>
+    <div><strong>Search Star</strong> — Specification v0.10 · MIT License</div>
     <div class="footer-links">
       <a href="index.html">Home</a>
       <a href="spec.html">Spec</a>
@@ -160,6 +160,7 @@ const completed = [
   { v: "Phase 4", t: "Admin Panel", d: "Financial dashboard, user management, trust adjustment, support tickets" },
   { v: "Phase 5", t: "Platform Portal", d: "Platform signup, credits, directory browser, paid queries, marketing composer, analytics" },
   { v: "v0.9", t: "Trust Architecture", d: "Trust-as-validation philosophy, trust layers, Depth/Breadth/Durability score, affiliate engine spec, anti-gaming, network value" },
+  { v: "v0.10", t: "Validator Cooperative", d: "LLC membership class, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance, qualification & termination rules" },
 ];
 
 const phases = [
@@ -178,6 +179,9 @@ const phases = [
   { v: "v1.0", t: "Full Release", target: "Q4 2026", status: "planned", effort: "Very Large",
     depends: "All prior versions complete",
     items: ["Open-source SDK & documentation", "Self-hosting toolkit", "ZK proof integration (financial verification)", "OAuth 2.0 endpoint authentication", "Anti-gaming enforcement (all protections live)", "Response likelihood scoring", "Public launch & marketing"] },
+  { v: "v1.1", t: "Validator Cooperative Launch", target: "Q1 2027", status: "planned", effort: "Large",
+    depends: "Requires v1.0 (needs live payments and trust scores at scale)",
+    items: ["LLC operating agreement finalized", "Automated qualification engine (monthly evaluation)", "First quarterly distribution", "Governance voting portal", "Cooperative member dashboard", "1099-NEC tax reporting integration"] },
 ];
 
 // Render completed

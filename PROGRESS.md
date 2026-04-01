@@ -1,7 +1,7 @@
 # Search Star MVP — Development Progress
 
 **Started:** March 31, 2026
-**Spec Version:** v0.7
+**Spec Version:** v0.10
 **Tech Stack:** Next.js 15 + Supabase + Vercel + Stripe Connect
 **Repo:** github.com/ArchonGraceland/Search-Star
 **Live:** searchstar.com
