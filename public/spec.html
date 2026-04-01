@@ -135,6 +135,7 @@
         <a class="toc-indent" href="#referrals">5.8 Referral Validation &amp; Revenue Sharing</a>
         <a class="toc-indent" href="#antigaming">5.9 Anti-Gaming Protections <span class="new-badge">New in v0.9</span></a>
         <a class="toc-indent" href="#networkvalue">5.10 Network Value Multiplier <span class="new-badge">New in v0.9</span></a>
+        <a class="toc-indent" href="#cooperative">5.11 Validator Cooperative <span class="new-badge">New in v0.10</span></a>
         <a href="#numbering">6. Profile Numbering</a>
         <a href="#directory">7. Directory, Registration &amp; Search API <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#registration">7.1 Profile Registration</a>
@@ -904,6 +905,7 @@
       </table>
       <p>Validators see only the sections selected for their review, in a read-only validation view. They never see raw financial data (only percentile bands) and never see access policy pricing.</p>
       <p>A validator may withdraw at any time. Their stake is returned (minus any penalties from prior upheld disputes), their validation is removed, and the Trust Score is recalculated.</p>
+      <div class="callout callout-info"><strong>Validators can become co-owners.</strong> Qualifying validators — those who maintain high reputation, sustained stakes, and broad participation — are eligible for the Validator Cooperative (section 5.11), which grants revenue participation and governance rights over trust-layer policy.</div>
 
       <h3 id="automated">5.5 Automated Verification</h3>
       <p>For fields that can be verified programmatically, the system runs automated checks and records results. These do not require a human validator or staking. Automated checks contribute to the Depth sub-score but carry lower weight than human validation.</p>
@@ -1024,6 +1026,73 @@
       <h4>Network multiplier mechanics</h4>
       <p>A family network where 15 members all have Trust Scores above 70 is worth more to a platform than 15 isolated profiles with the same scores. The network context tells platforms they're reaching a real, interconnected community — not isolated data points. This multiplier is reflected in suggested query pricing: profiles embedded in high-trust networks can justify premium pricing beyond what their individual score alone would warrant.</p>
       <p>This creates the ultimate virtuous cycle: the family reunion organizer who gets everyone's trust scores up by encouraging participation in real communities is literally increasing the economic value of every profile in the family. The affiliate incentive, the trust incentive, and the economic incentive all point in the same direction — do real things with real people over sustained periods of time.</p>
+
+      <h3 id="cooperative">5.11 Validator Cooperative <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.10</span></h3>
+      <p>Validators are the backbone of Search Star's trust infrastructure. The Validator Cooperative formalizes this by granting qualifying validators revenue participation and governance rights — structured as an LLC membership class that avoids securities classification.</p>
+
+      <h4>Legal structure</h4>
+      <p>Search Star operates as a multi-class LLC. The <strong>Operating Class</strong> holds full management authority over product, engineering, hiring, pricing, and business strategy. The <strong>Validator Member Class</strong> holds revenue participation rights and limited governance rights scoped exclusively to trust-layer policy. Validator Members are classified as service participants, not passive investors — their revenue share is tied to ongoing validation work, not a capital contribution. This structure is designed to avoid securities registration under the Howey test, because returns depend on the validator's own efforts, not solely the efforts of others.</p>
+      <div class="callout callout-warn"><strong>Not equity, not a security.</strong> Validator membership is a revenue-sharing arrangement tied to active service. It does not confer ownership of Search Star's intellectual property, brand, or technology. It cannot be sold, transferred, or inherited. If a validator stops qualifying, their membership and revenue share terminate. Legal counsel should review the operating agreement in each jurisdiction where validators are active.</div>
+
+      <h4>Qualification criteria</h4>
+      <p>Validator Cooperative membership is earned, not purchased. A validator qualifies when all of the following are met:</p>
+      <table>
+        <tr><th>Criterion</th><th>Threshold</th><th>Rationale</th></tr>
+        <tr><td>Active validation tenure</td><td>≥ 6 months of continuous active validation</td><td>Filters out casual or one-time validators</td></tr>
+        <tr><td>Cumulative stake</td><td>≥ $500 total staked (active or historically)</td><td>Demonstrates meaningful financial commitment to the trust layer</td></tr>
+        <tr><td>Profile breadth</td><td>Active validations on ≥ 3 distinct profiles</td><td>Ensures cross-network participation, not single-profile loyalty</td></tr>
+        <tr><td>Validator Reputation Score</td><td>≥ 70 / 100</td><td>Enforces accuracy and good-faith participation (see section 5.9)</td></tr>
+        <tr><td>Dispute record</td><td>Zero upheld disputes in the trailing 12 months</td><td>No recent history of vouching for false claims</td></tr>
+      </table>
+      <p>Qualification is evaluated monthly by an automated process. Validators who meet all criteria are invited to accept membership. Acceptance requires agreement to the Validator Member operating agreement.</p>
+
+      <h4>Revenue participation</h4>
+      <p>A fixed percentage of Search Star's marketplace fee revenue — the <strong>Validator Revenue Pool</strong> — is allocated to cooperative members. The initial pool is set at 20% of marketplace fee revenue (i.e., 2% of gross query revenue, since Search Star's marketplace fee is 10%).</p>
+      <table>
+        <tr><th>Parameter</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Pool size</td><td>20% of marketplace fee revenue</td><td>Adjustable by validator governance vote (see below)</td></tr>
+        <tr><td>Distribution frequency</td><td>Quarterly</td><td>Distributed within 30 days of quarter end</td></tr>
+        <tr><td>Allocation method</td><td>Stake-weighted validation activity</td><td>Proportional to each member's (active stake × validated profiles × months active) relative to all members</td></tr>
+        <tr><td>Minimum distribution</td><td>$5.00</td><td>Amounts below threshold roll to next quarter</td></tr>
+        <tr><td>Payment method</td><td>Same Stripe Connect payout as query earnings</td><td>No separate payment infrastructure required</td></tr>
+        <tr><td>Tax reporting</td><td>1099-NEC (US) for annual distributions above $600</td><td>Classified as non-employee compensation for services rendered</td></tr>
+      </table>
+
+      <h4>Allocation formula</h4>
+      <p>Each qualifying member's share of the quarterly pool is calculated as:</p>
+      <pre>
+member_score = active_stake × validated_profile_count × months_active
+member_share = member_score / sum(all_member_scores)
+member_payout = validator_revenue_pool × member_share</pre>
+      <p>This rewards validators who stake more, validate more profiles, and participate over longer periods. A validator with $2,000 staked across 8 profiles over 18 months receives a substantially larger share than one with $500 across 3 profiles over 6 months.</p>
+
+      <h4>Governance rights</h4>
+      <p>Validator Members vote on trust-layer policy questions. Governance is limited in scope — members do not vote on product direction, pricing, hiring, technology, or business strategy. Voting is weighted by the same stake-weighted formula used for revenue allocation.</p>
+      <table>
+        <tr><th>In scope (Validator Members vote)</th><th>Out of scope (Operating Class decides)</th></tr>
+        <tr><td>Minimum stake amounts for validation</td><td>Product roadmap and feature prioritization</td></tr>
+        <tr><td>Dispute resolution procedures and penalties</td><td>Query pricing and marketplace fee percentage</td></tr>
+        <tr><td>New validator relationship types</td><td>Hiring, compensation, and organizational structure</td></tr>
+        <tr><td>Anti-gaming rule thresholds (section 5.9)</td><td>Technology stack and infrastructure decisions</td></tr>
+        <tr><td>Validator qualification criteria adjustments</td><td>Platform partnerships and business development</td></tr>
+        <tr><td>Revenue pool percentage (within a 10–30% band)</td><td>Brand, marketing, and communications</td></tr>
+      </table>
+      <div class="callout callout-info"><strong>Revenue pool guardrails.</strong> Validator Members can vote to adjust the pool percentage, but only within a 10–30% band of marketplace fee revenue. The Operating Class retains the right to set the band boundaries. This prevents the cooperative from voting itself an unsustainable share while still giving members meaningful control over their compensation.</div>
+
+      <h4>Voting mechanics</h4>
+      <p>Votes are conducted quarterly, coinciding with revenue distributions. Proposals can be submitted by any member with ≥ 12 months tenure. A proposal passes with a simple majority of stake-weighted votes, with a minimum quorum of 25% of total member stake. Results are published transparently to all members.</p>
+
+      <h4>Membership termination</h4>
+      <p>Membership is automatically suspended if a validator falls below qualification thresholds. Specifically:</p>
+      <ol>
+        <li><strong>Reputation Score drops below 60.</strong> Membership suspended. Revenue share paused. If score recovers above 70 within 6 months, membership reinstates automatically.</li>
+        <li><strong>Upheld dispute.</strong> Membership suspended for 12 months from the dispute resolution date. Must re-qualify after suspension.</li>
+        <li><strong>Inactivity.</strong> If a member has zero active validations for 6 consecutive months, membership lapses. Must re-qualify from scratch.</li>
+        <li><strong>Voluntary withdrawal.</strong> A member may resign at any time. Accrued but unpaid distributions are paid out in the next quarterly cycle.</li>
+      </ol>
+      <p>Terminated members retain no ongoing rights. There is no buyout, no residual claim, and no transferability. Membership is personal and non-assignable.</p>
+
+      <div class="callout callout-info"><strong>The cooperative's narrative.</strong> "The people who keep Search Star honest own a piece of it." Validator cooperative membership is designed to be a genuine badge of honor — a recognition that this person has staked real money, maintained accuracy, and participated in the trust infrastructure over a sustained period. It is the highest status a non-operator can hold in the Search Star ecosystem.</div>
 
       <!-- ═══════════ 6. NUMBERING ═══════════ -->
 
@@ -1633,6 +1702,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.7</code></td><td>March 2026</td><td>Admin panel spec: operator financial dashboard, user management, support ticket system, admin RLS</td></tr>
         <tr><td><code>v0.8</code></td><td>March 2026</td><td>Platform Portal implementation, personal page &amp; visibility modes (full/summary), "Contact via Search Star" button requirement, AI-assisted profile creation flow (two-file output: profile.json + index.html), profile registration desk</td></tr>
         <tr><td><code>v0.9</code></td><td>April 2026</td><td>Trust architecture rewrite: trust as validation (core philosophy), trust layers (family/community/practice/cross-network), three-pillar Trust Score (Depth/Breadth/Durability), affiliate growth engine (schools, churches, clubs, families), anti-gaming protections (reciprocity limits, velocity caps, decay), network value multiplier</td></tr>
+        <tr><td><code>v0.10</code></td><td>April 2026</td><td>Validator Cooperative: LLC membership class for qualifying validators, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance over trust-layer policy, membership qualification and termination rules</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -1654,6 +1724,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.12</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
         <tr><td><code>v0.13</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
         <tr><td><code>v1.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
+        <tr><td><code>v1.1</code></td><td>Q1 2027</td><td>Validator Cooperative launch: LLC operating agreement finalized, automated qualification engine, first quarterly distribution, governance voting portal, cooperative member dashboard</td></tr>
       </table>
 
     </div>
