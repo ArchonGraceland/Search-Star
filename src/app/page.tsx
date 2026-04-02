@@ -171,6 +171,7 @@ export default async function Home() {
               <Link href="/spec.html" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">Spec</Link>
               <Link href="/roadmap.html" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">Roadmap</Link>
               <Link href="/manifesto" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">Manifesto</Link>
+              <Link href="/projections" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">Projections</Link>
               <a href="https://github.com/ArchonGraceland/Search-Star" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">GitHub</a>
             </div>
           </div>
