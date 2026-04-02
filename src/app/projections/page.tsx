@@ -104,17 +104,17 @@ const ownerData = [
 const affScenarios = ['Casual Referrer', 'Active Recruiter', 'Power Affiliate']
 const affData = [
   { section: 'Year 1–3' },
-  { label: 'Profiles recruited', values: [5, 25, 100] },
+  { label: 'Profiles recruited', values: [50, 250, 1000] },
   { label: 'Avg profile revenue/month', values: [10, 20, 30], fmt: 'dollar' },
-  { label: 'Annual affiliate earnings', values: [30, 300, 1800], fmt: 'dollar', highlight: true },
+  { label: 'Annual affiliate earnings', values: [300, 3000, 18000], fmt: 'dollar', highlight: true },
   { section: 'Year 4 (hockey stick)' },
-  { label: 'Profiles recruited', values: [10, 50, 250] },
+  { label: 'Profiles recruited', values: [100, 500, 2500] },
   { label: 'Avg profile revenue/month', values: [30, 50, 80], fmt: 'dollar' },
-  { label: 'Year 4 annual earnings', values: [180, 1500, 12000], fmt: 'dollar', highlight: true },
+  { label: 'Year 4 annual earnings', values: [1800, 15000, 120000], fmt: 'dollar', highlight: true },
   { section: 'Year 5 (mainstream)' },
-  { label: 'Profiles recruited', values: [20, 100, 500] },
+  { label: 'Profiles recruited', values: [200, 1000, 5000] },
   { label: 'Avg profile revenue/month', values: [50, 80, 120], fmt: 'dollar' },
-  { label: 'Year 5 annual earnings', values: [600, 4800, 36000], fmt: 'dollar', highlight: true },
+  { label: 'Year 5 annual earnings', values: [6000, 48000, 360000], fmt: 'dollar', highlight: true },
 ]
 
 /* ── Formatters ── */
