@@ -124,6 +124,9 @@
         <a class="toc-indent" href="#revshare">4.6 Revenue Share &amp; Fee Structure <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#bulkquery">4.7 Bulk Queries &amp; Volume Pricing <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#feedsubs">4.8 Feed Subscriptions <span class="new-badge">New in v0.4</span></a>
+        <a class="toc-indent" href="#campaigns">4.9 AI-Powered Campaigns <span class="new-badge">New in v1.1</span></a>
+        <a class="toc-indent" href="#campaign-fees">4.10 Campaign Fee Structure <span class="new-badge">New in v1.1</span></a>
+        <a class="toc-indent" href="#marketing-data-access">4.11 Marketing Data Access Controls <span class="new-badge">New in v1.1</span></a>
         <a href="#validation">5. Trust, Validation &amp; Affiliate Growth <span class="new-badge">Rewritten in v0.9</span></a>
         <a class="toc-indent" href="#trustphilosophy">5.1 Trust as Validation (Core Philosophy)</a>
         <a class="toc-indent" href="#trustlayers">5.2 Trust Layers</a>
@@ -153,6 +156,8 @@
         <a class="toc-indent" href="#platform-credits">9.2 Credit Management</a>
         <a class="toc-indent" href="#platform-directory">9.3 Directory &amp; Messaging</a>
         <a class="toc-indent" href="#platform-analytics">9.4 Spending Analytics</a>
+        <a class="toc-indent" href="#platform-campaigns">9.5 Campaign Management <span class="new-badge">New in v1.1</span></a>
+        <a class="toc-indent" href="#platform-campaign-analytics">9.6 Campaign Analytics <span class="new-badge">New in v1.1</span></a>
         <a href="#roadmap">10. Roadmap</a>
       </div>
 
@@ -842,6 +847,171 @@
       <p>Profile owners can view all active subscriptions to their feed in the earnings dashboard: subscriber identity (platform or individual), subscription start date, current interval, price, and total revenue generated. Owners can block any subscriber at any time — the subscription is immediately cancelled, the current interval is not refunded (same principle as Marketing tier), and the subscriber cannot re-subscribe without the owner's approval.</p>
 
       <div class="callout callout-info"><strong>Subscriptions don't bypass sovereignty.</strong> A subscription grants the right to query feed items — it does not grant the right to cache, redistribute, or archive content. Each item access still flows through Search Star's payment layer and is logged. If the owner removes an item from their feed endpoint, it becomes inaccessible to subscribers. The owner retains full control of their content at all times.</div>
+
+      <h3 id="campaigns">4.9 AI-Powered Campaigns <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v1.1</span></h3>
+      <p>AI-Powered Campaigns transform the Marketing tier from a one-at-a-time message sender into a system where platforms describe what they're offering and Search Star's AI generates individualized messages for each recipient. Every message is uniquely tailored to the recipient's interests, communication style, and comprehension preferences using the profile data they have made available for marketing purposes (see section 4.11).</p>
+
+      <div class="callout callout-green"><strong>Philosophy: we're not trying to trick you — we're trying to help you understand.</strong> The AI tailors each message so the recipient can evaluate the offering as quickly and clearly as possible. This isn't manipulation — it's translation. A technical person gets specifics. A visual learner gets imagery. A busy executive gets the bottom line first. The recipient's profile data is used <em>for</em> them, not against them. Their data makes their experience better, and they get paid for it.</div>
+
+      <h4>Campaign object</h4>
+      <p>A campaign is the core unit. A platform creates a campaign brief, Search Star's AI generates individualized messages, and those messages flow into recipient feeds.</p>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>id</code></td><td>UUID</td><td>Unique campaign identifier</td></tr>
+        <tr><td><code>platform_id</code></td><td>UUID</td><td>The platform that created the campaign</td></tr>
+        <tr><td><code>status</code></td><td>enum</td><td><code>draft</code> → <code>composing</code> → <code>review</code> → <code>active</code> → <code>paused</code> | <code>completed</code> | <code>expired</code></td></tr>
+        <tr><td><code>brief.offering</code></td><td>text (max 2000 chars)</td><td>What the platform is selling or proposing — freeform description</td></tr>
+        <tr><td><code>brief.category</code></td><td>enum</td><td><code>recruiting</code>, <code>dating</code>, <code>investment</code>, <code>product</code>, <code>partnership</code>, <code>other</code></td></tr>
+        <tr><td><code>brief.cta_type</code></td><td>enum</td><td><code>interested</code> (binary buttons), <code>outbound_link</code> (tracked redirect), <code>reply</code> (in-feed response)</td></tr>
+        <tr><td><code>brief.cta_url</code></td><td>url | null</td><td>Required if <code>cta_type = outbound_link</code>. The platform's landing page URL.</td></tr>
+        <tr><td><code>brief.attachments</code></td><td>url[]</td><td>Optional supporting materials (pitch deck, job spec, product page)</td></tr>
+        <tr><td><code>brief.expiration</code></td><td>timestamp</td><td>When the campaign stops delivering. Default: 30 days. Platform-configurable: 7–90 days.</td></tr>
+        <tr><td><code>audience.filters</code></td><td>object</td><td>Targeting criteria: <code>location</code>, <code>age_cohort</code>, <code>presence_min</code>, <code>interest_tags</code>, <code>has_dating</code>, <code>has_advertising</code>, <code>custom_query</code> (free-text for AI-refined targeting)</td></tr>
+        <tr><td><code>audience.matched_count</code></td><td>int</td><td>Number of profiles matching the filters at campaign creation</td></tr>
+        <tr><td><code>audience.estimated_budget</code></td><td>decimal</td><td>Projected total cost (send fees + estimated read fees)</td></tr>
+        <tr><td><code>composer_thread</code></td><td>message[]</td><td>Full chat history of the platform ↔ AI brief refinement conversation</td></tr>
+        <tr><td><code>sample_messages</code></td><td>generated_message[]</td><td>3–5 preview messages for different recipient persona types</td></tr>
+        <tr><td><code>platform_approved</code></td><td>boolean</td><td>Platform must approve sample messages before the campaign goes active</td></tr>
+        <tr><td><code>total_send_spend</code></td><td>decimal</td><td>Running total of send fees charged</td></tr>
+        <tr><td><code>total_read_spend</code></td><td>decimal</td><td>Running total of read fees charged</td></tr>
+        <tr><td><code>expires_at</code></td><td>timestamp</td><td>Campaign expiration date</td></tr>
+      </table>
+
+      <h4>Generated message object</h4>
+      <p>Each recipient gets a unique message. This is what the AI produces and what appears in the user's feed.</p>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>id</code></td><td>UUID</td><td>Unique message identifier</td></tr>
+        <tr><td><code>campaign_id</code></td><td>UUID</td><td>Parent campaign</td></tr>
+        <tr><td><code>recipient_id</code></td><td>UUID</td><td>The profile owner receiving the message</td></tr>
+        <tr><td><code>content.headline</code></td><td>string (max 100 chars)</td><td>Feed preview line — visible in collapsed state</td></tr>
+        <tr><td><code>content.body</code></td><td>text (max 2000 chars)</td><td>Full AI-tailored message — visible when expanded</td></tr>
+        <tr><td><code>content.media</code></td><td>object | null</td><td>AI-generated visual: <code>type</code> (image | video | none), <code>url</code> (Search Star CDN — never platform-hosted), <code>alt_text</code></td></tr>
+        <tr><td><code>content.cta</code></td><td>object</td><td><code>type</code>, <code>label</code> (AI-tailored button text), <code>tracked_url</code> (Search Star redirect that logs conversion before forwarding)</td></tr>
+        <tr><td><code>tailoring.fields_used</code></td><td>string[]</td><td>Which profile categories the AI accessed for tailoring</td></tr>
+        <tr><td><code>tailoring.persona_signals</code></td><td>string[]</td><td>Internal: communication style, complexity level, framing approach</td></tr>
+        <tr><td><code>status</code></td><td>enum</td><td><code>generated</code> → <code>delivered</code> → <code>read</code> → <code>acted</code> | <code>dismissed</code> | <code>expired</code></td></tr>
+        <tr><td><code>send_fee_charged</code></td><td>decimal</td><td>Charged at generation time</td></tr>
+        <tr><td><code>read_fee_charged</code></td><td>decimal | null</td><td>Charged when status transitions to <code>read</code></td></tr>
+      </table>
+
+      <div class="callout callout-warn"><strong>Search Star controls all media generation.</strong> Campaign messages may include AI-generated images or video, but these are generated by Search Star's AI and hosted on Search Star's CDN. Platforms cannot inject their own media into campaign messages. This preserves the feed's quality standards and ensures the profile owner is never exposed to unsolicited visual content that bypasses Search Star's content controls. The same "content is always pull, never push" principle from section 4.3 applies — Search Star generates media that serves the recipient's understanding, not the platform's brand vanity.</div>
+
+      <h4>Message lifecycle</h4>
+      <ol>
+        <li><strong>Generated.</strong> The AI creates the individualized message using the recipient's marketing-accessible profile data. The send fee is charged to the platform's credit balance. Messages are generated in batches.</li>
+        <li><strong>Delivered.</strong> The message appears in the recipient's feed. It shows in the feed list as a collapsed item with the headline, sender name, and campaign category badge.</li>
+        <li><strong>Read.</strong> The recipient expands the message to see the full AI-tailored content, media, and CTA. <strong>This is when the read fee is charged.</strong> Scrolling past the headline in the feed list does not trigger the fee — the user must actively choose to expand and engage.</li>
+        <li><strong>Acted.</strong> The recipient clicks the CTA (outbound link, interested button, or reply). This is logged as a conversion event. The platform is notified.</li>
+        <li><strong>Dismissed.</strong> The recipient dismisses the message without acting on the CTA. No additional charge.</li>
+        <li><strong>Expired.</strong> The message reaches its expiration date without being read. It is removed from the feed. No read fee is charged. The send fee is not refunded (AI compute was already spent).</li>
+      </ol>
+
+      <h4>Campaign creation flow</h4>
+      <p>The platform creates a campaign through a multi-stage flow in the Platform Portal (see section 9.5):</p>
+      <ol>
+        <li><strong>Brief.</strong> Platform describes their offering in free text. Selects a category. Optionally uploads supporting materials.</li>
+        <li><strong>AI Conversation.</strong> Search Star's AI reviews the brief and engages in a back-and-forth conversation with the platform to refine the approach. The AI asks clarifying questions, suggests angles, tone strategies, and framing options. The platform can steer the direction. This conversation is stored as the <code>composer_thread</code> and informs all subsequent message generation.</li>
+        <li><strong>Audience.</strong> Platform sets audience filters. System shows matched count and estimated budget (send fees + projected read fees based on historical read rates for similar campaigns).</li>
+        <li><strong>CTA selection.</strong> Platform picks a CTA type. If outbound link: provides URL, AI suggests button label variations.</li>
+        <li><strong>Preview &amp; Approve.</strong> AI generates 3–5 sample messages for different recipient persona types. Platform sees how the same offering reads differently for different people. Platform can request regeneration, give feedback, and adjust. Platform approves → campaign goes active.</li>
+        <li><strong>Active.</strong> Messages are generated in batches, delivered to feeds, and tracked. Platform sees real-time stats. Can pause or stop the campaign at any time.</li>
+      </ol>
+
+      <div class="callout callout-info"><strong>The platform doesn't need to be a great marketer.</strong> The AI conversation stage means a small recruiting firm that's never written compelling copy can lean on Search Star's AI to figure out the right approach. The platform describes the role, the AI shapes the messaging. Over time, Search Star learns what works across campaigns and can proactively suggest improvements — "your recruiting campaigns perform 2x better when emphasizing remote flexibility."</div>
+
+      <h4>Enhanced feed experience</h4>
+      <p>Campaign messages appear in the user's feed alongside standard marketing, feed, and system messages. They use a distinct type (<code>campaign_marketing</code>) and render with richer content than standard text-only marketing messages:</p>
+      <table>
+        <tr><th>Feed element</th><th>Standard marketing</th><th>Campaign marketing</th></tr>
+        <tr><td>Preview (collapsed)</td><td>Sender name + first line of text</td><td>Sender name + AI-generated headline + category badge</td></tr>
+        <tr><td>Full content (expanded)</td><td>Plain text, max 500 chars</td><td>AI-tailored body (max 2000 chars) + optional AI-generated media</td></tr>
+        <tr><td>Media</td><td>None (rejected at API)</td><td>AI-generated image or video, rendered by Search Star</td></tr>
+        <tr><td>CTA</td><td>None — message is the entire interaction</td><td>Tracked action: Interested/Not Interested buttons, outbound link, or reply</td></tr>
+        <tr><td>Fee trigger</td><td>Charged at send</td><td>Send fee at generation + read fee when expanded</td></tr>
+      </table>
+
+      <h4>Message expiration</h4>
+      <table>
+        <tr><th>Rule</th><th>Detail</th></tr>
+        <tr><td>Default expiration</td><td>30 days from generation</td></tr>
+        <tr><td>Platform-configurable</td><td>7–90 days per campaign</td></tr>
+        <tr><td>On expiration</td><td>Message removed from feed. Status → <code>expired</code>. No read fee charged. Send fee not refunded.</td></tr>
+        <tr><td>On campaign pause</td><td>Undelivered messages held (not expired). Already-delivered messages remain in feed until individual expiration.</td></tr>
+        <tr><td>On campaign stop</td><td>Ungenerated messages cancelled (no send fee). Already-delivered messages remain until expiration.</td></tr>
+      </table>
+
+      <h3 id="campaign-fees">4.10 Campaign Fee Structure <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v1.1</span></h3>
+      <p>Campaign messages use a two-part fee structure that replaces the flat per-message price for campaign-delivered messages. Individual one-off marketing messages (sent directly from the platform's message composer, see section 9.3) continue to use the existing flat fee model from section 4.3.</p>
+
+      <h4>Send fee</h4>
+      <table>
+        <tr><th>Property</th><th>Detail</th></tr>
+        <tr><td>What it covers</td><td>AI compute cost for generating the individualized message and optional media</td></tr>
+        <tr><td>When charged</td><td>At message generation time, debited from platform's credit balance</td></tr>
+        <tr><td>Revenue allocation</td><td>100% to Search Star (covers AI infrastructure costs)</td></tr>
+        <tr><td>Refundable?</td><td>No. AI compute was consumed at generation. The message may never be read, but the generation cost is real.</td></tr>
+      </table>
+
+      <h4>Read fee</h4>
+      <table>
+        <tr><th>Property</th><th>Detail</th></tr>
+        <tr><td>What it covers</td><td>The success kicker — Search Star and the profile owner earn when the AI does a good job and the recipient actually engages</td></tr>
+        <tr><td>When charged</td><td>When the recipient expands the message to view the full AI-tailored content. Scrolling past the headline does not trigger the fee.</td></tr>
+        <tr><td>Amount</td><td>The profile owner's marketing tier price (e.g., $5.00). Set by the owner, same as standard marketing messages.</td></tr>
+        <tr><td>Revenue allocation</td><td>Split between the profile owner and Search Star. A higher Search Star share than the standard query tier (10%) is justified because Search Star is providing AI generation value, not just payment routing.</td></tr>
+        <tr><td>Refundable?</td><td>No. Same principle as section 4.3: payment is for the opportunity to reach the owner, not a guarantee of response or conversion.</td></tr>
+      </table>
+
+      <h4>Revenue flow example</h4>
+      <p>A platform launches a campaign targeting 100 profiles. Each profile owner's marketing price is $5.00. Assume a 60% read rate:</p>
+      <table>
+        <tr><th>Event</th><th>Count</th><th>Fee</th><th>Platform pays</th><th>Search Star receives</th><th>Profile owner receives</th></tr>
+        <tr><td>Messages generated (send fee)</td><td>100</td><td>Send fee each</td><td>100 × send fee</td><td>100% of send fees</td><td>$0</td></tr>
+        <tr><td>Messages read (read fee)</td><td>60</td><td>$5.00 each</td><td>60 × $5.00 = $300</td><td>Read fee share</td><td>Read fee share</td></tr>
+        <tr><td>Messages expired (unread)</td><td>40</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td></tr>
+      </table>
+      <p>The send fee is calibrated to cover AI generation costs. The read fee is where Search Star and profile owners make money — aligning incentives so that only genuinely relevant, well-tailored messages generate revenue.</p>
+
+      <div class="callout callout-green"><strong>Incentive alignment.</strong> The platform wants conversions. The profile owner wants relevant messages. Search Star wants both. The send fee covers the cost of trying. The read fee rewards success. Messages that nobody reads generate no read fees — which means the AI has to be genuinely good, not just prolific.</div>
+
+      <h3 id="marketing-data-access">4.11 Marketing Data Access Controls <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v1.1</span></h3>
+      <p>Profile owners control exactly which categories of their profile data the AI can access when tailoring campaign messages. This is a separate control from the access tier system (section 4.1) — a profile owner might make their financial data available at the Private tier for approved platforms, but choose not to let the AI use it for marketing message tailoring.</p>
+
+      <h4>Data category toggles</h4>
+      <p>Each toggle controls whether the AI can use that data category to inform how it writes and tailors campaign messages for that user:</p>
+      <table>
+        <tr><th>Category</th><th>Default</th><th>Description</th></tr>
+        <tr><td>Interests</td><td>On</td><td>Athletic, social, and intellectual interests</td></tr>
+        <tr><td>Skills</td><td>On</td><td>Professional skills and credentials</td></tr>
+        <tr><td>Presence</td><td>On</td><td>Presence Composite score and component breakdown</td></tr>
+        <tr><td>Professional</td><td>On</td><td>Work history, current role, industry</td></tr>
+        <tr><td>Financial</td><td>Off</td><td>Net worth percentile, income band</td></tr>
+        <tr><td>Dating</td><td>Off</td><td>Dating preferences and profile data</td></tr>
+        <tr><td>Advertising</td><td>On</td><td>Advertising profile data</td></tr>
+        <tr><td>Location</td><td>On</td><td>City, region, geographic context</td></tr>
+      </table>
+
+      <h4>Frequency preferences</h4>
+      <p>Users set their own limits on campaign message volume. There is no system-imposed cap — some users may want every message they can get, while others want strict filtering:</p>
+      <table>
+        <tr><th>Setting</th><th>Default</th><th>Description</th></tr>
+        <tr><td>Max campaign messages per day</td><td>10</td><td>User-adjustable, no system maximum. A user who wants 100/day can set that.</td></tr>
+        <tr><td>Max from same platform per week</td><td>3</td><td>User-adjustable. Prevents any single platform from dominating the feed.</td></tr>
+      </table>
+
+      <h4>Category preferences</h4>
+      <p>Users can indicate their appetite for different campaign categories. These preferences inform the AI's delivery prioritization — not hard blocks. Setting a category to "none" does hard-block campaigns of that type.</p>
+      <table>
+        <tr><th>Category</th><th>Options</th></tr>
+        <tr><td>Recruiting</td><td><code>more</code> | <code>normal</code> | <code>less</code> | <code>none</code></td></tr>
+        <tr><td>Dating</td><td><code>more</code> | <code>normal</code> | <code>less</code> | <code>none</code></td></tr>
+        <tr><td>Investment</td><td><code>more</code> | <code>normal</code> | <code>less</code> | <code>none</code></td></tr>
+        <tr><td>Product</td><td><code>more</code> | <code>normal</code> | <code>less</code> | <code>none</code></td></tr>
+        <tr><td>Partnership</td><td><code>more</code> | <code>normal</code> | <code>less</code> | <code>none</code></td></tr>
+      </table>
+
+      <div class="callout callout-info"><strong>Sovereignty extends to marketing.</strong> The marketing data access controls are part of Search Star's core promise: your data, your rules. The AI uses your data <em>for</em> you — to ensure messages you receive are relevant, comprehensible, and worth your time. You decide what the AI can see, how often platforms can reach you, and what categories of offers you're interested in. The platform pays for the privilege of reaching you. You get paid for the attention you give.</div>
 
       <!-- ═══════════ 5. VALIDATION — NEW ═══════════ -->
 
@@ -1686,6 +1856,82 @@ Platform                Search Star              User's Hosting
 
       <div class="callout callout-info"><strong>Design principle: platforms see their own data, never another platform's.</strong> A platform's portal shows only its own queries, spend, and message history. There is no competitive intelligence — a platform cannot see how many queries another platform has made or how much they've spent. The only cross-platform data visible to anyone is the profile owner's earnings (visible only to the owner) and the admin panel's aggregate metrics (visible only to Search Star operators).</div>
 
+      <h3 id="platform-campaigns">9.5 Campaign Management <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v1.1</span></h3>
+      <p>The Campaign Management section lives within the platform portal's Messages area and provides the full workflow for creating and managing AI-Powered Campaigns (see section 4.9). While the existing message composer (section 9.3) remains available for one-off marketing messages, campaigns are the primary tool for platforms that want to reach multiple profiles with tailored messaging.</p>
+
+      <h4>Campaign list view (<code>/platform/campaigns</code>)</h4>
+      <p>The campaigns list shows all campaigns with their status, key metrics, and total spend:</p>
+      <table>
+        <tr><th>Column</th><th>Description</th></tr>
+        <tr><td>Campaign name</td><td>Auto-generated from the offering category and date, editable by the platform</td></tr>
+        <tr><td>Status</td><td>Badge showing <code>draft</code>, <code>composing</code>, <code>review</code>, <code>active</code>, <code>paused</code>, <code>completed</code>, or <code>expired</code></td></tr>
+        <tr><td>Category</td><td>Campaign category badge (recruiting, dating, investment, product, partnership, other)</td></tr>
+        <tr><td>Audience</td><td>Matched profile count</td></tr>
+        <tr><td>Sent / Read / Converted</td><td>Message lifecycle counts</td></tr>
+        <tr><td>Total spend</td><td>Combined send fees + read fees</td></tr>
+        <tr><td>Created</td><td>Campaign creation date</td></tr>
+      </table>
+
+      <h4>Campaign creation wizard</h4>
+      <p>Creating a new campaign follows the six-stage flow defined in section 4.9. The portal provides a step-by-step interface:</p>
+
+      <p><strong>Stage 1 — Brief.</strong> A large text area for the offering description (max 2000 characters). Category selector dropdown. File upload for optional attachments. Expiration date picker (default: 30 days).</p>
+
+      <p><strong>Stage 2 — AI Conversation.</strong> A chat interface where the platform converses with Search Star's AI to refine the campaign approach. The AI reviews the brief and asks clarifying questions about the offering, target audience, unique value propositions, and desired outcomes. The platform can provide tone guidance ("keep it casual," "emphasize equity compensation," "focus on remote flexibility"). The AI suggests angles and framing strategies. The full conversation history is stored as the <code>composer_thread</code> and informs all subsequent message generation. The platform can return to this stage at any time before launch to refine the approach.</p>
+
+      <p><strong>Stage 3 — Audience.</strong> Filter controls matching the directory search parameters (section 7.4): location, age cohort, Presence score range, interest tags, and profile extension flags. A live count shows how many profiles match the current filters. An estimated budget calculator shows projected send fees and estimated read fees (based on historical read rates for similar campaigns in the same category). The platform can adjust filters to change scope and budget.</p>
+
+      <p><strong>Stage 4 — CTA Selection.</strong> Radio buttons for CTA type: "Interested / Not Interested" buttons (binary signal — platform receives a warm lead notification), "Outbound Link" (tracked redirect to platform's URL — requires URL input), or "Reply" (in-feed response forwarded to platform). For outbound links, the AI suggests 2–3 button label variations tailored to the campaign category.</p>
+
+      <p><strong>Stage 5 — Preview &amp; Approve.</strong> The AI generates 3–5 sample messages showing how the offering would be presented to different recipient persona types. Each preview shows the recipient persona description (e.g., "analytical technical professional, 30s, interests in software and finance"), the generated headline, body, optional media preview, and CTA rendering. The platform can give feedback on any sample ("more professional," "shorter," "emphasize the equity package") and request regeneration. The platform approves the overall approach — they are not approving individual messages, but confirming that the AI's direction is correct. A "Launch Campaign" button with a cost confirmation modal (estimated total send fees, disclaimer that read fees are charged on engagement) finalizes the campaign.</p>
+
+      <p><strong>Stage 6 — Active Campaign.</strong> The campaign detail view shows real-time stats: messages generated, delivered, read, acted on, dismissed, and expired. A spend tracker shows send fees and read fees as separate line items. The platform can pause (holds undelivered messages), resume, or stop (cancels ungenerated messages) the campaign at any time.</p>
+
+      <h4>Campaign actions</h4>
+      <table>
+        <tr><th>Action</th><th>Available when</th><th>Effect</th></tr>
+        <tr><td>Edit brief</td><td><code>draft</code>, <code>composing</code></td><td>Modify the offering description, category, or attachments. Returns to AI conversation stage.</td></tr>
+        <tr><td>Adjust audience</td><td><code>draft</code>, <code>composing</code>, <code>review</code></td><td>Change filters. Recalculates matched count and estimated budget.</td></tr>
+        <tr><td>Pause</td><td><code>active</code></td><td>Halts further message generation and delivery. Already-delivered messages remain in feeds until expiration.</td></tr>
+        <tr><td>Resume</td><td><code>paused</code></td><td>Resumes message generation and delivery from where it was paused.</td></tr>
+        <tr><td>Stop</td><td><code>active</code>, <code>paused</code></td><td>Permanently stops the campaign. Ungenerated messages are cancelled (no send fee). Delivered messages remain until expiration.</td></tr>
+        <tr><td>Duplicate</td><td>Any terminal state</td><td>Creates a new campaign with the same brief, audience, and CTA settings. Starts at <code>draft</code> stage.</td></tr>
+      </table>
+
+      <h3 id="platform-campaign-analytics">9.6 Campaign Analytics <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v1.1</span></h3>
+      <p>The Analytics section (existing in section 9.4) is extended with campaign-specific performance data. Campaign analytics appear alongside the existing spending analytics, not as a replacement.</p>
+
+      <h4>Per-campaign metrics</h4>
+      <table>
+        <tr><th>Metric</th><th>Description</th></tr>
+        <tr><td>Messages generated</td><td>Total individualized messages created by the AI</td></tr>
+        <tr><td>Messages delivered</td><td>Messages that appeared in recipient feeds</td></tr>
+        <tr><td>Messages read</td><td>Messages where the recipient expanded to view full content (read fee triggered)</td></tr>
+        <tr><td>Messages acted on</td><td>Messages where the recipient clicked the CTA (conversion)</td></tr>
+        <tr><td>Messages dismissed</td><td>Messages actively dismissed by the recipient</td></tr>
+        <tr><td>Messages expired</td><td>Messages that expired without being read</td></tr>
+        <tr><td>Read rate</td><td>Read / Delivered (percentage)</td></tr>
+        <tr><td>Conversion rate</td><td>Acted / Read (percentage)</td></tr>
+        <tr><td>Dismiss rate</td><td>Dismissed / Delivered (percentage)</td></tr>
+        <tr><td>Cost per read</td><td>Total spend / Messages read</td></tr>
+        <tr><td>Cost per conversion</td><td>Total spend / Messages acted on</td></tr>
+        <tr><td>Total send fees</td><td>Sum of all send fees charged</td></tr>
+        <tr><td>Total read fees</td><td>Sum of all read fees charged</td></tr>
+        <tr><td>Total spend</td><td>Send fees + Read fees</td></tr>
+      </table>
+
+      <h4>Aggregate insights (across all campaigns)</h4>
+      <p>As a platform runs more campaigns, Search Star builds an aggregate performance picture:</p>
+      <table>
+        <tr><th>Insight</th><th>Description</th></tr>
+        <tr><td>Best performing category</td><td>Which campaign category (recruiting, dating, etc.) has the highest read and conversion rates</td></tr>
+        <tr><td>Best performing audience segment</td><td>Which filter combinations produce the best engagement</td></tr>
+        <tr><td>AI recommendations</td><td>Search Star's AI generates actionable suggestions based on campaign performance. Examples: "Your recruiting campaigns perform 40% better when targeting users with Presence scores above 70," "Messages with a casual tone have 2x the read rate for your audience segment," "Consider adding an equity compensation focus — similar campaigns saw 30% higher conversion."</td></tr>
+        <tr><td>Trend lines</td><td>Read rate, conversion rate, and cost per conversion over time across all campaigns</td></tr>
+      </table>
+
+      <div class="callout callout-info"><strong>Analytics are anonymized.</strong> Campaign analytics show aggregate and per-message performance metrics. The platform sees "Message #47 was read and converted" — not "Alice Testworth in New York clicked your link." Profile owners are never identified in campaign analytics. The platform knows their campaign is working; they don't know who specifically is engaging. Individual identity is revealed only when the recipient takes an explicit action (clicking "Interested" or replying) that inherently discloses their interest.</div>
+
       <!-- ═══════════ 10. ROADMAP ═══════════ -->
 
       <h2 id="roadmap">10. Roadmap</h2>
@@ -1703,6 +1949,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.8</code></td><td>March 2026</td><td>Platform Portal implementation, personal page &amp; visibility modes (full/summary), "Contact via Search Star" button requirement, AI-assisted profile creation flow (two-file output: profile.json + index.html), profile registration desk</td></tr>
         <tr><td><code>v0.9</code></td><td>April 2026</td><td>Trust architecture rewrite: trust as validation (core philosophy), trust layers (family/community/practice/cross-network), three-pillar Trust Score (Depth/Breadth/Durability), affiliate growth engine (schools, churches, clubs, families), anti-gaming protections (reciprocity limits, velocity caps, decay), network value multiplier</td></tr>
         <tr><td><code>v1.0</code></td><td>April 2026</td><td>Validator Cooperative: LLC membership class for qualifying validators, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance over trust-layer policy, membership qualification and termination rules</td></tr>
+        <tr><td><code>v1.1</code></td><td>April 2026</td><td>AI-Powered Campaigns: campaign data model, AI message composer with platform ↔ AI conversation, send fee + read fee structure, generated message lifecycle, enhanced feed experience (campaign_marketing type with AI-tailored body, AI-generated media, tracked CTAs), marketing data access controls (category toggles, frequency preferences, category preferences), campaign management portal (six-stage creation wizard, pause/resume/stop), campaign analytics (per-campaign metrics, aggregate insights, AI recommendations)</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -1719,7 +1966,7 @@ Platform                Search Star              User's Hosting
       <h4>Future milestones</h4>
       <table>
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
-        <tr><td><code>v1.1</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting</td></tr>
+        <tr><td><code>v1.1</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting, AI-Powered Campaign implementation (campaign creation wizard, AI composer, batch message generation, enhanced feed rendering, send/read fee billing, campaign analytics dashboard, marketing data access controls in owner dashboard)</td></tr>
         <tr><td><code>v1.2</code></td><td>Q2 2026</td><td>Trust Score implementation: Depth/Breadth/Durability calculation engine, trust layer classification, validator relationship types, decay scheduler</td></tr>
         <tr><td><code>v1.3</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
         <tr><td><code>v1.4</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
@@ -1735,7 +1982,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v1.0 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v1.1 · MIT License</div>
       <div class="footer-links">
         <a href="/">Home</a>
         <a href="profile.html">Sample</a>
