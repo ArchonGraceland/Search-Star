@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search Star — Specification v1.0</title>
+<title>Search Star — Specification v1.2</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -94,7 +94,7 @@
   <div class="wrap">
 
     <div class="spec-meta">
-      <span><strong>Version</strong> 1.1.0</span>
+      <span><strong>Version</strong> 1.2.0</span>
       <span><strong>Date</strong> April 2026</span>
       <span><strong>Status</strong> Released</span>
       <span><strong>License</strong> MIT</span>
@@ -128,7 +128,7 @@
         <a class="toc-indent" href="#campaign-fees">4.10 Campaign Fee Structure <span class="new-badge">New in v1.1</span></a>
         <a class="toc-indent" href="#marketing-data-access">4.11 Marketing Data Access Controls <span class="new-badge">New in v1.1</span></a>
         <a href="#validation">5. Trust, Validation &amp; Affiliate Growth <span class="new-badge">Rewritten in v0.9</span></a>
-        <a class="toc-indent" href="#trustphilosophy">5.1 Trust as Validation (Core Philosophy)</a>
+        <a class="toc-indent" href="#trustphilosophy">5.1 Trust as Love (Core Philosophy) <span class="new-badge">Rewritten in v1.2</span></a>
         <a class="toc-indent" href="#trustlayers">5.2 Trust Layers</a>
         <a class="toc-indent" href="#trustscore">5.3 Individual Trust Score</a>
         <a class="toc-indent" href="#validators">5.4 Validators &amp; Staking</a>
@@ -1016,14 +1016,39 @@
       <!-- ═══════════ 5. VALIDATION — NEW ═══════════ -->
 
       <h2 id="validation">5. Validation &amp; Trust Layer <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v0.3</span></h2>
-      <p>Search Star's trust system is built on a single insight: <strong>trust is not a status — trust is an action.</strong> You demonstrate trust when you're willing to put your reputation on the line to validate someone else's information. Every member is a potential validator within their network. Trust is measured by what people are willing to vouch for. Reputation — not money alone — is the cost of endorsement.</p>
+      <p>Search Star's trust system is built on a single insight: <strong>trust is not a status — trust is an action.</strong> You demonstrate trust when you're willing to put your reputation on the line to validate someone else's information. Every member is a potential validator within their network. Trust is measured by what people are willing to vouch for. Reputation — not money alone — is the cost of endorsement. At its deepest level, trust is love made legible — the willingness to bind your reputation to another person because you know them, you have walked alongside them, and you believe in the accuracy of who they say they are.</p>
 
       <div class="callout callout-warn"><strong>Architectural principle: Search Star is a directory and payment layer, not a hosting platform.</strong> Search Star never hosts, stores, or caches user profiles, photos, or media. The user hosts all of their own data on infrastructure they control (see section 8.1). Search Star's database contains only: the directory index (profile numbers, handles, endpoint URLs, trust scores, tier pricing), the earnings ledger (query transactions, revenue splits, settlement records), and the validation layer (validator relationships, trust scores, affiliate associations, disputes). If Search Star disappeared tomorrow, every user's profile would still exist at their own URL.</div>
 
-      <h3 id="trustphilosophy">5.1 Trust as Validation (Core Philosophy) <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.9</span></h3>
+      <h3 id="trustphilosophy">5.1 Trust as Love (Core Philosophy) <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">Rewritten in v1.2</span></h3>
+
+      <h4>The trust crisis</h4>
       <p>Garbage culture — AI slop, influencer fraud, fake outrage, clickbait — is fundamentally a trust crisis. Every form of garbage is an unverified claim with no one willing to vouch for it. AI slop claims authorship it doesn't have. Influencers claim lifestyles never lived. Clickbait claims value it can't deliver. In every case, no human is willing to stake their reputation on the claim's accuracy.</p>
       <p>Search Star's structural defense is that every meaningful claim on a profile can be validated by a real person who's willing to put their name on it. The cost of garbage isn't just monetary — it's reputational, because someone real had to vouch for it. This is enforced by architecture, not moderation policies or AI content filters.</p>
-      <p>The system produces trust through <strong>sustained effort in real communities</strong>. You can't validate someone you don't actually know. You can't know someone without spending time with them in shared activities. Therefore, the communities that produce the most valuable validators are those requiring ongoing effort and genuine participation: athletic clubs, intellectual societies, creative ensembles, religious congregations, and — most fundamentally — extended family networks.</p>
+
+      <h4>What trust actually measures</h4>
+      <p>But validation of factual claims is only the first layer. The deeper question is: what makes a person's validation meaningful? The answer is relationship. You cannot vouch for someone you don't know. You cannot know someone without spending sustained time with them — in shared meals, shared labor, shared worship, shared play. The communities that produce the most valuable validators are those requiring ongoing effort and genuine participation: athletic clubs, intellectual societies, creative ensembles, religious congregations, and — most fundamentally — families.</p>
+      <p>This means that what the Trust Score actually measures, at bottom, is not the accuracy of data fields. It measures the depth, breadth, and durability of a person's real human relationships. A profile backed by six validators who have known the owner for a decade, who vouch for each other as well as for the owner, and who come from independent communities — that profile is not just "verified." It is a portrait of a person embedded in a web of reciprocal love.</p>
+      <p>We use the word <em>love</em> deliberately and in the full Aristotelian-Thomistic sense: not merely erotic attraction, but the whole spectrum of human affection — erotic, romantic, filial, and fraternal. Love in this tradition is not a feeling. It is an act of the will directed toward the genuine good of another person. It is inherently particular: you love <em>this</em> person, not persons in general. And it is structurally rivalrous in a way that attention is not. You can watch a celebrity's content alongside millions of others. You cannot be someone's friend alongside millions of others. Friendship, family devotion, and genuine community require reciprocity, time, presence, and exclusivity. They do not scale — and that is precisely what makes them economically meaningful in a world where everything else scales infinitely.</p>
+      <div class="callout callout-info">In a world where AI-driven automation makes material production nearly free, the scarce resource is authentic human relationship. Search Star is infrastructure for an economy organized around the cultivation of human bonds — not data licensing, not attention brokerage, not celebrity worship. The Trust Score is the price signal for love.</div>
+
+      <h4>Against social credit</h4>
+      <p>Search Star's trust model is the structural inverse of top-down social credit systems. In a social credit regime — whether governmental or corporate — a central authority defines acceptable behavior, scores compliance, and punishes deviation. The individual is evaluated against criteria they did not choose, by an authority they cannot challenge, using data they do not control. Celebrity and influencer culture operate on the same logic at a cultural level: a small number of people accumulate enormous visibility, and their followers' identities are defined by parasocial attachment to figures who cannot love them back. Both systems produce idolatry — the elevation of an image over a person.</p>
+      <p>Search Star rejects this entirely. No central authority defines who is trustworthy. The people who actually know you make that determination through their sustained, voluntary association with you. Vouching is mutual: I vouch for you and you vouch for me, and both of us stake our reputation on the claim. The system is bottom-up, peer-to-peer, and resistant to coercion in a way that any top-down system cannot be.</p>
+      <p>The critical structural difference is symmetry. In a social credit system, the state evaluates you but you do not evaluate the state. In an influencer economy, the celebrity captures your attention but does not reciprocate your devotion. In Search Star, every validation relationship is potentially reciprocal, and reciprocal validation within a broader network is the highest-value signal the system recognizes (see section 5.9, Reciprocity limits — isolated mutual validation is discounted; mutual validation embedded in independent communities is rewarded).</p>
+      <div class="callout callout-warn"><strong>Search Star's enemies are explicit:</strong> top-down social credit systems that score compliance, celebrity economies that manufacture parasocial attachment, and platform architectures that harvest data without consent or compensation. These systems treat people as inputs. Search Star treats people as ends.</div>
+
+      <h4>The convergence principle</h4>
+      <p>The deepest design insight of the trust architecture is that gaming the system produces the behavior the system exists to reward.</p>
+      <p>Most economic systems have a gap between what is incentivized and what is good. Financial markets reward extraction alongside creation. Social media rewards provocation alongside connection. Credential systems reward signaling alongside learning. Search Star is designed so that gap closes.</p>
+      <p>The only way to increase your Trust Score is to maintain long, mutual, sustained relationships with real people across independent communities — people who genuinely vouch for you because they genuinely know you. Someone who sets out to "game" the system by strategically investing in deep friendships, showing up to their communities year after year, and building a reputation worth staking money on has simply… built a life of genuine human connection. The manipulation and the virtue converge. The incentive-compatible strategy and the good life are the same thing.</p>
+      <p>This is not accidental. It is a direct application of the Aristotelian insight that habituation precedes and eventually produces genuine character. The person who acts virtuously in order to gain an advantage will, over enough time and repetition, become genuinely virtuous. You act your way into virtue before you feel your way into it. Search Star's trust architecture applies this principle to love: a person who begins maintaining relationships for economic reward will, over years of reciprocal commitment, no longer be faking it. The practice becomes the reality.</p>
+      <div class="callout callout-green"><strong>We want people to game this system.</strong> The game is the point. The only way to win is to pursue love in the full Aristotelian-Thomistic sense — sustained, reciprocal, particular devotion to real people in real communities. If everyone plays this game as hard as they can, the result is a society of people embedded in deep, genuine, loving relationships. That is not a side effect. It is the design objective.</div>
+
+      <h4>The distributional answer</h4>
+      <p>A common objection to any system that rewards "interesting" or "attractive" people is that it produces extreme inequality — a few superstars capture everything, and the long tail earns nothing. The influencer economy already exhibits this power-law distribution.</p>
+      <p>Search Star's relational model answers this objection structurally. The relevant metric is not attention or fame — it is relational density. And relational density is naturally bounded. No person can sustain deep, reciprocal relationships with more than a few hundred people. Dunbar's number is a biological constraint, not a policy choice. A person with thirty genuine friendships and a loving family may score higher than a celebrity with ten million followers and no real intimacy, because the Trust Score rewards depth over breadth, and depth is something almost anyone can cultivate.</p>
+      <p>This also resolves the synthetic persona problem. An AI can simulate being interesting. It cannot simulate being the friend who showed up when your father died, who remembers the conversation about Dante ten years ago, who your children call uncle. The relational history is the proof of work, and it is unfalsifiable in a way that curated content never is.</p>
 
       <h3 id="trustlayers">5.2 Trust Layers <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.9</span></h3>
       <p>Validation radiates outward from the innermost circle of trust. Each layer produces people willing to vouch for different aspects of a profile, and validations from different layers are weighted accordingly.</p>
@@ -1160,6 +1185,7 @@
       <table>
         <tr><th>Protection</th><th>Mechanism</th><th>What it prevents</th></tr>
         <tr><td><strong>Reciprocity limits</strong></td><td>If two people validate each other and no one else, both validations are discounted by 70%</td><td>Mutual-only validation rings</td></tr>
+        <tr><td><strong>Reciprocal network bonus</strong></td><td>Mutual validation (A vouches for B, B vouches for A) within a broader network of 3+ independent validators receives a 1.25x weight bonus on both validations</td><td>Rewards genuine reciprocal relationships embedded in real communities — the convergence principle in action (see section 5.1)</td></tr>
         <tr><td><strong>Velocity caps</strong></td><td>Trust Score cannot increase by more than 5 points per month</td><td>Joining 10 clubs in a month and farming validations</td></tr>
         <tr><td><strong>Minimum relationship period</strong></td><td>Validations carry 25% weight in the first 90 days, scaling to 100% at 12 months</td><td>Shallow "weekend workshop" validations</td></tr>
         <tr><td><strong>Accuracy tracking</strong></td><td>Validators who vouch for claims later proven false lose trust score points (their own score, not the profile's)</td><td>Careless or fraudulent vouching</td></tr>
@@ -1950,6 +1976,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v0.9</code></td><td>April 2026</td><td>Trust architecture rewrite: trust as validation (core philosophy), trust layers (family/community/practice/cross-network), three-pillar Trust Score (Depth/Breadth/Durability), affiliate growth engine (schools, churches, clubs, families), anti-gaming protections (reciprocity limits, velocity caps, decay), network value multiplier</td></tr>
         <tr><td><code>v1.0</code></td><td>April 2026</td><td>Validator Cooperative: LLC membership class for qualifying validators, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance over trust-layer policy, membership qualification and termination rules</td></tr>
         <tr><td><code>v1.1</code></td><td>April 2026</td><td>AI-Powered Campaigns: campaign data model, AI message composer with platform ↔ AI conversation, send fee + read fee structure, generated message lifecycle, enhanced feed experience (campaign_marketing type with AI-tailored body, AI-generated media, tracked CTAs), marketing data access controls (category toggles, frequency preferences, category preferences), campaign management portal (six-stage creation wizard, pause/resume/stop), campaign analytics (per-campaign metrics, aggregate insights, AI recommendations)</td></tr>
+        <tr><td><code>v1.2</code></td><td>April 2026</td><td>Trust as Love: rewritten core philosophy (section 5.1) — trust score as measure of reciprocal love, explicit adversarial positioning against top-down social credit and celebrity/influencer economies, the convergence principle (gaming the trust metric produces genuine virtue), distributional answer via relational density vs. attention inequality. Reciprocal network bonus (1.25x for mutual validation within broader communities). Aristotelian-Thomistic philosophical framework.</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -1982,7 +2009,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v1.1 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v1.2 · MIT License</div>
       <div class="footer-links">
         <a href="/">Home</a>
         <a href="profile.html">Sample</a>
