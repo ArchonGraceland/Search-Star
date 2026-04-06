@@ -46,12 +46,22 @@ export async function POST(request: NextRequest) {
     // Get recipient profile
     const { data: recipient } = await admin()
       .from('profiles')
-      .select('id, display_name, price_marketing, status, profile_number')
+      .select('id, display_name, price_marketing, status, profile_number, seeding_status')
       .eq('id', recipient_profile_id)
       .single()
 
     if (!recipient || recipient.status !== 'active') {
       return NextResponse.json({ error: 'Recipient not found or inactive' }, { status: 404 })
+    }
+
+    // ═══ Unclaimed profile guard ═══
+    // Spec Section 3.9: "Marketing messages disabled — no one profits from unclaimed data"
+    if (recipient.seeding_status === 'unclaimed') {
+      return NextResponse.json({
+        error: 'Cannot send marketing messages to unclaimed profiles',
+        profile_number: recipient.profile_number,
+        seeding_status: 'unclaimed',
+      }, { status: 403 })
     }
 
     const price = Number(recipient.price_marketing)

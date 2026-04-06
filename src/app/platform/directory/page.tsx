@@ -20,6 +20,7 @@ interface Profile {
   has_financial: boolean
   has_dating: boolean
   has_content_feed: boolean
+  seeding_status: 'claimed' | 'unclaimed'
 }
 
 interface QueryResult {
@@ -42,6 +43,7 @@ export default function PlatformDirectory() {
   const [minPresence, setMinPresence] = useState('0')
   const [maxPresence, setMaxPresence] = useState('100')
   const [interest, setInterest] = useState('')
+  const [seedingStatus, setSeedingStatus] = useState('')
 
   // Expanded profile
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -65,6 +67,7 @@ export default function PlatformDirectory() {
     if (minPresence !== '0') params.set('min_presence', minPresence)
     if (maxPresence !== '100') params.set('max_presence', maxPresence)
     if (interest) params.set('interest', interest)
+    if (seedingStatus) params.set('seeding_status', seedingStatus)
 
     const res = await fetch(`/api/platform/directory?${params}`)
     if (res.ok) {
@@ -74,7 +77,7 @@ export default function PlatformDirectory() {
       setTotalPages(data.total_pages)
     }
     setLoading(false)
-  }, [page, search, location, ageCohort, minPresence, maxPresence, interest])
+  }, [page, search, location, ageCohort, minPresence, maxPresence, interest, seedingStatus])
 
   useEffect(() => {
     fetchProfiles()
@@ -188,6 +191,18 @@ export default function PlatformDirectory() {
             <label className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] block mb-1">Interest Tag</label>
             <input type="text" value={interest} onChange={(e) => setInterest(e.target.value)} placeholder="e.g. AI" className="w-full px-3 py-2 border border-[#d4d4d4] rounded-[3px] font-body text-sm outline-none focus:border-[#0d9488]" />
           </div>
+          <div>
+            <label className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] block mb-1">Profile Status</label>
+            <select
+              value={seedingStatus}
+              onChange={(e) => setSeedingStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-[#d4d4d4] rounded-[3px] font-body text-sm outline-none"
+            >
+              <option value="">All</option>
+              <option value="claimed">Claimed</option>
+              <option value="unclaimed">Unclaimed</option>
+            </select>
+          </div>
           <div className="flex items-end">
             <button type="submit" className="btn-platform !py-2 w-full">Search</button>
           </div>
@@ -219,9 +234,15 @@ export default function PlatformDirectory() {
                   <div className="flex items-center gap-2">
                     <span className="font-heading text-lg font-bold">{p.display_name}</span>
                     <span className="font-mono text-xs text-[#767676]">{p.profile_number}</span>
+                    {p.seeding_status === 'unclaimed' && (
+                      <span className="font-body text-[9px] font-bold tracking-[0.08em] uppercase px-2 py-0.5 rounded-[2px] bg-[#fef3c7] text-[#92400e] border border-[#f59e0b]/30">
+                        Unclaimed
+                      </span>
+                    )}
                   </div>
                   <div className="font-body text-xs text-[#767676]">
                     {p.location || 'Location not set'} · {p.age_cohort || 'Age N/A'} · Trust: {p.trust_score}
+                    {p.seeding_status === 'unclaimed' && ' · Not queryable'}
                   </div>
                 </div>
 
@@ -244,14 +265,17 @@ export default function PlatformDirectory() {
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); handleQuery(p.id) }}
-                    disabled={querying === p.id}
+                    disabled={querying === p.id || p.seeding_status === 'unclaimed'}
+                    title={p.seeding_status === 'unclaimed' ? 'Unclaimed profiles are not queryable' : 'Query this profile'}
                     className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-3 py-1.5 bg-[#0d9488] text-white rounded-[3px] hover:bg-[#14b8a6] disabled:opacity-50 cursor-pointer border-none"
                   >
                     {querying === p.id ? '...' : 'Query'}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setMessageTarget(p); setMessageResult(null); setMessageBody('') }}
-                    className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-3 py-1.5 bg-[#92400e] text-white rounded-[3px] hover:bg-[#a85b1b] cursor-pointer border-none"
+                    disabled={p.seeding_status === 'unclaimed'}
+                    title={p.seeding_status === 'unclaimed' ? 'Cannot message unclaimed profiles' : 'Send marketing message'}
+                    className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-3 py-1.5 bg-[#92400e] text-white rounded-[3px] hover:bg-[#a85b1b] disabled:opacity-50 cursor-pointer border-none"
                   >
                     Message
                   </button>

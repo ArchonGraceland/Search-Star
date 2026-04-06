@@ -51,6 +51,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found or inactive' }, { status: 404 })
     }
 
+    // ═══ Unclaimed profile guard ═══
+    // Spec Section 3.9: "Unclaimed stubs are never monetized.
+    // Platforms cannot query their data until the profile is claimed."
+    if (profile.seeding_status === 'unclaimed') {
+      return NextResponse.json({
+        error: 'This profile is unclaimed and not queryable',
+        profile_number: profile.profile_number,
+        seeding_status: 'unclaimed',
+      }, { status: 403 })
+    }
+
     const price = Number(profile.price_public)
     const balance = Number(platform.credit_balance)
 

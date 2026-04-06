@@ -29,18 +29,24 @@ export async function GET(request: NextRequest) {
     const maxPresence = parseInt(searchParams.get('max_presence') || '100')
     const skill = searchParams.get('skill') || ''
     const interest = searchParams.get('interest') || ''
+    const seedingStatus = searchParams.get('seeding_status') || '' // 'claimed', 'unclaimed', or '' for all
     const page = parseInt(searchParams.get('page') || '1')
     const limit = 20
 
     let query = admin()
       .from('profiles')
-      .select('id, profile_number, handle, display_name, location, age_cohort, presence_score, trust_score, skills_count, interests_tags, price_public, price_private, price_marketing, tagline, has_financial, has_dating, has_family, has_content_feed, feed_topics, status, role', { count: 'exact' })
+      .select('id, profile_number, handle, display_name, location, age_cohort, presence_score, trust_score, skills_count, interests_tags, price_public, price_private, price_marketing, tagline, has_financial, has_dating, has_family, has_content_feed, feed_topics, status, role, seeding_status', { count: 'exact' })
       .eq('status', 'active')
       .neq('role', 'platform')
       .gte('presence_score', minPresence)
       .lte('presence_score', maxPresence)
       .order('presence_score', { ascending: false })
       .range((page - 1) * limit, page * limit - 1)
+
+    // Filter by seeding_status (claimed/unclaimed)
+    if (seedingStatus === 'claimed' || seedingStatus === 'unclaimed') {
+      query = query.eq('seeding_status', seedingStatus)
+    }
 
     if (search) {
       query = query.or(`display_name.ilike.%${search}%,handle.ilike.%${search}%,profile_number.ilike.%${search}%`)
