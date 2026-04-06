@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Suspense } from 'react'
 
 type Step = 'url' | 'validate' | 'pricing' | 'confirm' | 'success'
 
@@ -34,12 +35,23 @@ interface ExtractedData {
   has_content_feed: boolean
 }
 
-export default function ProfileBuilder() {
+export default function ProfileBuilderPage() {
+  return (
+    <Suspense fallback={<div className="p-8 max-w-[720px] mx-auto"><div className="font-body text-sm text-[#767676]">Loading…</div></div>}>
+      <ProfileBuilder />
+    </Suspense>
+  )
+}
+
+function ProfileBuilder() {
   const router = useRouter()
-  const [step, setStep] = useState<Step>('url')
+  const searchParams = useSearchParams()
+  const isFromActivate = searchParams.get('source') === 'activate'
+  const [step, setStep] = useState<Step>(isFromActivate ? 'validate' : 'url')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [validating, setValidating] = useState(false)
+  const [activateSource, setActivateSource] = useState(isFromActivate)
 
   // Data
   const [endpointUrl, setEndpointUrl] = useState('')
@@ -54,6 +66,65 @@ export default function ProfileBuilder() {
   // Manual JSON paste fallback
   const [showManualPaste, setShowManualPaste] = useState(false)
   const [manualJson, setManualJson] = useState('')
+
+  // ═══ Activate handoff: load data from sessionStorage ═══
+  useEffect(() => {
+    if (!isFromActivate) return
+
+    try {
+      const raw = sessionStorage.getItem('activate_handoff')
+      if (!raw) {
+        // No handoff data — fall back to normal URL step
+        setStep('url')
+        setActivateSource(false)
+        return
+      }
+
+      const data = JSON.parse(raw)
+
+      // Build ExtractedData from activation handoff
+      const activateExtracted: ExtractedData = {
+        display_name: data.display_name || 'Unknown',
+        handle: data.handle || null,
+        tagline: null,
+        location: data.location || null,
+        age: null,
+        age_cohort: null,
+        presence_score: data.presence_score || 0,
+        net_worth_percentile: null,
+        income_percentile: null,
+        skills_count: data.skills_count || 0,
+        interests_tags: data.interests_tags || [],
+        has_financial: false,
+        has_dating: false,
+        has_advertising: false,
+        has_content_feed: false,
+      }
+
+      setExtracted(activateExtracted)
+
+      // Set pricing from activation
+      if (data.public_price || data.private_price || data.marketing_price) {
+        setPricing({
+          publicPrice: data.public_price || '0.02',
+          privatePrice: data.private_price || '0.50',
+          marketingPrice: data.marketing_price || '5.00',
+        })
+      }
+
+      // Use the profile number from activation if available
+      if (data.profile_number) {
+        setProfileNumber(data.profile_number)
+      }
+
+      setStep('validate')
+    } catch (err) {
+      console.error('Failed to load activation handoff data:', err)
+      setStep('url')
+      setActivateSource(false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const generateProfileNumber = () => {
     const num = Math.floor(Math.random() * 999999) + 1
@@ -243,12 +314,18 @@ export default function ProfileBuilder() {
   }
 
   // ─── Step indicators ────────────────────────────────────
-  const steps = [
-    { key: 'url', label: 'Endpoint' },
-    { key: 'validate', label: 'Review' },
-    { key: 'pricing', label: 'Pricing' },
-    { key: 'confirm', label: 'Register' },
-  ]
+  const steps = activateSource
+    ? [
+        { key: 'validate', label: 'Review' },
+        { key: 'pricing', label: 'Pricing' },
+        { key: 'confirm', label: 'Register' },
+      ]
+    : [
+        { key: 'url', label: 'Endpoint' },
+        { key: 'validate', label: 'Review' },
+        { key: 'pricing', label: 'Pricing' },
+        { key: 'confirm', label: 'Register' },
+      ]
 
   const stepIndex = steps.findIndex(s => s.key === step)
 
@@ -371,15 +448,35 @@ export default function ProfileBuilder() {
               Then host both files on Cloudflare Pages (free, ~20 minutes) and come back here with your URL.
             </p>
           </div>
+
+          {/* Activate callout */}
+          <div className="mt-4 p-4 bg-[#f0fdf4] border-l-[3px] border-[#166534] rounded-[3px]">
+            <p className="font-body text-sm text-[#5a5a5a] m-0">
+              <strong className="text-[#166534]">Just activated?</strong> If you just completed the{' '}
+              <Link href="/activate" className="text-[#166534] font-medium no-underline hover:underline">Activate flow</Link>,
+              your data should transfer automatically. If it didn&apos;t,{' '}
+              <Link href="/activate" className="text-[#166534] font-medium no-underline hover:underline">go back to Activate</Link>{' '}
+              and click &ldquo;Download files &amp; register&rdquo; again.
+            </p>
+          </div>
         </div>
       )}
 
       {/* ═══ STEP 2: Review extracted data ═══ */}
       {step === 'validate' && extracted && (
         <div className="card-grace p-8">
+          {activateSource && (
+            <div className="mb-4 p-3 bg-[#f0fdf4] border border-[#166534] rounded-[3px]">
+              <div className="font-body text-[12px] text-[#166534]">
+                <strong>✓ Arrived from Activate</strong> — your profile data has been pre-populated from the activation flow.
+              </div>
+            </div>
+          )}
           <h2 className="font-heading text-xl font-bold mb-2">Review your directory listing</h2>
           <p className="font-body text-sm text-[#5a5a5a] mb-6">
-            This is what Search Star extracted from your profile. This metadata is what platforms see when they search the directory.
+            {activateSource
+              ? 'This metadata was extracted from your activation. Confirm it looks correct, then set your pricing.'
+              : 'This is what Search Star extracted from your profile. This metadata is what platforms see when they search the directory.'}
           </p>
 
           <div className="space-y-4">
@@ -448,9 +545,15 @@ export default function ProfileBuilder() {
           </div>
 
           <div className="flex gap-3 mt-6">
-            <button onClick={() => { setStep('url'); setShowManualPaste(false) }} className="btn-secondary">
-              ← Back
-            </button>
+            {activateSource ? (
+              <Link href="/activate" className="btn-secondary no-underline text-center">
+                ← Back to Activate
+              </Link>
+            ) : (
+              <button onClick={() => { setStep('url'); setShowManualPaste(false) }} className="btn-secondary">
+                ← Back
+              </button>
+            )}
             <button onClick={() => setStep('pricing')} className="btn-primary">
               Looks Good →
             </button>

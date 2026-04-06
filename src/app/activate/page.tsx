@@ -299,59 +299,143 @@ export default function Activate() {
 
   const currentStepIndex = STEPS.findIndex(s => s.key === step)
 
-  // ═══ Persistence: save/load activation state ═══
+  // ═══ Persistence: save/load activation state via Supabase ═══
 
-  // Save profileId to sessionStorage whenever it changes
+  const [stateLoaded, setStateLoaded] = useState(false)
+
+  // Save state to Supabase whenever key values change
+  const saveActivationState = useCallback(async (overrides?: Record<string, unknown>) => {
+    try {
+      await fetch('/api/activate/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_step: step,
+          full_name: fullName || null,
+          employer: employer || null,
+          city: city || null,
+          linkedin_url: linkedinUrl || null,
+          profile_id: profileId || null,
+          field_ids: fields.filter(f => f.dbId).map(f => f.dbId),
+          photo_ids: photos.map(p => p.id),
+          public_price: parseFloat(publicPrice) || 0.02,
+          private_price: parseFloat(privatePrice) || 0.50,
+          marketing_price: parseFloat(marketingPrice) || 5.00,
+          ...overrides,
+        }),
+      })
+    } catch (err) {
+      console.error('Failed to save activation state:', err)
+    }
+  }, [step, fullName, employer, city, linkedinUrl, profileId, fields, photos, publicPrice, privatePrice, marketingPrice])
+
+  // Save state on step changes
+  useEffect(() => {
+    if (!stateLoaded) return  // Don't save until initial load completes
+    saveActivationState()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
+
+  // Also keep sessionStorage for profileId (used by field API calls)
   useEffect(() => {
     if (profileId) {
       sessionStorage.setItem('activate_profileId', profileId)
     }
   }, [profileId])
 
-  // Save fullName to sessionStorage for resumption
+  // On mount: load activation state from Supabase
   useEffect(() => {
-    if (fullName) {
-      sessionStorage.setItem('activate_fullName', fullName)
-    }
-  }, [fullName])
+    async function loadState() {
+      try {
+        // First try Supabase state
+        const res = await fetch('/api/activate/state')
+        const data = await res.json()
 
-  // On mount: check for saved profileId and load fields from database
-  useEffect(() => {
-    const savedProfileId = sessionStorage.getItem('activate_profileId')
-    const savedFullName = sessionStorage.getItem('activate_fullName')
-    if (!savedProfileId) return
+        if (data.state && data.state.current_step !== 'identify') {
+          const s = data.state
+          if (s.full_name) setFullName(s.full_name)
+          if (s.employer) setEmployer(s.employer)
+          if (s.city) setCity(s.city)
+          if (s.linkedin_url) setLinkedinUrl(s.linkedin_url)
+          if (s.profile_id) setProfileId(s.profile_id)
+          if (s.public_price) setPublicPrice(String(s.public_price))
+          if (s.private_price) setPrivatePrice(String(s.private_price))
+          if (s.marketing_price) setMarketingPrice(String(s.marketing_price))
+          if (s.published_handle && s.published_profile_number) {
+            setPublishResult({ handle: s.published_handle, profileNumber: s.published_profile_number })
+          }
 
-    setProfileId(savedProfileId)
-    if (savedFullName && !fullName) setFullName(savedFullName)
+          // Load fields from database if we have a profile_id
+          if (s.profile_id) {
+            sessionStorage.setItem('activate_profileId', s.profile_id)
+            try {
+              const fieldsRes = await fetch(`/api/activate/fields?profileId=${s.profile_id}`)
+              const fieldsData = await fieldsRes.json()
+              if (fieldsData.fields && fieldsData.fields.length > 0) {
+                const loadedFields: SeededField[] = fieldsData.fields.map((row: {
+                  id: string; section: string; label: string; value: string;
+                  source_name: string; source_url: string; provenance_status: string;
+                  original_value: string | null; confidence_score: number;
+                }) => ({
+                  id: row.id,
+                  section: row.section,
+                  label: row.label,
+                  value: row.value,
+                  source: row.source_name || '',
+                  sourceUrl: row.source_url || '',
+                  provenance: row.provenance_status as Provenance,
+                  correctedValue: row.provenance_status === 'corrected' ? row.value : undefined,
+                  confidenceScore: row.confidence_score,
+                  dbId: row.id,
+                }))
+                setFields(loadedFields)
+              }
+            } catch (err) {
+              console.error('Failed to load saved fields:', err)
+            }
+          }
 
-    // Load fields from database
-    fetch(`/api/activate/fields?profileId=${savedProfileId}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.fields && data.fields.length > 0) {
-          // Map database rows back to SeededField format
-          const loadedFields: SeededField[] = data.fields.map((row: {
-            id: string; section: string; label: string; value: string;
-            source_name: string; source_url: string; provenance_status: string;
-            original_value: string | null; confidence_score: number;
-          }) => ({
-            id: row.id,
-            section: row.section,
-            label: row.label,
-            value: row.value,
-            source: row.source_name || '',
-            sourceUrl: row.source_url || '',
-            provenance: row.provenance_status as Provenance,
-            correctedValue: row.provenance_status === 'corrected' ? row.value : undefined,
-            confidenceScore: row.confidence_score,
-            dbId: row.id,
-          }))
-          setFields(loadedFields)
-          // If we have loaded fields, jump to review step
-          if (loadedFields.length > 0) setStep('review')
+          // Restore step (but not 'completed' — that means they finished)
+          if (s.current_step && s.current_step !== 'completed') {
+            setStep(s.current_step as Step)
+          }
+        } else {
+          // Fallback to sessionStorage for unauthenticated users
+          const savedProfileId = sessionStorage.getItem('activate_profileId')
+          const savedFullName = sessionStorage.getItem('activate_fullName')
+          if (savedProfileId) {
+            setProfileId(savedProfileId)
+            if (savedFullName && !fullName) setFullName(savedFullName)
+            try {
+              const fieldsRes = await fetch(`/api/activate/fields?profileId=${savedProfileId}`)
+              const fieldsData = await fieldsRes.json()
+              if (fieldsData.fields && fieldsData.fields.length > 0) {
+                const loadedFields: SeededField[] = fieldsData.fields.map((row: {
+                  id: string; section: string; label: string; value: string;
+                  source_name: string; source_url: string; provenance_status: string;
+                  original_value: string | null; confidence_score: number;
+                }) => ({
+                  id: row.id, section: row.section, label: row.label, value: row.value,
+                  source: row.source_name || '', sourceUrl: row.source_url || '',
+                  provenance: row.provenance_status as Provenance,
+                  correctedValue: row.provenance_status === 'corrected' ? row.value : undefined,
+                  confidenceScore: row.confidence_score, dbId: row.id,
+                }))
+                setFields(loadedFields)
+                if (loadedFields.length > 0) setStep('review')
+              }
+            } catch (err) {
+              console.error('Failed to load saved fields:', err)
+            }
+          }
         }
-      })
-      .catch(err => console.error('Failed to load saved fields:', err))
+      } catch (err) {
+        console.error('Failed to load activation state:', err)
+      } finally {
+        setStateLoaded(true)
+      }
+    }
+    loadState()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -833,6 +917,26 @@ export default function Activate() {
     }
   }
 
+  // ═══ Derived data ═══
+
+  const activeFields = fields.filter(f => f.provenance !== 'removed')
+  const confirmedCount = activeFields.filter(f => f.provenance === 'confirmed').length
+  const correctedCount = activeFields.filter(f => f.provenance === 'corrected').length
+  const selfReportedCount = activeFields.filter(f => f.provenance === 'self_reported').length
+  const seededCount = activeFields.filter(f => f.provenance === 'seeded').length
+
+  const sections = [...new Set(activeFields.map(f => f.section))]
+
+  const completeness = Math.min(100, Math.round(
+    (activeFields.length * 4 + photos.length * 6 + (confirmedCount + correctedCount) * 2) / 1.5
+  ))
+
+  const trustEstimate = Math.min(30, Math.round(
+    confirmedCount * 2 + correctedCount * 3 + (photos.length > 0 ? 5 : 0)
+  ))
+
+  const chaptersWithPhotos = [...new Set(photos.map(p => p.chapter))]
+
   // ═══ Publish handler ═══
 
   const handlePublish = useCallback(async () => {
@@ -946,33 +1050,43 @@ Learn more: https://www.searchstar.com/spec.html
           profileNumber: result.profileNumber,
           handle: result.handle,
         })
+
+        // Save completed state to Supabase
+        await saveActivationState({
+          current_step: 'completed',
+          published_handle: result.handle,
+          published_profile_number: result.profileNumber,
+        })
+
+        // Store activation data in sessionStorage for profile-builder handoff
+        const activateData = {
+          display_name: fullName,
+          handle: result.handle,
+          location: city,
+          presence_score: completeness,
+          skills_count: activeFields.filter(f => f.section === 'Skills').length,
+          interests_tags: activeFields
+            .filter(f => f.section.startsWith('Interests'))
+            .map(f => f.label)
+            .filter(Boolean),
+          public_price: publicPrice,
+          private_price: privatePrice,
+          marketing_price: marketingPrice,
+          profile_number: result.profileNumber,
+        }
+        sessionStorage.setItem('activate_handoff', JSON.stringify(activateData))
+
+        // Redirect to profile-builder after a brief delay to show success
+        setTimeout(() => {
+          window.location.href = '/profile-builder?source=activate'
+        }, 2500)
       }
     } catch (err) {
       setPublishError(err instanceof Error ? err.message : 'Failed to generate files')
     } finally {
       setPublishing(false)
     }
-  }, [fullName, employer, city, fields, photos, publicPrice, privatePrice, marketingPrice])
-
-  // ═══ Derived data ═══
-
-  const activeFields = fields.filter(f => f.provenance !== 'removed')
-  const confirmedCount = activeFields.filter(f => f.provenance === 'confirmed').length
-  const correctedCount = activeFields.filter(f => f.provenance === 'corrected').length
-  const selfReportedCount = activeFields.filter(f => f.provenance === 'self_reported').length
-  const seededCount = activeFields.filter(f => f.provenance === 'seeded').length
-
-  const sections = [...new Set(activeFields.map(f => f.section))]
-
-  const completeness = Math.min(100, Math.round(
-    (activeFields.length * 4 + photos.length * 6 + (confirmedCount + correctedCount) * 2) / 1.5
-  ))
-
-  const trustEstimate = Math.min(30, Math.round(
-    confirmedCount * 2 + correctedCount * 3 + (photos.length > 0 ? 5 : 0)
-  ))
-
-  const chaptersWithPhotos = [...new Set(photos.map(p => p.chapter))]
+  }, [fullName, employer, city, fields, photos, publicPrice, privatePrice, marketingPrice, saveActivationState, completeness, activeFields])
 
   // ═══════════════════════════════════════════════════
   // Render
@@ -1759,8 +1873,12 @@ Learn more: https://www.searchstar.com/spec.html
                   Handle: <strong>{publishResult.handle}</strong>
                 </div>
                 <p className="font-body text-[12px] text-[#166534] mt-2 m-0">
-                  Your ZIP has been downloaded. Host <code>profile.json</code> and <code>index.html</code> at your domain, then verify ownership to claim your profile.
+                  Your ZIP has been downloaded. Redirecting to the registration desk to complete your directory listing…
                 </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-[#166534] border-t-transparent rounded-full animate-spin" />
+                  <span className="font-body text-[11px] text-[#166534]">Redirecting…</span>
+                </div>
               </div>
             )}
 
