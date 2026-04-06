@@ -854,10 +854,65 @@ export default function Activate() {
       // 2. Generate index.html
       const profileHtml = generateProfileHtml(profileJson)
 
-      // 3. Bundle into ZIP
+      // 3. Bundle into ZIP with README
+      const readme = `Search Star Profile — Self-Hosting Guide
+==========================================
+
+Your profile export contains:
+
+  profile.json   JSON-LD profile data (schema v1.3)
+  index.html     Standalone HTML profile page (Graceland design)
+  README.txt     This file
+
+HOSTING INSTRUCTIONS
+--------------------
+1. Upload all files to your web server or static host (Vercel, Netlify, Cloudflare Pages, GitHub Pages, S3 + CloudFront, etc.)
+2. Ensure profile.json is served at the root alongside index.html
+3. Replace any base64 photo data URLs in profile.json with hosted WebP image URLs
+
+PHOTO SPECIFICATIONS
+--------------------
+- Format: WebP (recommended) or JPEG fallback
+- Max dimensions: 1200×1200px
+- Max file size: 500KB per photo
+- Naming convention: photos/{id}.webp
+- Store photos in a /photos/ subdirectory
+
+CACHE HEADER GUIDANCE
+---------------------
+HTML & JSON (profile data — changes periodically):
+  Cache-Control: public, max-age=3600, s-maxage=86400
+  ETag: [generate from file hash]
+  Vary: Accept-Encoding
+
+For CDN deployments:
+  Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=86400
+
+Photos (immutable content-addressed files):
+  Cache-Control: public, max-age=31536000, immutable
+
+VISIBILITY MODES
+----------------
+index.html supports two display modes via the top-bar toggle:
+  Full     — Shows all sections including private-tier data
+  Summary  — Hides private-tier sections (photos, detailed history)
+
+The toggle works client-side via CSS class switching on the body element.
+
+SCHEMA VERSION
+--------------
+This export uses Search Star schema v1.3 with:
+- Per-field provenance tags (seeded/confirmed/corrected/self_reported)
+- Full photo metadata with narrative chapter, access tier, and content hash
+- Access policy block with user-set pricing
+- JSON-LD @context: https://schema.searchstar.org/v1.3
+
+Learn more: https://www.searchstar.com/spec.html
+`
       const zip = new JSZip()
       zip.file('profile.json', JSON.stringify(profileJson, null, 2))
       zip.file('index.html', profileHtml)
+      zip.file('README.txt', readme)
 
       const blob = await zip.generateAsync({ type: 'blob' })
 

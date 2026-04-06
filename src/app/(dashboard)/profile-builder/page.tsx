@@ -60,18 +60,24 @@ export default function ProfileBuilder() {
     return `SS-${num.toString().padStart(6, '0')}`
   }
 
-  // Validate JSON-LD structure
+  // Validate JSON-LD structure (supports v0.8 and v1.3 schemas)
   const validateProfileJSON = (json: ProfileJSON): string[] => {
     const errors: string[] = []
     if (!json['@context'] && !json.identity && !json.presenceComposite) {
       errors.push('This doesn\'t look like a Search Star profile. Expected @context, identity, or presenceComposite fields.')
       return errors
     }
+    // Accept both v0.8 and v1.3 context URIs
+    if (json['@context'] &&
+        json['@context'] !== 'https://schema.searchstar.org/v0.8' &&
+        json['@context'] !== 'https://schema.searchstar.org/v1.3') {
+      errors.push(`Unrecognized schema context: ${json['@context']}. Expected v0.8 or v1.3.`)
+    }
     if (!json.identity?.displayName) errors.push('Missing identity.displayName (required)')
     return errors
   }
 
-  // Extract directory metadata from JSON-LD
+  // Extract directory metadata from JSON-LD (v0.8 + v1.3 compatible)
   const extractFromJSON = (json: ProfileJSON): ExtractedData => {
     const id = json.identity || {}
     const fin = json.financial || {}
@@ -87,6 +93,16 @@ export default function ProfileBuilder() {
       ...(int.social || []).map((i: { name?: string }) => i.name),
       ...(int.intellectual || []).map((i: { name?: string }) => i.name),
     ].filter(Boolean)
+
+    // v1.3: extract pricing from accessPolicy if present
+    const ap = json.accessPolicy?.tiers
+    if (ap) {
+      setPricing({
+        publicPrice: String(ap.public?.pricePerQuery ?? '0.02'),
+        privatePrice: String(ap.private?.pricePerQuery ?? '0.50'),
+        marketingPrice: String(ap.marketing?.pricePerMessage ?? '5.00'),
+      })
+    }
 
     return {
       display_name: id.displayName || 'Unknown',
@@ -324,7 +340,7 @@ export default function ProfileBuilder() {
                 value={manualJson}
                 onChange={(e) => setManualJson(e.target.value)}
                 rows={10}
-                placeholder='{"@context": "https://schema.searchstar.org/v0.8", ...}'
+                placeholder='{"@context": "https://schema.searchstar.org/v1.3", ...}'
                 className="w-full px-3 py-2.5 border border-[#d4d4d4] rounded-[3px] font-mono text-xs outline-none focus:border-[#1a3a6b] resize-none mb-3"
               />
               <button

@@ -1,7 +1,8 @@
 // ═══════════════════════════════════════════════════
 // generate-profile-json.ts
 // Generates a JSON-LD profile document from Activate state
-// Schema: Search Star v1.3 with per-field provenance
+// Schema: Search Star v1.3 with per-field provenance,
+// full photo metadata, and access policy block
 // ═══════════════════════════════════════════════════
 
 export interface SeededField {
@@ -14,7 +15,10 @@ export interface SeededField {
   provenance: 'seeded' | 'confirmed' | 'corrected' | 'self_reported' | 'removed'
   correctedValue?: string
   discoveredAt?: string
+  confidenceScore?: number
 }
+
+export type AccessTier = 'public' | 'private' | 'marketing'
 
 export interface NarrativePhoto {
   id: string
@@ -26,6 +30,8 @@ export interface NarrativePhoto {
   sourceLabel: string
   previewUrl: string
   relatedFields: string[]
+  accessTier: AccessTier
+  hash: string
 }
 
 export interface PricingConfig {
@@ -43,15 +49,25 @@ export interface ProfileInput {
   pricing: PricingConfig
 }
 
+// ── Per-field provenance builder ──────────────────
+
 function buildProvenance(field: SeededField) {
   const now = new Date().toISOString()
-  const prov: Record<string, string> = {
+  const prov: Record<string, unknown> = {
     status: field.provenance,
     source: field.source,
   }
 
+  if (field.sourceUrl) {
+    prov.sourceUrl = field.sourceUrl
+  }
+
   if (field.discoveredAt) {
     prov.seededAt = field.discoveredAt
+  }
+
+  if (field.confidenceScore !== undefined) {
+    prov.confidenceScore = field.confidenceScore
   }
 
   switch (field.provenance) {
@@ -66,7 +82,6 @@ function buildProvenance(field: SeededField) {
       prov.addedAt = now
       break
     case 'seeded':
-      // Still unreviewed — just seededAt
       if (!prov.seededAt) prov.seededAt = now
       break
   }
@@ -74,31 +89,66 @@ function buildProvenance(field: SeededField) {
   return prov
 }
 
-function groupFieldsBySection(fields: SeededField[]) {
-  const groups: Record<string, SeededField[]> = {}
-  for (const f of fields) {
-    if (f.provenance === 'removed') continue
-    const key = f.section.toLowerCase().replace(/[^a-z0-9]/g, '_')
-    if (!groups[key]) groups[key] = []
-    groups[key].push(f)
+// ── Photo metadata builder (Section 3.9 schema) ──
+
+function buildPhotoMetadata(photo: NarrativePhoto) {
+  return {
+    type: 'photo' as const,
+    url: photo.previewUrl?.startsWith('data:')
+      ? `photos/${photo.id}.webp`
+      : (photo.previewUrl || `photos/${photo.id}.webp`),
+    hash: photo.hash || `sha256:placeholder-${photo.id}`,
+    accessTier: photo.accessTier || 'private',
+    narrative: {
+      chapter: photo.chapter,
+      caption: photo.caption,
+      date: photo.date,
+      location: photo.location,
+      relatedFields: photo.relatedFields || [],
+    },
+    provenance: {
+      status: 'confirmed' as const,
+      source: photo.sourceLabel || photo.source,
+      discoveredAt: new Date().toISOString(),
+    },
+    validation: {
+      validatedBy: [] as string[],
+      stake: 0,
+    },
   }
-  return groups
 }
+
+// ── Effective value helper ────────────────────────
+
+function effectiveValue(field: SeededField): string {
+  if (field.provenance === 'corrected' && field.correctedValue) {
+    return field.correctedValue
+  }
+  return field.value
+}
+
+// ── Main generator ────────────────────────────────
 
 export function generateProfileJson(input: ProfileInput): object {
   const { fullName, employer, city, fields, photos, pricing } = input
   const activeFields = fields.filter(f => f.provenance !== 'removed')
   const now = new Date().toISOString()
 
-  // Build skills array from Skills section fields
+  // ── Identity fields ──
+  const identityFields = activeFields.filter(f => f.section === 'Identity')
+  const titleField = identityFields.find(f => f.label.toLowerCase().includes('title'))
+  const locationField = identityFields.find(f => f.label.toLowerCase().includes('location'))
+  const taglineField = identityFields.find(f => f.label.toLowerCase().includes('tagline'))
+
+  // ── Skills ──
   const skillFields = activeFields.filter(f => f.section === 'Skills')
   const skills = skillFields.map(f => ({
     name: f.label,
-    detail: f.correctedValue || f.value,
+    detail: effectiveValue(f),
     provenance: buildProvenance(f),
   }))
 
-  // Build interests from Interests sections
+  // ── Interests (by category) ──
   const interestCategories: Record<string, Array<{ name: string; detail: string; provenance: object }>> = {
     athletic: [],
     social: [],
@@ -112,19 +162,13 @@ export function generateProfileJson(input: ProfileInput): object {
       else if (sectionLower.includes('social')) cat = 'social'
       interestCategories[cat].push({
         name: f.label,
-        detail: f.correctedValue || f.value,
+        detail: effectiveValue(f),
         provenance: buildProvenance(f),
       })
     }
   }
 
-  // Build identity fields from Identity section
-  const identityFields = activeFields.filter(f => f.section === 'Identity')
-  const titleField = identityFields.find(f => f.label.toLowerCase().includes('title'))
-  const locationField = identityFields.find(f => f.label.toLowerCase().includes('location'))
-  const taglineField = identityFields.find(f => f.label.toLowerCase().includes('tagline'))
-
-  // Build professional history fields
+  // ── Professional history ──
   const professionalFields = activeFields.filter(f =>
     f.section.toLowerCase().includes('professional') ||
     f.section.toLowerCase().includes('experience') ||
@@ -132,47 +176,68 @@ export function generateProfileJson(input: ProfileInput): object {
   )
   const professional = professionalFields.map(f => ({
     label: f.label,
-    detail: f.correctedValue || f.value,
+    detail: effectiveValue(f),
     provenance: buildProvenance(f),
   }))
 
-  // Build media array from photos
-  const media = photos.map(p => ({
-    type: 'photo' as const,
-    url: p.previewUrl || `photos/${p.id}.webp`,
-    label: p.caption,
-    chapter: p.chapter,
-    date: p.date,
-    location: p.location,
-    source: p.sourceLabel,
-    accessTier: 'private',
-    relatedFields: p.relatedFields,
-    hash: `sha256:placeholder-${p.id}`,
-  }))
+  // ── Media array (full Section 3.9 schema) ──
+  const media = photos.map(p => buildPhotoMetadata(p))
 
-  // Build the remaining ungrouped fields
+  // ── Narrative chapter counts ──
+  const chapters = ['intellectual', 'social', 'athletic', 'professional', 'aesthetic', 'family'] as const
+  const narrativeChapters: Record<string, number> = {}
+  for (const ch of chapters) {
+    narrativeChapters[ch] = photos.filter(p => p.chapter === ch).length
+  }
+
+  // ── Remaining ungrouped sections ──
   const groupedSections = new Set([
     'Skills', 'Identity',
     ...activeFields.filter(f => f.section.toLowerCase().includes('interests')).map(f => f.section),
-    ...activeFields.filter(f =>
-      f.section.toLowerCase().includes('professional') ||
-      f.section.toLowerCase().includes('experience') ||
-      f.section.toLowerCase().includes('education')
-    ).map(f => f.section),
+    ...professionalFields.map(f => f.section),
   ])
   const otherFields = activeFields.filter(f => !groupedSections.has(f.section))
-  const additionalData: Record<string, Array<{ label: string; value: string; provenance: object }>> = {}
+  const additionalSections: Record<string, Array<{ label: string; value: string; provenance: object }>> = {}
   for (const f of otherFields) {
     const key = f.section
-    if (!additionalData[key]) additionalData[key] = []
-    additionalData[key].push({
+    if (!additionalSections[key]) additionalSections[key] = []
+    additionalSections[key].push({
       label: f.label,
-      value: f.correctedValue || f.value,
+      value: effectiveValue(f),
       provenance: buildProvenance(f),
     })
   }
 
-  // Build the full JSON-LD document
+  // ── Access policy with user-set pricing ──
+  const accessPolicy = {
+    tiers: {
+      public: {
+        pricePerQuery: parseFloat(pricing.publicPrice) || 0.02,
+        includes: ['identity', 'skills', 'interests', 'presenceComposite.score'],
+      },
+      private: {
+        pricePerQuery: parseFloat(pricing.privatePrice) || 0.50,
+        includes: ['*'],
+      },
+      marketing: {
+        pricePerMessage: parseFloat(pricing.marketingPrice) || 5.00,
+      },
+    },
+    revenueSplit: {
+      profileOwner: 0.90,
+      searchStar: 0.10,
+    },
+  }
+
+  // ── Provenance breakdown ──
+  const provenanceBreakdown = {
+    confirmed: activeFields.filter(f => f.provenance === 'confirmed').length,
+    corrected: activeFields.filter(f => f.provenance === 'corrected').length,
+    self_reported: activeFields.filter(f => f.provenance === 'self_reported').length,
+    seeded: activeFields.filter(f => f.provenance === 'seeded').length,
+  }
+
+  // ── Build the JSON-LD document ──
   const profile = {
     '@context': 'https://schema.searchstar.org/v1.3',
     '@type': 'SearchStarProfile',
@@ -182,9 +247,9 @@ export function generateProfileJson(input: ProfileInput): object {
     identity: {
       displayName: fullName,
       handle: `@${fullName.toLowerCase().replace(/\s+/g, '.')}`,
-      tagline: taglineField ? (taglineField.correctedValue || taglineField.value) : '',
-      location: locationField ? (locationField.correctedValue || locationField.value) : city,
-      currentTitle: titleField ? (titleField.correctedValue || titleField.value) : (employer ? `at ${employer}` : ''),
+      tagline: taglineField ? effectiveValue(taglineField) : '',
+      location: locationField ? effectiveValue(locationField) : city,
+      currentTitle: titleField ? effectiveValue(titleField) : (employer ? `at ${employer}` : ''),
     },
 
     skills,
@@ -204,37 +269,11 @@ export function generateProfileJson(input: ProfileInput): object {
 
     media,
 
-    narrativeChapters: {
-      intellectual: photos.filter(p => p.chapter === 'intellectual').length,
-      social: photos.filter(p => p.chapter === 'social').length,
-      athletic: photos.filter(p => p.chapter === 'athletic').length,
-      professional: photos.filter(p => p.chapter === 'professional').length,
-      aesthetic: photos.filter(p => p.chapter === 'aesthetic').length,
-      family: photos.filter(p => p.chapter === 'family').length,
-    },
+    narrativeChapters,
 
-    accessPolicy: {
-      tiers: {
-        public: {
-          pricePerQuery: parseFloat(pricing.publicPrice) || 0.02,
-          includes: ['identity', 'skills', 'interests', 'presenceComposite.score'],
-        },
-        private: {
-          pricePerQuery: parseFloat(pricing.privatePrice) || 0.50,
-          includes: ['*'],
-        },
-        marketing: {
-          pricePerMessage: parseFloat(pricing.marketingPrice) || 5.00,
-        },
-      },
-      revenueSplit: {
-        profileOwner: 0.90,
-        searchStar: 0.10,
-      },
-    },
+    accessPolicy,
 
-    // Additional ungrouped data sections
-    ...(Object.keys(additionalData).length > 0 ? { additionalSections: additionalData } : {}),
+    ...(Object.keys(additionalSections).length > 0 ? { additionalSections } : {}),
 
     _meta: {
       generatedBy: 'Search Star Activate',
@@ -242,12 +281,7 @@ export function generateProfileJson(input: ProfileInput): object {
       schemaVersion: '1.3',
       totalFields: activeFields.length,
       totalPhotos: photos.length,
-      provenanceBreakdown: {
-        confirmed: activeFields.filter(f => f.provenance === 'confirmed').length,
-        corrected: activeFields.filter(f => f.provenance === 'corrected').length,
-        self_reported: activeFields.filter(f => f.provenance === 'self_reported').length,
-        seeded: activeFields.filter(f => f.provenance === 'seeded').length,
-      },
+      provenanceBreakdown,
     },
   }
 
