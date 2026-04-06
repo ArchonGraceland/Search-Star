@@ -3,6 +3,9 @@
 import { useState, useCallback } from 'react'
 import { PublicHeader } from '@/components/public-header'
 import { PublicFooter } from '@/components/public-footer'
+import { generateProfileJson } from '@/lib/activate/generate-profile-json'
+import { generateProfileHtml } from '@/lib/activate/generate-profile-html'
+import JSZip from 'jszip'
 
 // ═══════════════════════════════════════════════════
 // Types
@@ -217,6 +220,11 @@ export default function Activate() {
   const [privatePrice, setPrivatePrice] = useState('0.50')
   const [marketingPrice, setMarketingPrice] = useState('5.00')
 
+  // Step 6 — Publishing
+  const [publishing, setPublishing] = useState(false)
+  const [publishResult, setPublishResult] = useState<{ profileNumber: string; handle: string } | null>(null)
+  const [publishError, setPublishError] = useState('')
+
   // Disambiguation
   const [disambiguationCandidates, setDisambiguationCandidates] = useState<DisambiguationCandidate[]>([])
   const [disambiguationSelections, setDisambiguationSelections] = useState<Record<string, string>>({})
@@ -359,6 +367,72 @@ export default function Activate() {
     // For now, simulate
     alert('Google Photos Picker integration: In production, this opens the Google Photos picker where you select photos from your library. The selected photos are imported with full metadata (date, location) and assigned to narrative chapters.')
   }
+
+  // ═══ Publish handler ═══
+
+  const handlePublish = useCallback(async () => {
+    setPublishing(true)
+    setPublishError('')
+    setPublishResult(null)
+
+    try {
+      // 1. Generate profile.json
+      const profileJson = generateProfileJson({
+        fullName,
+        employer,
+        city,
+        fields,
+        photos,
+        pricing: { publicPrice, privatePrice, marketingPrice },
+      })
+
+      // 2. Generate index.html
+      const profileHtml = generateProfileHtml(profileJson)
+
+      // 3. Bundle into ZIP
+      const zip = new JSZip()
+      zip.file('profile.json', JSON.stringify(profileJson, null, 2))
+      zip.file('index.html', profileHtml)
+
+      const blob = await zip.generateAsync({ type: 'blob' })
+
+      // 4. Trigger download
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `searchstar-profile-${fullName.toLowerCase().replace(/\s+/g, '-')}.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      // 5. Register directory stub
+      const handle = `@${fullName.toLowerCase().replace(/\s+/g, '.')}`
+      const res = await fetch('/api/activate/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileJson,
+          fullName,
+          handle,
+        }),
+      })
+
+      const result = await res.json()
+      if (!res.ok) {
+        setPublishError(result.error || 'Registration failed')
+      } else {
+        setPublishResult({
+          profileNumber: result.profileNumber,
+          handle: result.handle,
+        })
+      }
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : 'Failed to generate files')
+    } finally {
+      setPublishing(false)
+    }
+  }, [fullName, employer, city, fields, photos, publicPrice, privatePrice, marketingPrice])
 
   // ═══ Derived data ═══
 
@@ -1118,10 +1192,35 @@ export default function Activate() {
               </div>
             </div>
 
+            {/* Publish result */}
+            {publishResult && (
+              <div className="mt-4 p-4 bg-[#f0fdf4] border border-[#166534] rounded-[3px]">
+                <div className="font-body text-[13px] text-[#166534] font-bold mb-1">✓ Profile registered</div>
+                <div className="font-mono text-sm text-[#166534]">
+                  Profile number: <strong>{publishResult.profileNumber}</strong><br />
+                  Handle: <strong>{publishResult.handle}</strong>
+                </div>
+                <p className="font-body text-[12px] text-[#166534] mt-2 m-0">
+                  Your ZIP has been downloaded. Host <code>profile.json</code> and <code>index.html</code> at your domain, then verify ownership to claim your profile.
+                </p>
+              </div>
+            )}
+
+            {publishError && (
+              <div className="mt-4 p-4 bg-[#fef2f2] border border-[#dc2626] rounded-[3px]">
+                <div className="font-body text-[13px] text-[#dc2626]">{publishError}</div>
+              </div>
+            )}
+
             <div className="flex gap-3 mt-6">
               <button onClick={() => setStep('photos')} className="btn-secondary">← Back</button>
-              <button className="btn-primary flex-1">
-                Download files &amp; register with Search Star →
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                className="btn-primary flex-1"
+                style={{ opacity: publishing ? 0.6 : 1 }}
+              >
+                {publishing ? 'Generating files…' : 'Download files & register with Search Star →'}
               </button>
             </div>
           </div>
