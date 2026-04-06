@@ -8,7 +8,7 @@ import { PublicFooter } from '@/components/public-footer'
 // Types
 // ═══════════════════════════════════════════════════
 
-type Step = 'identify' | 'results' | 'review' | 'private' | 'photos' | 'publish'
+type Step = 'identify' | 'disambiguate' | 'results' | 'review' | 'private' | 'photos' | 'publish'
 type Provenance = 'seeded' | 'confirmed' | 'corrected' | 'self_reported' | 'removed'
 type PhotoChannel = 'public' | 'google' | 'upload' | 'url'
 type NarrativeChapter = 'intellectual' | 'social' | 'athletic' | 'professional' | 'aesthetic' | 'family'
@@ -34,6 +34,44 @@ interface NarrativePhoto {
   sourceLabel: string
   previewUrl: string
   relatedFields: string[]
+}
+
+interface DisambiguationCandidate {
+  id: string
+  source: string
+  name: string
+  title?: string
+  location?: string
+  employer?: string
+  url: string
+  avatar?: string
+  confidence: number
+  snippet?: string
+}
+
+interface SourceStatus {
+  name: string
+  status: 'found' | 'not_found' | 'error'
+  count: number
+}
+
+interface DisambiguationCandidate {
+  id: string
+  source: string
+  name: string
+  title?: string
+  location?: string
+  employer?: string
+  url: string
+  avatar?: string
+  confidence: number
+  snippet?: string
+}
+
+interface SourceStatus {
+  name: string
+  status: 'found' | 'not_found' | 'error'
+  count: number
 }
 
 // ═══════════════════════════════════════════════════
@@ -69,11 +107,12 @@ const CHAPTERS: { key: NarrativeChapter; label: string; icon: string; descriptio
 
 const STEPS: { key: Step; num: number; label: string; sub: string }[] = [
   { key: 'identify', num: 1, label: 'Identify', sub: 'Name & details' },
-  { key: 'results', num: 2, label: 'Scrape', sub: 'Public sources' },
-  { key: 'review', num: 3, label: 'Review', sub: 'Confirm & correct' },
-  { key: 'private', num: 4, label: 'Private', sub: 'Financial, family' },
-  { key: 'photos', num: 5, label: 'Photos', sub: 'Visual narrative' },
-  { key: 'publish', num: 6, label: 'Publish', sub: 'Pricing & files' },
+  { key: 'disambiguate', num: 2, label: 'Match', sub: 'Pick the right you' },
+  { key: 'results', num: 3, label: 'Scrape', sub: 'Public sources' },
+  { key: 'review', num: 4, label: 'Review', sub: 'Confirm & correct' },
+  { key: 'private', num: 5, label: 'Private', sub: 'Financial, family' },
+  { key: 'photos', num: 6, label: 'Photos', sub: 'Visual narrative' },
+  { key: 'publish', num: 7, label: 'Publish', sub: 'Pricing & files' },
 ]
 
 // ═══════════════════════════════════════════════════
@@ -151,6 +190,11 @@ export default function Activate() {
   // Step 2/3 — Seeded fields
   const [fields, setFields] = useState<SeededField[]>([])
 
+  // Disambiguation — when multiple candidates are found
+  const [disambiguation, setDisambiguation] = useState<DisambiguationCandidate[]>([])
+  const [sourceStatuses, setSourceStatuses] = useState<SourceStatus[]>([])
+  const [selectedCandidates, setSelectedCandidates] = useState<Record<string, string>>({})  // source -> candidateId
+
   // Step 3 — correction editing
   const [editingField, setEditingField] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -173,6 +217,14 @@ export default function Activate() {
   const [privatePrice, setPrivatePrice] = useState('0.50')
   const [marketingPrice, setMarketingPrice] = useState('5.00')
 
+  // Disambiguation
+  const [disambiguationCandidates, setDisambiguationCandidates] = useState<DisambiguationCandidate[]>([])
+  const [disambiguationSelections, setDisambiguationSelections] = useState<Record<string, string>>({})
+
+  // Source tracking
+  const [sourceSummary, setSourceSummary] = useState<SourceStatus[]>([])
+  const [discoveryErrors, setDiscoveryErrors] = useState<string[]>([])
+
   const currentStepIndex = STEPS.findIndex(s => s.key === step)
 
   // ═══ Handlers ═══
@@ -194,7 +246,16 @@ export default function Activate() {
       }
       setFields(data.fields || [])
       setPhotos(data.photos || [])
-      setStep('results')
+      setSourceStatuses(data.sources || [])
+
+      // If disambiguation candidates exist, show disambiguation step
+      if (data.disambiguation && data.disambiguation.length > 0) {
+        setDisambiguation(data.disambiguation)
+        setStep('disambiguate')
+      } else {
+        setDisambiguation([])
+        setStep('results')
+      }
     } catch (err) {
       console.error('Discovery error:', err)
       setScrapeError(err instanceof Error ? err.message : 'Discovery failed. Please try again.')
@@ -444,6 +505,137 @@ export default function Activate() {
         )}
 
         {/* ═══════════════════════════════════════════ */}
+        {/* STEP 1.5: Disambiguation */}
+        {/* ═══════════════════════════════════════════ */}
+        {step === 'disambiguate' && (
+          <div className="card-grace p-8">
+            <h2 className="font-heading text-xl font-bold mb-1">We found multiple possible matches</h2>
+            <p className="font-body text-sm text-[#5a5a5a] mb-6 leading-relaxed">
+              Some sources returned more than one person matching your name. Select the correct profile for each source, or skip if none match.
+              We&apos;ve already imported data from the best match — you can adjust in the review step.
+            </p>
+
+            {/* Source status summary */}
+            <div className="mb-6 p-4 bg-[#f9f9f9] border border-[#e8e8e8] rounded-[3px]">
+              <div className="label-grace text-[#767676] mb-3">Discovery sources</div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {sourceStatuses.map(s => (
+                  <div key={s.name} className="flex items-center gap-2 font-body text-[12px]">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${
+                      s.status === 'found' ? 'bg-[#16a34a]' : s.status === 'error' ? 'bg-[#dc2626]' : 'bg-[#d4d4d4]'
+                    }`} />
+                    <span className={s.status === 'found' ? 'text-[#1a1a1a] font-medium' : 'text-[#999]'}>
+                      {s.name}
+                      {s.status === 'found' && <span className="text-[#16a34a] ml-1">({s.count})</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Group disambiguation candidates by source */}
+            {(() => {
+              const sourceGroups = new Map<string, typeof disambiguation>()
+              for (const c of disambiguation) {
+                const existing = sourceGroups.get(c.source) || []
+                existing.push(c)
+                sourceGroups.set(c.source, existing)
+              }
+
+              return [...sourceGroups.entries()].map(([source, candidates]) => (
+                <div key={source} className="mb-6">
+                  <div className="label-grace text-[#1a3a6b] mb-3 flex items-center gap-2">
+                    <span className="inline-block w-4 h-4 rounded-[2px] bg-[#eef2f8] text-center text-[10px] leading-[16px] font-bold">
+                      {source === 'github.com' ? '⌨' : source === 'linkedin.com' ? '💼' : '🔍'}
+                    </span>
+                    {source} — {candidates.length} possible matches
+                  </div>
+                  <div className="space-y-2">
+                    {candidates.map(candidate => {
+                      const isSelected = selectedCandidates[source] === candidate.id
+                      return (
+                        <button
+                          key={candidate.id}
+                          onClick={() => setSelectedCandidates(prev => ({
+                            ...prev,
+                            [source]: isSelected ? '' : candidate.id,
+                          }))}
+                          className={`w-full text-left p-4 rounded-[3px] border-2 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-[#1a3a6b] bg-[#eef2f8]'
+                              : 'border-[#e8e8e8] bg-white hover:border-[#b0b0b0]'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {candidate.avatar && (
+                              <img
+                                src={candidate.avatar}
+                                alt=""
+                                className="w-10 h-10 rounded-full bg-[#e8e8e8] shrink-0"
+                              />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-body text-[14px] font-bold text-[#1a1a1a]">{candidate.name}</span>
+                                <span className="font-mono text-[10px] text-[#999] bg-[#f5f5f5] px-1.5 py-0.5 rounded-[2px]">
+                                  {Math.round(candidate.confidence * 100)}% match
+                                </span>
+                              </div>
+                              {candidate.title && (
+                                <div className="font-body text-[13px] text-[#5a5a5a]">{candidate.title}</div>
+                              )}
+                              <div className="font-body text-[11px] text-[#999] mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                                {candidate.employer && <span>🏢 {candidate.employer}</span>}
+                                {candidate.location && <span>📍 {candidate.location}</span>}
+                                <a href={candidate.url} target="_blank" rel="noopener noreferrer"
+                                  className="text-[#1a3a6b] hover:underline"
+                                  onClick={e => e.stopPropagation()}>
+                                  View profile ↗
+                                </a>
+                              </div>
+                              {candidate.snippet && (
+                                <div className="font-body text-[11px] text-[#999] mt-1 line-clamp-2">{candidate.snippet}</div>
+                              )}
+                            </div>
+                            <div className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                              isSelected ? 'border-[#1a3a6b] bg-[#1a3a6b]' : 'border-[#d4d4d4]'
+                            }`}>
+                              {isSelected && (
+                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                  <path d="M2 5L4.5 7.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))
+            })()}
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setStep('results')}
+                className="btn-primary"
+              >
+                Continue with selections →
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedCandidates({})
+                  setStep('results')
+                }}
+                className="font-body text-sm text-[#767676] hover:text-[#1a1a1a] px-4 py-2 bg-transparent border border-[#d4d4d4] rounded-[3px] cursor-pointer"
+              >
+                Skip — use best guesses
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════ */}
         {/* STEP 2: Scraping results */}
         {/* ═══════════════════════════════════════════ */}
         {step === 'results' && (
@@ -452,9 +644,46 @@ export default function Activate() {
               <h2 className="font-heading text-xl font-bold">What we found</h2>
               <span className="font-mono text-sm text-[#1a3a6b] font-medium">{fields.length} fields · {photos.length} photos</span>
             </div>
-            <p className="font-body text-sm text-[#5a5a5a] mb-6 leading-relaxed">
+            <p className="font-body text-sm text-[#5a5a5a] mb-4 leading-relaxed">
               Every field shows exactly where it came from. Nothing is published without your approval.
             </p>
+
+            {/* Source status bar */}
+            {sourceStatuses.length > 0 && (
+              <div className="mb-6 flex flex-wrap gap-2">
+                {sourceStatuses.map(s => (
+                  <span key={s.name} className={`inline-flex items-center gap-1.5 font-body text-[11px] font-bold tracking-[0.05em] uppercase px-2.5 py-1 rounded-[3px] ${
+                    s.status === 'found' ? 'bg-[#f0fdf4] text-[#166534]' :
+                    s.status === 'error' ? 'bg-[#fef2f2] text-[#991b1b]' :
+                    'bg-[#f5f5f5] text-[#999]'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      s.status === 'found' ? 'bg-[#16a34a]' : s.status === 'error' ? 'bg-[#dc2626]' : 'bg-[#d4d4d4]'
+                    }`} />
+                    {s.name} {s.status === 'found' ? `(${s.count})` : s.status === 'error' ? '✗' : '—'}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Multi-source indicator for fields with same label from different sources */}
+            {(() => {
+              const multiSourceLabels = new Map<string, number>()
+              for (const f of fields.filter(f => f.provenance !== 'removed')) {
+                const key = `${f.section}|${f.label}`
+                multiSourceLabels.set(key, (multiSourceLabels.get(key) || 0) + 1)
+              }
+              const conflicts = [...multiSourceLabels.entries()].filter(([, count]) => count > 1)
+              if (conflicts.length === 0) return null
+              return (
+                <div className="mb-5 p-3 bg-[#fffbeb] border-l-[3px] border-[#f59e0b] rounded-[3px]">
+                  <p className="font-body text-[12px] text-[#92400e] m-0 leading-relaxed">
+                    <strong>Multiple sources detected:</strong> {conflicts.length} field{conflicts.length > 1 ? 's have' : ' has'} values from different sources.
+                    All values are preserved — you can confirm, correct, or remove each one in the Review step.
+                  </p>
+                </div>
+              )
+            })()}
 
             {sections.map(section => (
               <div key={section} className="mb-5">
