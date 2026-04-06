@@ -115,7 +115,7 @@
         <a class="toc-indent" href="#advertising">3.6 Advertising Profile <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#dating">3.7 Intimate &amp; Dating <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#contentfeed">3.8 Content Feed <span class="new-badge">New in v0.4</span></a>
-        <a class="toc-indent" href="#seeding">3.9 Profile Seeding &amp; Visual Narrative <span class="new-badge">New in v1.3</span></a>
+        <a class="toc-indent" href="#seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span class="new-badge">New in v1.3</span></a>
         <a href="#access">4. Access Control &amp; Monetization</a>
         <a class="toc-indent" href="#tiers">4.1 Three Tiers</a>
         <a class="toc-indent" href="#pricing">4.2 Pricing Model</a>
@@ -689,16 +689,16 @@
 
       <div class="callout callout-warn"><strong>Content ownership.</strong> Search Star does not claim any rights to feed content. The user retains full copyright and can remove, edit, or restrict access to any item at any time by updating their feed endpoint. If an item is removed from the feed, it becomes inaccessible — Search Star does not cache or archive content. Subscribers who have already accessed an item retain whatever they downloaded, but cannot re-fetch deleted items.</div>
 
-      <!-- ═══════════ 3.9 PROFILE SEEDING ═══════════ -->
+      <!-- ═══════════ 3.9 ACTIVATE ═══════════ -->
 
-      <h3 id="seeding">3.9 Profile Seeding &amp; Visual Narrative <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v1.3</span></h3>
-      <p>The current profile creation flow (section 8.4) requires the individual to build their profile from scratch — pasting a prompt into an AI and answering questions for 30–60 minutes. This works, but it creates a cold-start problem: the person does all the work before getting any value. Profile seeding inverts this. The system assembles a draft profile from publicly available information, the individual claims it and corrects it, and validators vouch for the result. The barrier drops from "build your profile" to "review what we found and fix what's wrong."</p>
-      <p>This is the Grokipedia model applied to everyone, with a critical difference: Grokipedia builds profiles of famous people that those people do not control. Search Star builds draft profiles from public data and then <em>hands ownership to the individual</em>. The scraper-seeded draft is a starting point, not a final product. The individual corrects inaccuracies, adds private information the scraper could not find, removes anything they do not want published, and hosts the result on their own infrastructure.</p>
+      <h3 id="seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v1.3</span></h3>
+      <p>The current profile creation flow (section 8.4) requires the individual to build their profile from scratch — pasting a prompt into an AI and answering questions for 30–60 minutes. This works, but it creates a cold-start problem: the person does all the work before getting any value. Activate inverts this. The system discovers the individual's existing public footprint, assembles a draft profile, and hands it to the individual to correct, enrich, and own. The barrier drops from "build your profile" to "review what we found and fix what's wrong." The individual transitions from a passive data subject to an active participant who controls their own information.</p>
+      <p>This is the Grokipedia model applied to everyone, with a critical difference: Grokipedia builds profiles of famous people that those people do not control. Search Star discovers public data and then <em>hands ownership to the individual</em>. The draft is a starting point, not a final product. The individual corrects inaccuracies, adds private information the system could not find, removes anything they do not want published, and hosts the result on their own infrastructure.</p>
 
-      <div class="callout callout-info"><strong>Design philosophy:</strong> Every person with any public presence at all — a LinkedIn profile, a conference talk, a published article, a university alumni listing, a professional license — already has a partial profile scattered across the internet. It just isn't structured, isn't owned, isn't monetized, and nobody has vouched for its accuracy. Profile seeding collects what already exists, organizes it into the Search Star schema, and gives the individual the power to claim, correct, and profit from it.</div>
+      <div class="callout callout-info"><strong>Design philosophy:</strong> Every person with any public presence at all — a LinkedIn profile, a conference talk, a published article, a university alumni listing, a professional license — already has a partial profile scattered across the internet. It just isn't structured, isn't owned, isn't monetized, and nobody has vouched for its accuracy. Activate collects what already exists, organizes it into the Search Star schema, and gives the individual the power to claim, correct, and profit from it.</div>
 
-      <h4>Seeding sources</h4>
-      <p>The seeding engine queries available public APIs and scrapes public web pages to populate profile fields. The individual provides identifying information (full name, employer or university, city) to disambiguate, and the engine returns a draft mapped to the Search Star schema.</p>
+      <h4>Discovery sources</h4>
+      <p>The Activate engine queries available public APIs and scrapes public web pages to populate profile fields. The individual provides identifying information (full name, employer or university, city) to disambiguate, and the engine returns a draft mapped to the Search Star schema.</p>
       <table>
         <tr><th>Profile section</th><th>Public sources</th><th>Method</th></tr>
         <tr><td>Identity (name, location, tagline)</td><td>LinkedIn public profile, personal websites, company about pages, university directories</td><td>Web scrape, structured data extraction</td></tr>
@@ -709,16 +709,16 @@
         <tr><td>Professional history</td><td>LinkedIn, company websites, press releases, SEC filings (for executives), professional registrations</td><td>Web scrape + structured data</td></tr>
       </table>
 
-      <div class="callout callout-warn"><strong>What the seeder does NOT touch:</strong> Financial data is never scraped or estimated. The seeder does not guess income percentiles, net worth, credit scores, or any financial field. Presence Composite scores are not assigned from scraped photos — they require the user's explicit participation (see section 3.2). Family data (section 3.5) and dating data (section 3.7) are never seeded. These sections remain blank until the individual chooses to populate them.</div>
+      <div class="callout callout-warn"><strong>What Activate does NOT touch:</strong> Financial data is never scraped or estimated. The system does not guess income percentiles, net worth, credit scores, or any financial field. Presence Composite scores are not assigned from scraped photos — they require the individual's explicit participation (see section 3.2). Family data (section 3.5) and dating data (section 3.7) are never discovered. These sections remain blank until the individual chooses to populate them.</div>
 
       <h4>Claim provenance</h4>
-      <p>Every field in a Search Star profile carries a provenance tag that records where the data came from. This is a significant departure from the current spec, where all data is implicitly self-reported. With seeded profiles, each claim has one of four provenance states, and each state carries a different baseline credibility:</p>
+      <p>Every field in a Search Star profile carries a provenance tag that records where the data came from. This is a significant departure from the current spec, where all data is implicitly self-reported. With activated profiles, each claim has one of five provenance states, and each state carries a different baseline credibility:</p>
       <table>
         <tr><th>Provenance</th><th>Meaning</th><th>Baseline credibility</th></tr>
-        <tr><td><code>seeded</code></td><td>Extracted from a public source by the seeding engine. The individual has not yet reviewed it.</td><td>Low — public sources can be outdated, misattributed, or wrong</td></tr>
-        <tr><td><code>confirmed</code></td><td>The seeded data was reviewed by the individual and confirmed as accurate.</td><td>Medium — the individual vouches for it but no third party has verified</td></tr>
+        <tr><td><code>seeded</code></td><td>Extracted from a public source by the Activate engine. The individual has not yet reviewed it.</td><td>Low — public sources can be outdated, misattributed, or wrong</td></tr>
+        <tr><td><code>confirmed</code></td><td>The discovered data was reviewed by the individual and confirmed as accurate.</td><td>Medium — the individual vouches for it but no third party has verified</td></tr>
         <tr><td><code>self_reported</code></td><td>Added by the individual during profile creation or editing. No public source exists.</td><td>Medium — equivalent to current profile data</td></tr>
-        <tr><td><code>corrected</code></td><td>The seeder got it wrong and the individual corrected it. The original seeded value is logged.</td><td>Medium-high — corrections demonstrate active engagement and honesty</td></tr>
+        <tr><td><code>corrected</code></td><td>The system got it wrong and the individual corrected it. The original discovered value is logged.</td><td>Medium-high — corrections demonstrate active engagement and honesty</td></tr>
         <tr><td><code>validated</code></td><td>A human validator has staked money on this claim (section 5.4) or an automated check has confirmed it (section 5.5).</td><td>High — third-party verification</td></tr>
       </table>
       <p>Provenance is stored per-field in the profile JSON-LD:</p>
@@ -747,19 +747,19 @@
   ]
 }</pre>
 
-      <h4>The seeding flow</h4>
+      <h4>The activation flow</h4>
       <ol>
-        <li><strong>Identify.</strong> The individual provides their full name and 2–3 disambiguating details (current employer, university, city, or a link to their LinkedIn). This is enough for the seeder to find the right person across multiple sources.</li>
-        <li><strong>Scrape.</strong> The seeding engine queries all available sources in parallel. Each source returns structured data mapped to the Search Star schema, with the source URL recorded as provenance.</li>
+        <li><strong>Identify.</strong> The individual provides their full name and 2–3 disambiguating details (current employer, university, city, or a link to their LinkedIn). This is enough for the system to find the right person across multiple sources.</li>
+        <li><strong>Discover.</strong> The Activate engine queries all available sources in parallel. Each source returns structured data mapped to the Search Star schema, with the source URL recorded as provenance.</li>
         <li><strong>Assemble draft.</strong> The engine merges results, resolves conflicts (e.g., two sources list different job titles — both are preserved with timestamps), and produces a draft profile in JSON-LD format. Every field is tagged <code>provenance: "seeded"</code>.</li>
-        <li><strong>Present for review.</strong> The individual sees their draft profile in a review interface. Each field shows what was found, where it came from (with a link to the source), and a confidence indicator. Fields are grouped by section.</li>
-        <li><strong>Confirm, correct, or remove.</strong> For each field, the individual can: confirm it (provenance becomes <code>confirmed</code>), correct it (provenance becomes <code>corrected</code>, original value logged), remove it entirely, or leave it for later. They can also add new fields that the seeder missed (<code>self_reported</code>).</li>
-        <li><strong>Add private sections.</strong> After reviewing seeded data, the individual is prompted to populate sections the seeder cannot touch: financial percentiles, family, dating, Presence Composite, and access pricing.</li>
-        <li><strong>Publish.</strong> The reviewed profile is output as <code>profile.json</code> and <code>index.html</code>, hosted by the individual, and registered with Search Star. The trust score starts at whatever the automated checks and provenance quality justify — typically 10–25 for a freshly claimed profile, rising as validators are invited.</li>
+        <li><strong>Present for review.</strong> The individual sees their draft profile in a review interface. Each field shows what was found, where it came from (with a link to the source), and a confidence indicator based on source reliability. Fields are grouped by section.</li>
+        <li><strong>Confirm, correct, or remove.</strong> For each field, the individual can: confirm it (provenance becomes <code>confirmed</code>), correct it (provenance becomes <code>corrected</code>, original value logged), remove it entirely, or leave it for later. They can also add new fields that were missed (<code>self_reported</code>).</li>
+        <li><strong>Add private sections.</strong> After reviewing discovered data, the individual is prompted to populate sections the system cannot touch: financial percentiles, family, dating, Presence Composite, and access pricing.</li>
+        <li><strong>Publish.</strong> The reviewed profile is output as <code>profile.json</code> and <code>index.html</code>, hosted by the individual, and registered with Search Star. The trust score starts at whatever the automated checks and provenance quality justify — typically 10–25 for a freshly activated profile, rising as validators are invited.</li>
       </ol>
 
       <h4>Unclaimed profiles</h4>
-      <p>A seeded profile that has not been claimed by the individual exists in the Search Star directory as a <strong>draft stub</strong>. The stub contains only public-tier data that was scraped from public sources. It is clearly marked as unclaimed.</p>
+      <p>A discovered profile that has not been claimed by the individual exists in the Search Star directory as a <strong>draft stub</strong>. The stub contains only public-tier data that was found from public sources. It is clearly marked as unclaimed and frozen — no edits are possible until claimed.</p>
       <table>
         <tr><th>Property</th><th>Claimed profile</th><th>Unclaimed stub</th></tr>
         <tr><td>Trust score</td><td>0–100 (validator-backed)</td><td>0 (no validators, no owner confirmation)</td></tr>
@@ -790,7 +790,7 @@
       <h4>Photo sourcing</h4>
       <p>Photos enter the visual narrative from two channels:</p>
       <ol>
-        <li><strong>Public discovery.</strong> During profile seeding, the engine identifies publicly available images associated with the individual: conference speaker photos, university faculty pages, company about pages, published articles with author headshots, public Instagram or Flickr, event photography archives, race result photo services. These are presented to the individual for approval — no photo is included without explicit consent.</li>
+        <li><strong>Public discovery.</strong> During activation, the engine identifies publicly available images associated with the individual: conference speaker photos, university faculty pages, company about pages, published articles with author headshots, public Instagram or Flickr, event photography archives, race result photo services. These are presented to the individual for approval — no photo is included without explicit consent.</li>
         <li><strong>Private library integration.</strong> The individual connects their photo libraries (Google Photos API, Apple Photos via device access, uploaded files) and the AI performs the analysis described in section 3.2: scanning for relevant images, tagging to narrative chapters, selecting for variety, quality, recency, and brand-blind compliance. The individual approves, rejects, or substitutes any selection.</li>
       </ol>
 
@@ -2121,7 +2121,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v1.0</code></td><td>April 2026</td><td>Validator Cooperative: LLC membership class for qualifying validators, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance over trust-layer policy, membership qualification and termination rules</td></tr>
         <tr><td><code>v1.1</code></td><td>April 2026</td><td>AI-Powered Campaigns: campaign data model, AI message composer with platform ↔ AI conversation, send fee + read fee structure, generated message lifecycle, enhanced feed experience (campaign_marketing type with AI-tailored body, AI-generated media, tracked CTAs), marketing data access controls (category toggles, frequency preferences, category preferences), campaign management portal (six-stage creation wizard, pause/resume/stop), campaign analytics (per-campaign metrics, aggregate insights, AI recommendations)</td></tr>
         <tr><td><code>v1.2</code></td><td>April 2026</td><td>Trust as Love: rewritten core philosophy (section 5.1) — trust score as measure of reciprocal love, explicit adversarial positioning against top-down social credit and celebrity/influencer economies, the convergence principle (gaming the trust metric produces genuine virtue), distributional answer via relational density vs. attention inequality. Reciprocal network bonus (1.25x for mutual validation within broader communities). Aristotelian-Thomistic philosophical framework.</td></tr>
-        <tr><td><code>v1.3</code></td><td>April 2026</td><td>Profile Seeding &amp; Visual Narrative (section 3.9): scraper-seeded draft profiles from public data, claim provenance system (seeded/confirmed/self_reported/corrected/validated), unclaimed stub directory entries, visual narrative organized by thematic chapters (intellectual/social/athletic/professional/aesthetic/family), photo discovery from public sources + private library integration, photo metadata schema with narrative chapter mapping and validation, per-field provenance in JSON-LD</td></tr>
+        <tr><td><code>v1.3</code></td><td>April 2026</td><td>Activate: Profile Discovery &amp; Visual Narrative (section 3.9): public-source profile discovery from scattered internet data, claim provenance system (seeded/confirmed/self_reported/corrected/validated), unclaimed frozen stub directory entries, visual narrative organized by thematic chapters (intellectual/social/athletic/professional/aesthetic/family), photo discovery from public sources + private library integration (Google Photos Picker, device upload, URL import), photo metadata schema with narrative chapter mapping and validation, per-field provenance in JSON-LD, multi-value conflict preservation for fields with multiple sources</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -2140,7 +2140,7 @@ Platform                Search Star              User's Hosting
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
         <tr><td><code>v1.1</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting, AI-Powered Campaign implementation (campaign creation wizard, AI composer, batch message generation, enhanced feed rendering, send/read fee billing, campaign analytics dashboard, marketing data access controls in owner dashboard)</td></tr>
         <tr><td><code>v1.2</code></td><td>Q2 2026</td><td>Trust Score implementation: Depth/Breadth/Durability calculation engine, trust layer classification, validator relationship types, decay scheduler</td></tr>
-        <tr><td><code>v1.3</code></td><td>Q3 2026</td><td>Profile Seeding implementation: scraping engine (LinkedIn, GitHub, Scholar, conference archives, professional directories), claim provenance system, unclaimed stub management, visual narrative chapter builder, photo discovery + private library integration (Google Photos API), review &amp; correction UI, seeded profile → JSON-LD + HTML output pipeline</td></tr>
+        <tr><td><code>v1.3</code></td><td>Q3 2026</td><td>Activate implementation: discovery engine (LinkedIn, GitHub, Scholar, conference archives, professional directories, Athlinks), claim provenance system, multi-value conflict resolution, unclaimed frozen stub management, visual narrative chapter builder, photo discovery + Google Photos Picker + device upload + URL import, review &amp; correction UI with per-field confidence indicators, profile JSON-LD + HTML output pipeline with schema v1.3</td></tr>
         <tr><td><code>v1.4</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
         <tr><td><code>v1.5</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
         <tr><td><code>v2.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
