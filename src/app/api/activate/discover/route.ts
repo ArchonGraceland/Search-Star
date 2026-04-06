@@ -266,8 +266,10 @@ function buildGitHubFields(user: GitHubUser, repos: GitHubRepo[]): SeededField[]
 }
 
 // ═══════════════════════════════════════════════════
-// Google Scholar Discovery (via web scraping)
+// Google Scholar Discovery (via SerpAPI)
 // ═══════════════════════════════════════════════════
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 async function discoverScholar(fullName: string, employer?: string): Promise<SeededField[]> {
   const fields: SeededField[] = []
@@ -275,82 +277,51 @@ async function discoverScholar(fullName: string, employer?: string): Promise<See
   let idCounter = 1
   const makeId = () => `scholar-${idCounter++}-${now}`
 
+  const serpApiKey = process.env.SERPAPI_KEY
+  if (!serpApiKey) {
+    console.log('SERPAPI_KEY not configured — skipping Scholar discovery')
+    return fields
+  }
+
   try {
-    // Search Google Scholar author pages via the public search page
-    const query = employer
-      ? `${fullName} ${employer}`
-      : fullName
+    // Step 1: Search for author profiles via SerpAPI Google Scholar Profiles
+    const query = employer ? `${fullName} ${employer}` : fullName
+    const searchUrl = `https://serpapi.com/search.json?engine=google_scholar_profiles&mauthors=${encodeURIComponent(query)}&api_key=${serpApiKey}`
 
-    const searchUrl = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(query)}&hl=en`
-
-    const res = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      next: { revalidate: 0 },
-    })
-
-    if (!res.ok) {
-      console.error(`Scholar search failed: ${res.status}`)
+    const searchRes = await fetch(searchUrl, { next: { revalidate: 0 } })
+    if (!searchRes.ok) {
+      console.error(`SerpAPI profile search failed: ${searchRes.status}`)
       return fields
     }
 
-    const html = await res.text()
+    const searchData = await searchRes.json()
+    const profiles = searchData.profiles || []
 
-    // Extract first author result's profile link
-    const profileMatch = html.match(/citations\?user=([a-zA-Z0-9_-]+)/)
-    if (!profileMatch) {
+    if (profiles.length === 0) {
       console.log('No Scholar profile found for:', fullName)
       return fields
     }
 
-    const userId = profileMatch[1]
-    const profileUrl = `https://scholar.google.com/citations?user=${userId}&hl=en`
+    // Take the first (best) match
+    const profile = profiles[0]
+    const authorId = profile.author_id
+    const profileUrl = profile.link || `https://scholar.google.com/citations?user=${authorId}&hl=en`
 
-    // Fetch the author profile page
-    const profileRes = await fetch(profileUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      next: { revalidate: 0 },
-    })
-
-    if (!profileRes.ok) {
-      console.error(`Scholar profile fetch failed: ${profileRes.status}`)
-      return fields
-    }
-
-    const profileHtml = await profileRes.text()
-
-    // Extract author name from profile
-    const nameMatch = profileHtml.match(/<div id="gsc_prf_in"[^>]*>([^<]+)</)
-    const authorName = nameMatch ? nameMatch[1].trim() : fullName
-
-    // Extract affiliation
-    const affiliationMatch = profileHtml.match(/<div class="gsc_prf_il"[^>]*>([^<]+)</)
-    if (affiliationMatch) {
+    // Affiliation from search result
+    if (profile.affiliations) {
       fields.push({
         id: makeId(),
         section: 'Identity',
         label: 'Academic Affiliation',
-        value: affiliationMatch[1].trim(),
+        value: profile.affiliations,
         source: 'scholar.google.com',
         sourceUrl: profileUrl,
         provenance: 'seeded',
       })
     }
 
-    // Extract research interests/tags
-    const interestRegex = /<a[^>]*class="gsc_prf_inta[^"]*"[^>]*>([^<]+)</g
-    const interests: string[] = []
-    let interestMatch
-    while ((interestMatch = interestRegex.exec(profileHtml)) !== null) {
-      interests.push(interestMatch[1].trim())
-    }
+    // Research interests from search result
+    const interests: string[] = (profile.interests || []).map((i: any) => i.title).filter(Boolean)
     if (interests.length > 0) {
       fields.push({
         id: makeId(),
@@ -363,83 +334,92 @@ async function discoverScholar(fullName: string, employer?: string): Promise<See
       })
     }
 
-    // Extract citation metrics (h-index, i10-index, total citations)
-    // These appear in the #gsc_rsb_st table
-    const citedByMatch = profileHtml.match(/Cited by[\s\S]*?<td class="gsc_rsb_std"[^>]*>(\d+)</)
-    const hIndexMatch = profileHtml.match(/h-index[\s\S]*?<td class="gsc_rsb_std"[^>]*>(\d+)</)
-    const i10Match = profileHtml.match(/i10-index[\s\S]*?<td class="gsc_rsb_std"[^>]*>(\d+)</)
-
-    if (hIndexMatch) {
-      const hIndex = hIndexMatch[1]
-      const citations = citedByMatch ? citedByMatch[1] : null
-      const i10 = i10Match ? i10Match[1] : null
-
-      let metricsValue = `h-index: ${hIndex}`
-      if (citations) metricsValue += `, ${parseInt(citations).toLocaleString()} total citations`
-      if (i10) metricsValue += `, i10-index: ${i10}`
-
+    // Email domain (if exposed)
+    if (profile.email) {
       fields.push({
         id: makeId(),
-        section: 'Interests (intellectual)',
-        label: 'Citation Metrics',
-        value: metricsValue,
+        section: 'Identity',
+        label: 'Verified Email Domain',
+        value: profile.email,
         source: 'scholar.google.com',
         sourceUrl: profileUrl,
         provenance: 'seeded',
       })
     }
 
-    // Extract publication titles (top publications listed on profile page)
-    const pubRegex = /<a[^>]*class="gsc_a_at"[^>]*>([^<]+)</g
-    const publications: string[] = []
-    let pubMatch
-    while ((pubMatch = pubRegex.exec(profileHtml)) !== null) {
-      publications.push(pubMatch[1].trim())
-    }
+    // Step 2: Fetch full author page for citation metrics + articles
+    const authorUrl = `https://serpapi.com/search.json?engine=google_scholar_author&author_id=${authorId}&api_key=${serpApiKey}`
+    const authorRes = await fetch(authorUrl, { next: { revalidate: 0 } })
 
-    if (publications.length > 0) {
-      // Count total publications
-      fields.push({
-        id: makeId(),
-        section: 'Interests (intellectual)',
-        label: 'Published Research',
-        value: `${publications.length}+ publications including: ${publications.slice(0, 3).join('; ')}`,
-        source: 'scholar.google.com',
-        sourceUrl: profileUrl,
-        provenance: 'seeded',
-      })
+    if (authorRes.ok) {
+      const authorData = await authorRes.json()
 
-      // Individual notable publications (top 3 only to keep it manageable)
-      for (const pub of publications.slice(0, 3)) {
+      // Citation metrics from cited_by.table
+      const table = authorData.cited_by?.table
+      if (table) {
+        const allCitations = table.find((r: any) => r.citations)?.citations?.all
+        const hIndex = table.find((r: any) => r.h_index)?.h_index?.all
+        const i10Index = table.find((r: any) => r.i10_index)?.i10_index?.all
+
+        if (hIndex) {
+          let metricsValue = `h-index: ${hIndex}`
+          if (allCitations) metricsValue += `, ${Number(allCitations).toLocaleString()} total citations`
+          if (i10Index) metricsValue += `, i10-index: ${i10Index}`
+
+          fields.push({
+            id: makeId(),
+            section: 'Interests (intellectual)',
+            label: 'Citation Metrics',
+            value: metricsValue,
+            source: 'scholar.google.com',
+            sourceUrl: profileUrl,
+            provenance: 'seeded',
+          })
+        }
+      }
+
+      // Articles (top publications)
+      const articles: any[] = authorData.articles || []
+      if (articles.length > 0) {
         fields.push({
           id: makeId(),
           section: 'Interests (intellectual)',
-          label: 'Publication',
-          value: pub,
+          label: 'Published Research',
+          value: `${articles.length}+ publications including: ${articles.slice(0, 3).map((a: any) => a.title).join('; ')}`,
+          source: 'scholar.google.com',
+          sourceUrl: profileUrl,
+          provenance: 'seeded',
+        })
+
+        // Individual notable publications (top 3)
+        for (const article of articles.slice(0, 3)) {
+          const citedBy = article.cited_by?.value ? ` (cited ${article.cited_by.value}×)` : ''
+          const year = article.year ? ` [${article.year}]` : ''
+          fields.push({
+            id: makeId(),
+            section: 'Interests (intellectual)',
+            label: 'Publication',
+            value: `${article.title}${year}${citedBy}`,
+            source: 'scholar.google.com',
+            sourceUrl: article.link || profileUrl,
+            provenance: 'seeded',
+          })
+        }
+      }
+
+      // Co-authors
+      const coauthors: any[] = authorData.co_authors || []
+      if (coauthors.length > 0) {
+        fields.push({
+          id: makeId(),
+          section: 'Interests (intellectual)',
+          label: 'Frequent Collaborators',
+          value: coauthors.slice(0, 5).map((c: any) => c.name).join(', '),
           source: 'scholar.google.com',
           sourceUrl: profileUrl,
           provenance: 'seeded',
         })
       }
-    }
-
-    // Extract co-authors if present
-    const coauthorRegex = /<span class="gsc_rsb_a_desc"><a[^>]*>([^<]+)</g
-    const coauthors: string[] = []
-    let coauthorMatch
-    while ((coauthorMatch = coauthorRegex.exec(profileHtml)) !== null) {
-      coauthors.push(coauthorMatch[1].trim())
-    }
-    if (coauthors.length > 0) {
-      fields.push({
-        id: makeId(),
-        section: 'Interests (intellectual)',
-        label: 'Frequent Collaborators',
-        value: coauthors.slice(0, 5).join(', '),
-        source: 'scholar.google.com',
-        sourceUrl: profileUrl,
-        provenance: 'seeded',
-      })
     }
 
   } catch (err) {
