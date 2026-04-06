@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { PublicHeader } from '@/components/public-header'
 import { PublicFooter } from '@/components/public-footer'
 import { generateProfileJson } from '@/lib/activate/generate-profile-json'
@@ -255,6 +255,62 @@ export default function Activate() {
   const [discoveryErrors, setDiscoveryErrors] = useState<string[]>([])
 
   const currentStepIndex = STEPS.findIndex(s => s.key === step)
+
+  // ═══ Persistence: save/load activation state ═══
+
+  // Save profileId to sessionStorage whenever it changes
+  useEffect(() => {
+    if (profileId) {
+      sessionStorage.setItem('activate_profileId', profileId)
+    }
+  }, [profileId])
+
+  // Save fullName to sessionStorage for resumption
+  useEffect(() => {
+    if (fullName) {
+      sessionStorage.setItem('activate_fullName', fullName)
+    }
+  }, [fullName])
+
+  // On mount: check for saved profileId and load fields from database
+  useEffect(() => {
+    const savedProfileId = sessionStorage.getItem('activate_profileId')
+    const savedFullName = sessionStorage.getItem('activate_fullName')
+    if (!savedProfileId) return
+
+    setProfileId(savedProfileId)
+    if (savedFullName && !fullName) setFullName(savedFullName)
+
+    // Load fields from database
+    fetch(`/api/activate/fields?profileId=${savedProfileId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.fields && data.fields.length > 0) {
+          // Map database rows back to SeededField format
+          const loadedFields: SeededField[] = data.fields.map((row: {
+            id: string; section: string; label: string; value: string;
+            source_name: string; source_url: string; provenance_status: string;
+            original_value: string | null; confidence_score: number;
+          }) => ({
+            id: row.id,
+            section: row.section,
+            label: row.label,
+            value: row.value,
+            source: row.source_name || '',
+            sourceUrl: row.source_url || '',
+            provenance: row.provenance_status as Provenance,
+            correctedValue: row.provenance_status === 'corrected' ? row.value : undefined,
+            confidenceScore: row.confidence_score,
+            dbId: row.id,
+          }))
+          setFields(loadedFields)
+          // If we have loaded fields, jump to review step
+          if (loadedFields.length > 0) setStep('review')
+        }
+      })
+      .catch(err => console.error('Failed to load saved fields:', err))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ═══ Handlers ═══
 
