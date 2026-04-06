@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 // ═══════════════════════════════════════════════════
 // Types — mirrors the client-side SeededField type
@@ -77,6 +78,18 @@ function nameMatchScore(found: string | null | undefined, target: string): numbe
 
 function safeHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url.slice(0, 40) }
+}
+
+function getSourceConfidence(sourceName: string): number {
+  const s = sourceName.toLowerCase()
+  if (s.includes('github')) return 0.9
+  if (s.includes('scholar')) return 0.85
+  if (s.includes('calbar') || s.includes('nysed') || s.includes('aicpa') || s.includes('npi')) return 0.8
+  if (s.includes('linkedin')) return 0.7
+  if (s.includes('athlinks') || s.includes('runsignup')) return 0.75
+  if (s.includes('meetup')) return 0.65
+  if (s === 'user-input') return 0.5
+  return 0.6
 }
 
 // ═══════════════════════════════════════════════════
@@ -840,10 +853,85 @@ export async function POST(request: NextRequest) {
     // ═══ Build disambiguation candidates ═══
     const disambiguation = buildDisambiguationCandidates(githubCandidates, linkedinCandidates)
 
+    // ═══ Persist to Supabase (best-effort — don't block response on DB errors) ═══
+    let profileId: string | null = null
+    try {
+      const supabase = await createClient()
+
+      // Create or find a directory stub for this activation
+      const handle = `@${fullName.toLowerCase().replace(/\s+/g, '.')}`
+      const { data: existing } = await supabase
+        .from('directory')
+        .select('id')
+        .eq('handle', handle)
+        .maybeSingle()
+
+      if (existing) {
+        profileId = existing.id
+      } else {
+        // Get next profile number
+        const { data: lastEntry } = await supabase
+          .from('directory')
+          .select('profile_number')
+          .order('profile_number', { ascending: false })
+          .limit(1)
+
+        let nextNum = 'SS-000001'
+        if (lastEntry && lastEntry.length > 0) {
+          const num = parseInt(lastEntry[0].profile_number.replace('SS-', ''), 10)
+          nextNum = `SS-${String(num + 1).padStart(6, '0')}`
+        }
+
+        const { data: newEntry, error: insertError } = await supabase
+          .from('directory')
+          .insert({
+            profile_number: nextNum,
+            handle,
+            display_name: fullName,
+            endpoint_url: '',
+            domain: '',
+            domain_verified: false,
+            status: 'active',
+            seeding_status: 'unclaimed',
+          })
+          .select('id')
+          .single()
+
+        if (!insertError && newEntry) {
+          profileId = newEntry.id
+        }
+      }
+
+      // Save fields to profile_fields table
+      if (profileId && fields.length > 0) {
+        const fieldRows = fields.map((f, i) => {
+          const sourceName = f.source || 'unknown'
+          return {
+            profile_id: profileId,
+            section: f.section,
+            label: f.label,
+            value: f.value,
+            provenance_status: 'seeded',
+            source_url: f.sourceUrl || null,
+            source_name: sourceName,
+            seeded_at: f.discoveredAt || ts,
+            confidence_score: getSourceConfidence(sourceName),
+            sort_order: i,
+          }
+        })
+
+        await supabase.from('profile_fields').insert(fieldRows)
+      }
+    } catch (dbErr) {
+      console.error('Database persistence error (non-fatal):', dbErr)
+      // Don't fail the discovery — fields are still returned in the response
+    }
+
     // ═══ Response ═══
     const response: DiscoverResponse = { fields, photos: [], sources }
     if (errors.length > 0) response.errors = errors
     if (disambiguation.length > 0) response.disambiguation = disambiguation
+    if (profileId) (response as unknown as Record<string, unknown>).profileId = profileId
 
     return NextResponse.json(response)
   } catch (err) {

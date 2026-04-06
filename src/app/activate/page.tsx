@@ -25,6 +25,8 @@ interface SeededField {
   sourceUrl: string
   provenance: Provenance
   correctedValue?: string
+  confidenceScore?: number
+  dbId?: string  // UUID from profile_fields table
 }
 
 interface NarrativePhoto {
@@ -141,6 +143,22 @@ function ProvenanceBadge({ status }: { status: Provenance }) {
   )
 }
 
+function ConfidenceIndicator({ score }: { score?: number }) {
+  if (score === undefined || score === null) return null
+  const pct = Math.round(score * 100)
+  const color = score >= 0.8 ? '#166534' : score >= 0.6 ? '#1a3a6b' : '#92400e'
+  const bg = score >= 0.8 ? '#f0fdf4' : score >= 0.6 ? '#eef2f8' : '#fffbeb'
+  return (
+    <span
+      className="font-mono text-[10px] font-medium px-[6px] py-[1px] rounded-[2px] inline-block ml-1"
+      style={{ background: bg, color }}
+      title={`Source confidence: ${pct}%`}
+    >
+      {pct}%
+    </span>
+  )
+}
+
 // ═══════════════════════════════════════════════════
 // Photo card component
 // ═══════════════════════════════════════════════════
@@ -225,6 +243,9 @@ export default function Activate() {
   const [publishResult, setPublishResult] = useState<{ profileNumber: string; handle: string } | null>(null)
   const [publishError, setPublishError] = useState('')
 
+  // Database persistence
+  const [profileId, setProfileId] = useState<string | null>(null)
+
   // Disambiguation
   const [disambiguationCandidates, setDisambiguationCandidates] = useState<DisambiguationCandidate[]>([])
   const [disambiguationSelections, setDisambiguationSelections] = useState<Record<string, string>>({})
@@ -255,6 +276,7 @@ export default function Activate() {
       setFields(data.fields || [])
       setPhotos(data.photos || [])
       setSourceStatuses(data.sources || [])
+      if (data.profileId) setProfileId(data.profileId)
 
       // If disambiguation candidates exist, show disambiguation step
       if (data.disambiguation && data.disambiguation.length > 0) {
@@ -274,6 +296,15 @@ export default function Activate() {
 
   const handleConfirmField = (id: string) => {
     setFields(prev => prev.map(f => f.id === id ? { ...f, provenance: 'confirmed' as Provenance } : f))
+    // Persist to database
+    const field = fields.find(f => f.id === id)
+    if (field?.dbId) {
+      fetch('/api/activate/fields', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fieldId: field.dbId, action: 'confirm' }),
+      }).catch(err => console.error('Failed to persist confirm:', err))
+    }
   }
 
   const handleStartCorrection = (id: string) => {
@@ -291,11 +322,29 @@ export default function Activate() {
       correctedValue: editValue,
     } : f))
     setEditingField(null)
+    // Persist to database
+    const field = fields.find(f => f.id === id)
+    if (field?.dbId) {
+      fetch('/api/activate/fields', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fieldId: field.dbId, action: 'correct', correctedValue: editValue }),
+      }).catch(err => console.error('Failed to persist correction:', err))
+    }
     setEditValue('')
   }
 
   const handleRemoveField = (id: string) => {
     setFields(prev => prev.map(f => f.id === id ? { ...f, provenance: 'removed' as Provenance } : f))
+    // Persist to database
+    const field = fields.find(f => f.id === id)
+    if (field?.dbId) {
+      fetch('/api/activate/fields', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fieldId: field.dbId, action: 'remove' }),
+      }).catch(err => console.error('Failed to persist removal:', err))
+    }
   }
 
   const handleAddField = () => {
@@ -308,8 +357,27 @@ export default function Activate() {
       source: 'self',
       sourceUrl: '',
       provenance: 'self_reported',
+      confidenceScore: 0.5,
     }
     setFields(prev => [...prev, newField])
+    // Persist to database
+    if (profileId) {
+      fetch('/api/activate/fields', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId,
+          fields: [{
+            section: newFieldSection,
+            label: newFieldLabel,
+            value: newFieldValue,
+            sourceName: 'self-reported',
+            sourceUrl: '',
+            provenanceStatus: 'self_reported',
+          }],
+        }),
+      }).catch(err => console.error('Failed to persist new field:', err))
+    }
     setNewFieldLabel('')
     setNewFieldValue('')
     setAddingField(false)
@@ -774,6 +842,7 @@ export default function Activate() {
                       </div>
                     </div>
                     <ProvenanceBadge status={field.provenance} />
+                    <ConfidenceIndicator score={field.confidenceScore} />
                   </div>
                 ))}
               </div>
@@ -827,6 +896,7 @@ export default function Activate() {
                         )}
                       </div>
                       <ProvenanceBadge status={field.provenance} />
+                      <ConfidenceIndicator score={field.confidenceScore} />
                     </div>
 
                     {/* Correction edit mode */}
