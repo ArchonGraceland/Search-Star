@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
             presence_score: 0,
             status: 'active',
             seeding_status: 'unclaimed',
-            role: 'owner',
+            role: 'user',
             skills_count: skillTags.length,
             interests_tags: interestTags,
             price_public: 0,

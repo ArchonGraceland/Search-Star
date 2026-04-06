@@ -21,3 +21,8 @@ CREATE INDEX IF NOT EXISTS idx_profiles_seeding_status ON profiles(seeding_statu
 
 ALTER TABLE directory ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id);
 CREATE INDEX IF NOT EXISTS idx_directory_user_id ON directory(user_id);
+
+-- ═══ 4. Allow NULL user_id on profiles for unclaimed stubs ═══
+-- (unclaimed profiles have no owner until claimed via KYC)
+
+ALTER TABLE profiles ALTER COLUMN user_id DROP NOT NULL;
