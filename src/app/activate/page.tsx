@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { PublicHeader } from '@/components/public-header'
 import { PublicFooter } from '@/components/public-footer'
 import { generateProfileJson } from '@/lib/activate/generate-profile-json'
@@ -233,6 +233,12 @@ export default function Activate() {
   const [importChapter, setImportChapter] = useState<NarrativeChapter>('intellectual')
   const [importCaption, setImportCaption] = useState('')
 
+  // Step 5 — Google Photos Picker
+  const [gPhotosConnected, setGPhotosConnected] = useState(false)
+  const [gPhotosLoading, setGPhotosLoading] = useState(false)
+  const [gPhotosError, setGPhotosError] = useState('')
+  const [gPhotosSessionId, setGPhotosSessionId] = useState<string | null>(null)
+
   // Step 6 — Pricing
   const [publicPrice, setPublicPrice] = useState('0.02')
   const [privatePrice, setPrivatePrice] = useState('0.50')
@@ -311,6 +317,172 @@ export default function Activate() {
       .catch(err => console.error('Failed to load saved fields:', err))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ═══ Google Photos: handle OAuth callback params ═══
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const connected = params.get('gphotos_connected')
+    const error = params.get('gphotos_error')
+
+    if (connected === 'true') {
+      setGPhotosConnected(true)
+      // Jump to photos step and auto-start picker session
+      setStep('photos')
+      // Clean URL before starting picker
+      window.history.replaceState({}, '', window.location.pathname)
+      // Small delay to let React render the photos step first
+      setTimeout(() => startPickerSession(), 300)
+    } else if (error) {
+      setGPhotosError(`Google Photos connection failed: ${error}`)
+      setStep('photos')
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
+    }
+  }, [])
+
+  // ═══ Google Photos Picker flow ═══
+
+  async function startPickerSession() {
+    setGPhotosLoading(true)
+    setGPhotosError('')
+
+    try {
+      const res = await fetch('/api/activate/google-photos/session', {
+        method: 'POST',
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        if (data.code === 'TOKEN_EXPIRED') {
+          setGPhotosConnected(false)
+          setGPhotosError('Session expired. Please reconnect to Google Photos.')
+          setGPhotosLoading(false)
+          return
+        }
+        throw new Error(data.error || 'Failed to create session')
+      }
+
+      const { sessionId, pickerUri, pollInterval, timeoutIn } = data
+      setGPhotosSessionId(sessionId)
+
+      // Open picker in a new window with /autoclose
+      const pickerWindow = window.open(
+        `${pickerUri}/autoclose`,
+        'google-photos-picker',
+        'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no'
+      )
+
+      // Start polling
+      pollForCompletion(sessionId, pollInterval, timeoutIn, pickerWindow)
+    } catch (err) {
+      setGPhotosError(err instanceof Error ? err.message : 'Failed to start picker')
+      setGPhotosLoading(false)
+    }
+  }
+
+  function pollForCompletion(
+    sessionId: string,
+    interval: number,
+    timeout: number,
+    pickerWindow: Window | null
+  ) {
+    const startTime = Date.now()
+
+    async function doPoll() {
+      // Check timeout
+      if (Date.now() - startTime > timeout) {
+        setGPhotosError('Photo selection timed out. Please try again.')
+        setGPhotosLoading(false)
+        setGPhotosSessionId(null)
+        return
+      }
+
+      try {
+        const res = await fetch(
+          `/api/activate/google-photos/poll?sessionId=${encodeURIComponent(sessionId)}`
+        )
+        const data = await res.json()
+
+        if (!res.ok) {
+          if (data.code === 'TOKEN_EXPIRED') {
+            setGPhotosConnected(false)
+            setGPhotosError('Token expired during selection. Please reconnect.')
+            setGPhotosLoading(false)
+            return
+          }
+          throw new Error(data.error || 'Poll failed')
+        }
+
+        if (data.mediaItemsSet) {
+          // User finished picking — fetch the items
+          await fetchPickedItems(sessionId)
+          return
+        }
+
+        // Check if the picker window was closed manually
+        if (pickerWindow && pickerWindow.closed) {
+          // Give a brief grace period — autoclose can take a moment
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          // Do one final poll
+          const finalRes = await fetch(
+            `/api/activate/google-photos/poll?sessionId=${encodeURIComponent(sessionId)}`
+          )
+          const finalData = await finalRes.json()
+          if (finalData.mediaItemsSet) {
+            await fetchPickedItems(sessionId)
+            return
+          }
+          // User closed without picking
+          setGPhotosLoading(false)
+          setGPhotosSessionId(null)
+          return
+        }
+
+        // Continue polling with the recommended interval
+        const nextInterval = data.pollInterval || interval
+        pollTimerRef.current = setTimeout(doPoll, nextInterval)
+      } catch (err) {
+        console.error('Poll error:', err)
+        setGPhotosError('Error checking photo selection status.')
+        setGPhotosLoading(false)
+      }
+    }
+
+    pollTimerRef.current = setTimeout(doPoll, interval)
+  }
+
+  async function fetchPickedItems(sessionId: string) {
+    try {
+      const res = await fetch(
+        `/api/activate/google-photos/items?sessionId=${encodeURIComponent(sessionId)}`
+      )
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to fetch selected photos')
+      }
+
+      if (data.photos && data.photos.length > 0) {
+        setPhotos(prev => [...prev, ...data.photos])
+      }
+
+      setGPhotosLoading(false)
+      setGPhotosSessionId(null)
+    } catch (err) {
+      setGPhotosError(err instanceof Error ? err.message : 'Failed to retrieve photos')
+      setGPhotosLoading(false)
+      setGPhotosSessionId(null)
+    }
+  }
 
   // ═══ Handlers ═══
 
@@ -487,9 +659,13 @@ export default function Activate() {
   }
 
   const handleGooglePhotosConnect = () => {
-    // In production: create a Picker API session, redirect to pickerUri
-    // For now, simulate
-    alert('Google Photos Picker integration: In production, this opens the Google Photos picker where you select photos from your library. The selected photos are imported with full metadata (date, location) and assigned to narrative chapters.')
+    if (gPhotosConnected) {
+      // Already connected — start a new picker session directly
+      startPickerSession()
+    } else {
+      // Redirect to Google OAuth
+      window.location.href = '/api/activate/google-photos/auth'
+    }
   }
 
   // ═══ Publish handler ═══
@@ -1105,9 +1281,14 @@ export default function Activate() {
                 Import photos from
               </div>
               <button onClick={handleGooglePhotosConnect}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#d4d4d4] rounded-[3px] font-body text-[12px] font-medium text-[#1a1a1a] cursor-pointer hover:border-[#1a3a6b] transition-colors">
+                disabled={gPhotosLoading}
+                className={`flex items-center gap-2 px-4 py-2 border rounded-[3px] font-body text-[12px] font-medium cursor-pointer transition-colors ${
+                  gPhotosConnected
+                    ? 'bg-[#f0f7f0] border-[#4caf50] text-[#2e7d32] hover:bg-[#e0f0e0]'
+                    : 'bg-white border-[#d4d4d4] text-[#1a1a1a] hover:border-[#1a3a6b]'
+                } ${gPhotosLoading ? 'opacity-60 cursor-wait' : ''}`}>
                 <svg width="16" height="16" viewBox="0 0 24 24"><path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z" fill="#4285f4"/></svg>
-                Google Photos
+                {gPhotosLoading ? 'Selecting photos…' : gPhotosConnected ? 'Pick more from Google Photos' : 'Connect Google Photos'}
               </button>
               <label className="flex items-center gap-2 px-4 py-2 bg-white border border-[#d4d4d4] rounded-[3px] font-body text-[12px] font-medium text-[#1a1a1a] cursor-pointer hover:border-[#1a3a6b] transition-colors">
                 <span>📁</span> Upload from device
@@ -1123,6 +1304,25 @@ export default function Activate() {
                 <span>🔗</span> Import from URL
               </button>
             </div>
+
+            {/* Google Photos status messages */}
+            {gPhotosError && (
+              <div className="mb-4 p-3 bg-[#fff5f5] border border-[#e57373] rounded-[3px] font-body text-[12px] text-[#c62828]">
+                {gPhotosError}
+                {!gPhotosConnected && (
+                  <button onClick={handleGooglePhotosConnect}
+                    className="ml-2 underline font-medium">
+                    Try again
+                  </button>
+                )}
+              </div>
+            )}
+            {gPhotosLoading && (
+              <div className="mb-4 p-3 bg-[#f0f7ff] border border-[#90caf9] rounded-[3px] font-body text-[12px] text-[#1565c0] flex items-center gap-2">
+                <span className="inline-block w-3 h-3 border-2 border-[#1565c0] border-t-transparent rounded-full animate-spin" />
+                Waiting for photo selection in Google Photos… (this window will update automatically)
+              </div>
+            )}
 
             {/* URL import form */}
             {showUrlImport && (
