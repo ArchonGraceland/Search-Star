@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { discoverPhotos, DiscoveredPhoto } from '@/lib/photo-discovery'
 
 // ═══════════════════════════════════════════════════
 // Types — mirrors the client-side SeededField type
@@ -853,6 +854,35 @@ export async function POST(request: NextRequest) {
     // ═══ Build disambiguation candidates ═══
     const disambiguation = buildDisambiguationCandidates(githubCandidates, linkedinCandidates)
 
+    // ═══ Photo Discovery (Phase 9) ═══
+    // Search for publicly available images per spec Section 3.9 "Photo sourcing — Public discovery"
+    let discoveredPhotos: NarrativePhoto[] = []
+    try {
+      const photoResult = await discoverPhotos(fullName, employer, city)
+      discoveredPhotos = photoResult.photos.map((p: DiscoveredPhoto) => ({
+        id: p.id,
+        chapter: p.chapter,
+        caption: p.caption,
+        date: p.date,
+        location: p.location,
+        source: p.source,
+        sourceLabel: p.sourceLabel,
+        previewUrl: p.previewUrl,
+        relatedFields: p.relatedFields,
+        // Extended fields for discovered photos
+        sourceUrl: p.sourceUrl,
+        sourceContext: p.sourceContext,
+      } as NarrativePhoto & { sourceUrl: string; sourceContext: string }))
+
+      // Add photo discovery sources to the sources array
+      for (const ps of photoResult.sourcesSearched) {
+        sources.push({ name: `Photos: ${ps.name}`, status: ps.status, count: ps.status === 'found' ? 1 : 0 })
+      }
+    } catch (photoErr) {
+      console.error('Photo discovery error (non-fatal):', photoErr)
+      errors.push(`Photo discovery failed: ${photoErr}`)
+    }
+
     // ═══ Persist to Supabase (best-effort — don't block response on DB errors) ═══
     let profileId: string | null = null
     try {
@@ -922,13 +952,33 @@ export async function POST(request: NextRequest) {
 
         await supabase.from('profile_fields').insert(fieldRows)
       }
+
+      // Save discovered photos to photo_metadata table (Phase 9)
+      if (profileId && discoveredPhotos.length > 0) {
+        const photoRows = discoveredPhotos.map((p: any) => ({
+          profile_id: profileId,
+          chapter: p.chapter,
+          caption: p.caption,
+          photo_date: p.date || null,
+          location: p.location || '',
+          provenance_status: 'discovered',
+          provenance_source: p.sourceUrl || '',
+          source_channel: 'public',
+          source_label: p.sourceLabel || '',
+          preview_data: null,
+          original_url: p.sourceUrl || '',
+          access_tier: 'public',
+        }))
+
+        await supabase.from('photo_metadata').insert(photoRows)
+      }
     } catch (dbErr) {
       console.error('Database persistence error (non-fatal):', dbErr)
       // Don't fail the discovery — fields are still returned in the response
     }
 
     // ═══ Response ═══
-    const response: DiscoverResponse = { fields, photos: [], sources }
+    const response: DiscoverResponse = { fields, photos: discoveredPhotos, sources }
     if (errors.length > 0) response.errors = errors
     if (disambiguation.length > 0) response.disambiguation = disambiguation
     if (profileId) (response as unknown as Record<string, unknown>).profileId = profileId

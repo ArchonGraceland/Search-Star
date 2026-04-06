@@ -270,6 +270,10 @@ export default function Activate() {
   const [importChapter, setImportChapter] = useState<NarrativeChapter>('intellectual')
   const [importCaption, setImportCaption] = useState('')
 
+  // Step 5 — Discovered Photos (Phase 9)
+  const [discoveredPhotos, setDiscoveredPhotos] = useState<(NarrativePhoto & { sourceUrl?: string; sourceContext?: string; approved?: boolean; rejected?: boolean })[]>([])
+  const [discoveryPhotoLoading, setDiscoveryPhotoLoading] = useState(false)
+
   // Step 5 — Google Photos Picker
   const [gPhotosConnected, setGPhotosConnected] = useState(false)
   const [gPhotosLoading, setGPhotosLoading] = useState(false)
@@ -693,6 +697,17 @@ export default function Activate() {
       setSourceStatuses(data.sources || [])
       if (data.profileId) setProfileId(data.profileId)
 
+      // Store discovered photos separately for approve/reject flow (Phase 9)
+      if (data.photos && data.photos.length > 0) {
+        setDiscoveredPhotos(data.photos.map((p: any) => ({
+          ...p,
+          approved: false,
+          rejected: false,
+        })))
+        // Don't auto-include — clear the photos array; only approved ones go in
+        setPhotos([])
+      }
+
       // If disambiguation candidates exist, show disambiguation step
       if (data.disambiguation && data.disambiguation.length > 0) {
         setDisambiguation(data.disambiguation)
@@ -804,6 +819,41 @@ export default function Activate() {
 
   const handleUpdateAccessTier = (id: string, tier: AccessTier) => {
     setPhotos(prev => prev.map(p => p.id === id ? { ...p, accessTier: tier } : p))
+  }
+
+  // ═══ Discovered photo approve/reject (Phase 9) ═══
+  const handleApproveDiscoveredPhoto = (id: string) => {
+    const photo = discoveredPhotos.find(p => p.id === id)
+    if (!photo) return
+    // Mark as approved in discovered list
+    setDiscoveredPhotos(prev => prev.map(p => p.id === id ? { ...p, approved: true, rejected: false } : p))
+    // Add to the main photos array (the visual narrative)
+    const narrativePhoto: NarrativePhoto = {
+      id: photo.id,
+      chapter: photo.chapter,
+      caption: photo.caption,
+      date: photo.date || '',
+      location: photo.location || '',
+      source: 'public' as PhotoChannel,
+      sourceLabel: photo.sourceLabel,
+      previewUrl: photo.previewUrl,
+      relatedFields: photo.relatedFields || [],
+      accessTier: 'public' as AccessTier,
+      hash: '',
+    }
+    setPhotos(prev => [...prev.filter(p => p.id !== id), narrativePhoto])
+  }
+
+  const handleRejectDiscoveredPhoto = (id: string) => {
+    setDiscoveredPhotos(prev => prev.map(p => p.id === id ? { ...p, rejected: true, approved: false } : p))
+    // Remove from main photos if it was previously approved
+    setPhotos(prev => prev.filter(p => p.id !== id))
+  }
+
+  const handleChangeDiscoveredChapter = (id: string, chapter: NarrativeChapter) => {
+    setDiscoveredPhotos(prev => prev.map(p => p.id === id ? { ...p, chapter } : p))
+    // Also update in main photos if already approved
+    setPhotos(prev => prev.map(p => p.id === id ? { ...p, chapter } : p))
   }
 
   const [uploadingCount, setUploadingCount] = useState(0)
@@ -1696,6 +1746,109 @@ Learn more: https://www.searchstar.com/spec.html
             )}
 
             {/* Chapter grids */}
+            {/* ═══ Discovered Photos (Phase 9) ═══ */}
+            {discoveredPhotos.length > 0 && (
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-base">🌐</span>
+                  <span className="label-grace text-[#1a3a6b]">Discovered photos</span>
+                  <span className="font-mono text-[11px] text-[#767676]">
+                    {discoveredPhotos.filter(p => !p.rejected).length} found
+                  </span>
+                  <span
+                    className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-2 py-[2px] rounded-[3px] inline-block"
+                    style={{ background: '#fffbeb', color: '#92400e' }}
+                  >
+                    requires approval
+                  </span>
+                </div>
+                <p className="font-body text-[12px] text-[#5a5a5a] mb-3 leading-relaxed">
+                  These photos were found on public websites. None are included in your profile until you approve them.
+                  Each has a suggested chapter based on the source context — you can change it before approving.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {discoveredPhotos.filter(p => !p.rejected).map(photo => {
+                    const chapterObj = CHAPTERS.find(c => c.key === photo.chapter)
+                    const hasPreview = photo.previewUrl && (photo.previewUrl.startsWith('http'))
+                    return (
+                      <div key={photo.id} className={`border rounded-[3px] overflow-hidden transition-all ${
+                        photo.approved
+                          ? 'border-[#4caf50] bg-[#f0fdf4]'
+                          : 'border-[#d4d4d4] bg-white'
+                      }`}>
+                        <div className="flex gap-3 p-3">
+                          {/* Thumbnail */}
+                          <div className="w-20 h-20 rounded-[3px] overflow-hidden bg-[#f5f5f5] flex-shrink-0">
+                            {hasPreview ? (
+                              <img src={photo.previewUrl} alt={photo.caption} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-2xl">🌐</div>
+                            )}
+                          </div>
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-body text-[13px] font-medium text-[#1a1a1a] leading-tight mb-1 truncate">
+                              {photo.caption}
+                            </div>
+                            <div className="font-body text-[11px] text-[#767676] mb-1">
+                              {photo.sourceLabel}
+                            </div>
+                            {photo.sourceUrl && (
+                              <a
+                                href={photo.sourceUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-mono text-[10px] text-[#1a3a6b] hover:underline truncate block"
+                              >
+                                {photo.sourceUrl.slice(0, 60)}{photo.sourceUrl.length > 60 ? '…' : ''}
+                              </a>
+                            )}
+                            {/* Chapter selector */}
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="font-body text-[10px] text-[#767676]">Chapter:</span>
+                              <select
+                                value={photo.chapter}
+                                onChange={e => handleChangeDiscoveredChapter(photo.id, e.target.value as NarrativeChapter)}
+                                className="px-2 py-1 border border-[#d4d4d4] rounded-[3px] font-body text-[11px] outline-none bg-white"
+                              >
+                                {CHAPTERS.map(c => (
+                                  <option key={c.key} value={c.key}>{c.icon} {c.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Action buttons */}
+                        <div className="flex border-t border-[#e8e8e8]">
+                          <button
+                            onClick={() => handleApproveDiscoveredPhoto(photo.id)}
+                            className={`flex-1 py-2 font-body text-[11px] font-medium transition-colors ${
+                              photo.approved
+                                ? 'bg-[#166534] text-white'
+                                : 'text-[#166534] hover:bg-[#f0fdf4]'
+                            }`}
+                          >
+                            {photo.approved ? '✓ Approved' : '✓ Approve'}
+                          </button>
+                          <button
+                            onClick={() => handleRejectDiscoveredPhoto(photo.id)}
+                            className="flex-1 py-2 font-body text-[11px] font-medium text-[#991b1b] hover:bg-[#fef2f2] transition-colors border-l border-[#e8e8e8]"
+                          >
+                            ✕ Reject
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {discoveredPhotos.filter(p => p.rejected).length > 0 && (
+                  <div className="mt-2 font-body text-[11px] text-[#767676]">
+                    {discoveredPhotos.filter(p => p.rejected).length} photo{discoveredPhotos.filter(p => p.rejected).length > 1 ? 's' : ''} rejected
+                  </div>
+                )}
+              </div>
+            )}
+
             {CHAPTERS.map(chapter => {
               const chapterPhotos = photos.filter(p => p.chapter === chapter.key)
               return (
