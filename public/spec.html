@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search Star — Specification v1.2</title>
+<title>Search Star — Specification v1.3</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -115,6 +115,7 @@
         <a class="toc-indent" href="#advertising">3.6 Advertising Profile <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#dating">3.7 Intimate &amp; Dating <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#contentfeed">3.8 Content Feed <span class="new-badge">New in v0.4</span></a>
+        <a class="toc-indent" href="#seeding">3.9 Profile Seeding &amp; Visual Narrative <span class="new-badge">New in v1.3</span></a>
         <a href="#access">4. Access Control &amp; Monetization</a>
         <a class="toc-indent" href="#tiers">4.1 Three Tiers</a>
         <a class="toc-indent" href="#pricing">4.2 Pricing Model</a>
@@ -687,6 +688,149 @@
       <div class="callout callout-info"><strong>The summary field is free.</strong> When a platform queries the feed index (not individual items), Search Star returns item metadata including the <code>summary</code> field — but not the <code>content</code> or <code>media</code> fields. This lets platforms show previews and titles to entice clicks, similar to how the public tier shows headline data for free. The full content is behind the paywall.</div>
 
       <div class="callout callout-warn"><strong>Content ownership.</strong> Search Star does not claim any rights to feed content. The user retains full copyright and can remove, edit, or restrict access to any item at any time by updating their feed endpoint. If an item is removed from the feed, it becomes inaccessible — Search Star does not cache or archive content. Subscribers who have already accessed an item retain whatever they downloaded, but cannot re-fetch deleted items.</div>
+
+      <!-- ═══════════ 3.9 PROFILE SEEDING ═══════════ -->
+
+      <h3 id="seeding">3.9 Profile Seeding &amp; Visual Narrative <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v1.3</span></h3>
+      <p>The current profile creation flow (section 8.4) requires the individual to build their profile from scratch — pasting a prompt into an AI and answering questions for 30–60 minutes. This works, but it creates a cold-start problem: the person does all the work before getting any value. Profile seeding inverts this. The system assembles a draft profile from publicly available information, the individual claims it and corrects it, and validators vouch for the result. The barrier drops from "build your profile" to "review what we found and fix what's wrong."</p>
+      <p>This is the Grokipedia model applied to everyone, with a critical difference: Grokipedia builds profiles of famous people that those people do not control. Search Star builds draft profiles from public data and then <em>hands ownership to the individual</em>. The scraper-seeded draft is a starting point, not a final product. The individual corrects inaccuracies, adds private information the scraper could not find, removes anything they do not want published, and hosts the result on their own infrastructure.</p>
+
+      <div class="callout callout-info"><strong>Design philosophy:</strong> Every person with any public presence at all — a LinkedIn profile, a conference talk, a published article, a university alumni listing, a professional license — already has a partial profile scattered across the internet. It just isn't structured, isn't owned, isn't monetized, and nobody has vouched for its accuracy. Profile seeding collects what already exists, organizes it into the Search Star schema, and gives the individual the power to claim, correct, and profit from it.</div>
+
+      <h4>Seeding sources</h4>
+      <p>The seeding engine queries available public APIs and scrapes public web pages to populate profile fields. The individual provides identifying information (full name, employer or university, city) to disambiguate, and the engine returns a draft mapped to the Search Star schema.</p>
+      <table>
+        <tr><th>Profile section</th><th>Public sources</th><th>Method</th></tr>
+        <tr><td>Identity (name, location, tagline)</td><td>LinkedIn public profile, personal websites, company about pages, university directories</td><td>Web scrape, structured data extraction</td></tr>
+        <tr><td>Skills &amp; credentials</td><td>LinkedIn, GitHub API (repos, commit history, languages), Google Scholar (publications, h-index), conference archives, professional directories (bar associations, medical boards, CPA registries)</td><td>API queries + web scrape, mapped to W3C VC format</td></tr>
+        <tr><td>Interests (athletic)</td><td>Strava public profiles, race results databases (Athlinks, RunSignUp, USAC), club rosters</td><td>API where available, otherwise web scrape of public results</td></tr>
+        <tr><td>Interests (social)</td><td>Event speaker pages, meetup profiles, nonprofit board listings, published travel writing, public social media bios</td><td>Web scrape, structured data extraction</td></tr>
+        <tr><td>Interests (intellectual)</td><td>Google Scholar, ORCID, Goodreads public shelves, published articles, podcast guest appearances, course instructor pages, patent filings</td><td>API queries + web scrape</td></tr>
+        <tr><td>Professional history</td><td>LinkedIn, company websites, press releases, SEC filings (for executives), professional registrations</td><td>Web scrape + structured data</td></tr>
+      </table>
+
+      <div class="callout callout-warn"><strong>What the seeder does NOT touch:</strong> Financial data is never scraped or estimated. The seeder does not guess income percentiles, net worth, credit scores, or any financial field. Presence Composite scores are not assigned from scraped photos — they require the user's explicit participation (see section 3.2). Family data (section 3.5) and dating data (section 3.7) are never seeded. These sections remain blank until the individual chooses to populate them.</div>
+
+      <h4>Claim provenance</h4>
+      <p>Every field in a Search Star profile carries a provenance tag that records where the data came from. This is a significant departure from the current spec, where all data is implicitly self-reported. With seeded profiles, each claim has one of four provenance states, and each state carries a different baseline credibility:</p>
+      <table>
+        <tr><th>Provenance</th><th>Meaning</th><th>Baseline credibility</th></tr>
+        <tr><td><code>seeded</code></td><td>Extracted from a public source by the seeding engine. The individual has not yet reviewed it.</td><td>Low — public sources can be outdated, misattributed, or wrong</td></tr>
+        <tr><td><code>confirmed</code></td><td>The seeded data was reviewed by the individual and confirmed as accurate.</td><td>Medium — the individual vouches for it but no third party has verified</td></tr>
+        <tr><td><code>self_reported</code></td><td>Added by the individual during profile creation or editing. No public source exists.</td><td>Medium — equivalent to current profile data</td></tr>
+        <tr><td><code>corrected</code></td><td>The seeder got it wrong and the individual corrected it. The original seeded value is logged.</td><td>Medium-high — corrections demonstrate active engagement and honesty</td></tr>
+        <tr><td><code>validated</code></td><td>A human validator has staked money on this claim (section 5.4) or an automated check has confirmed it (section 5.5).</td><td>High — third-party verification</td></tr>
+      </table>
+      <p>Provenance is stored per-field in the profile JSON-LD:</p>
+      <pre>{
+  "skills": [
+    {
+      "name": "Python",
+      "level": "expert",
+      "score": 88,
+      "provenance": {
+        "status": "confirmed",
+        "source": "github.com/janesmith",
+        "seededAt": "2026-04-10T14:30:00Z",
+        "confirmedAt": "2026-04-10T15:02:00Z"
+      }
+    },
+    {
+      "name": "Public Speaking",
+      "level": "advanced",
+      "score": 75,
+      "provenance": {
+        "status": "self_reported",
+        "addedAt": "2026-04-10T15:10:00Z"
+      }
+    }
+  ]
+}</pre>
+
+      <h4>The seeding flow</h4>
+      <ol>
+        <li><strong>Identify.</strong> The individual provides their full name and 2–3 disambiguating details (current employer, university, city, or a link to their LinkedIn). This is enough for the seeder to find the right person across multiple sources.</li>
+        <li><strong>Scrape.</strong> The seeding engine queries all available sources in parallel. Each source returns structured data mapped to the Search Star schema, with the source URL recorded as provenance.</li>
+        <li><strong>Assemble draft.</strong> The engine merges results, resolves conflicts (e.g., two sources list different job titles — both are preserved with timestamps), and produces a draft profile in JSON-LD format. Every field is tagged <code>provenance: "seeded"</code>.</li>
+        <li><strong>Present for review.</strong> The individual sees their draft profile in a review interface. Each field shows what was found, where it came from (with a link to the source), and a confidence indicator. Fields are grouped by section.</li>
+        <li><strong>Confirm, correct, or remove.</strong> For each field, the individual can: confirm it (provenance becomes <code>confirmed</code>), correct it (provenance becomes <code>corrected</code>, original value logged), remove it entirely, or leave it for later. They can also add new fields that the seeder missed (<code>self_reported</code>).</li>
+        <li><strong>Add private sections.</strong> After reviewing seeded data, the individual is prompted to populate sections the seeder cannot touch: financial percentiles, family, dating, Presence Composite, and access pricing.</li>
+        <li><strong>Publish.</strong> The reviewed profile is output as <code>profile.json</code> and <code>index.html</code>, hosted by the individual, and registered with Search Star. The trust score starts at whatever the automated checks and provenance quality justify — typically 10–25 for a freshly claimed profile, rising as validators are invited.</li>
+      </ol>
+
+      <h4>Unclaimed profiles</h4>
+      <p>A seeded profile that has not been claimed by the individual exists in the Search Star directory as a <strong>draft stub</strong>. The stub contains only public-tier data that was scraped from public sources. It is clearly marked as unclaimed.</p>
+      <table>
+        <tr><th>Property</th><th>Claimed profile</th><th>Unclaimed stub</th></tr>
+        <tr><td>Trust score</td><td>0–100 (validator-backed)</td><td>0 (no validators, no owner confirmation)</td></tr>
+        <tr><td>Queryable</td><td>Yes, at owner-set pricing</td><td>No — stubs are not monetized</td></tr>
+        <tr><td>Editable</td><td>By the owner</td><td>Not editable — frozen until claimed</td></tr>
+        <tr><td>Visible in directory</td><td>Yes</td><td>Yes, with "Unclaimed" badge</td></tr>
+        <tr><td>Marketing messages</td><td>Owner controls</td><td>Disabled — no one profits from unclaimed data</td></tr>
+      </table>
+      <p>The existence of an unclaimed stub creates a natural incentive to claim. The individual can see that a partial, possibly inaccurate version of their profile exists in the directory. Claiming it gives them control: they can correct errors, add private data, set pricing, and start earning. Not claiming it means the scraped version — with a trust score of zero — is all that platforms see.</p>
+      <div class="callout callout-warn"><strong>Ethical constraint:</strong> Unclaimed stubs are never monetized. Search Star does not profit from data about people who have not consented. The stub exists solely as a discovery mechanism — platforms can see that a person exists in the directory, but cannot query their data or send them messages until the profile is claimed and the individual has set their own access policies. If an individual requests removal of their unclaimed stub, it is deleted immediately with no appeals process.</div>
+
+      <h4>Visual narrative</h4>
+      <p>Photos in most people's digital lives are a mess — scattered across iCloud, Google Photos, Amazon Photos, old phones, Facebook albums, Instagram archives. No platform organizes photos by <em>meaning</em>. They organize by date, by face recognition, by GPS coordinates. None of them ask: what story do these photos tell about who this person is?</p>
+      <p>The visual narrative is a curated collection of images organized not chronologically but thematically — mapped to the profile schema sections they illustrate. It tells the story of how the individual's data visually relates to the life they actually live. The emphasis is on social, intellectual, and academic interests told through pictures across time and place.</p>
+
+      <h4>Narrative chapters</h4>
+      <p>Each visual narrative is organized into chapters that correspond to profile sections. Not every chapter needs photos — empty chapters are simply omitted.</p>
+      <table>
+        <tr><th>Chapter</th><th>Maps to</th><th>Photo types</th></tr>
+        <tr><td><strong>Intellectual life</strong></td><td>Interests (intellectual), Skills</td><td>Conference talks, bookshelves, lab or studio work, university settings, teaching moments, published work, research sites</td></tr>
+        <tr><td><strong>Social life</strong></td><td>Interests (social), Presence (Rizz)</td><td>Community events, travel with friends, cultural experiences, dinner parties, volunteer work, religious or civic gatherings</td></tr>
+        <tr><td><strong>Athletic life</strong></td><td>Interests (athletic)</td><td>Competition photos, training, outdoor adventures, team sports, race finishes, coaching</td></tr>
+        <tr><td><strong>Professional life</strong></td><td>Skills, Content Feed</td><td>Workspace, team photos, speaking engagements, project milestones, awards, office environments</td></tr>
+        <tr><td><strong>Aesthetic identity</strong></td><td>Presence (Drip, Vibe)</td><td>Outfit photos, living space, curated environments, travel destinations, artistic output</td></tr>
+        <tr><td><strong>Family life</strong></td><td>Family &amp; Household</td><td>Family photos the individual chooses to share — always private tier by default</td></tr>
+      </table>
+
+      <h4>Photo sourcing</h4>
+      <p>Photos enter the visual narrative from two channels:</p>
+      <ol>
+        <li><strong>Public discovery.</strong> During profile seeding, the engine identifies publicly available images associated with the individual: conference speaker photos, university faculty pages, company about pages, published articles with author headshots, public Instagram or Flickr, event photography archives, race result photo services. These are presented to the individual for approval — no photo is included without explicit consent.</li>
+        <li><strong>Private library integration.</strong> The individual connects their photo libraries (Google Photos API, Apple Photos via device access, uploaded files) and the AI performs the analysis described in section 3.2: scanning for relevant images, tagging to narrative chapters, selecting for variety, quality, recency, and brand-blind compliance. The individual approves, rejects, or substitutes any selection.</li>
+      </ol>
+
+      <h4>Photo metadata schema</h4>
+      <p>Each photo in the visual narrative carries structured metadata that maps it to the profile and supports validation:</p>
+      <pre>{
+  "media": [
+    {
+      "type": "photo",
+      "url": "https://jane.smith.id/media/conference-talk-2024.webp",
+      "hash": "sha256:def456...",
+      "accessTier": "public",
+      "narrative": {
+        "chapter": "intellectual",
+        "caption": "Keynote at PyCon 2024, Pittsburgh",
+        "date": "2024-05-18",
+        "location": "Pittsburgh, PA",
+        "relatedFields": ["skills.python", "interests.intellectual.conference_speaking"]
+      },
+      "provenance": {
+        "status": "confirmed",
+        "source": "pycon.org/2024/speakers",
+        "discoveredAt": "2026-04-10T14:30:00Z"
+      },
+      "validation": {
+        "validatedBy": ["SS-000042"],
+        "stake": 25.00
+      }
+    }
+  ]
+}</pre>
+
+      <h4>Visual narrative validation</h4>
+      <p>Photos are validatable in the same way as data fields. A validator who attended the same conference can confirm "yes, she gave that keynote." A family member can validate family photos. A training partner can validate athletic photos. Each validated photo strengthens the trust score of the profile sections it maps to.</p>
+      <p>This creates a profile where the data claims and the visual evidence reinforce each other. A skills section that lists "Python — expert" backed by a GitHub profile (automated verification) and a photo of the individual giving a PyCon keynote (validated by an attendee who staked money) is far more credible than either claim alone.</p>
+
+      <h4>Photo hosting</h4>
+      <p>Consistent with the architectural principle in section 1, Search Star never stores photos. Visual narrative images are hosted by the individual on their own infrastructure. Search Star indexes only the URL, the hash, and the narrative metadata. The individual retains full control — deleting a photo from their hosting removes it from their profile. Photos should be served as WebP at a maximum of 2048px on the long edge, with appropriate cache headers (minimum 24h). The hash allows platforms to verify that a referenced photo has not been altered since it was validated.</p>
+
+      <div class="callout callout-info"><strong>The combined effect:</strong> A scraped data draft, enriched by the individual, illustrated by a curated visual narrative, and vouched for by people who stake real money — this is a fundamentally different kind of online profile. It is not a résumé. It is not a social media page. It is not a dating profile. It is a comprehensive, validated, owner-controlled representation of a person's life, backed by evidence and trust. The visual narrative makes it human in a way that pure data cannot.</div>
 
       <!-- ═══════════ 4. ACCESS ═══════════ -->
 
@@ -1977,6 +2121,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v1.0</code></td><td>April 2026</td><td>Validator Cooperative: LLC membership class for qualifying validators, stake-weighted revenue participation (20% of marketplace fees), quarterly distributions, scoped governance over trust-layer policy, membership qualification and termination rules</td></tr>
         <tr><td><code>v1.1</code></td><td>April 2026</td><td>AI-Powered Campaigns: campaign data model, AI message composer with platform ↔ AI conversation, send fee + read fee structure, generated message lifecycle, enhanced feed experience (campaign_marketing type with AI-tailored body, AI-generated media, tracked CTAs), marketing data access controls (category toggles, frequency preferences, category preferences), campaign management portal (six-stage creation wizard, pause/resume/stop), campaign analytics (per-campaign metrics, aggregate insights, AI recommendations)</td></tr>
         <tr><td><code>v1.2</code></td><td>April 2026</td><td>Trust as Love: rewritten core philosophy (section 5.1) — trust score as measure of reciprocal love, explicit adversarial positioning against top-down social credit and celebrity/influencer economies, the convergence principle (gaming the trust metric produces genuine virtue), distributional answer via relational density vs. attention inequality. Reciprocal network bonus (1.25x for mutual validation within broader communities). Aristotelian-Thomistic philosophical framework.</td></tr>
+        <tr><td><code>v1.3</code></td><td>April 2026</td><td>Profile Seeding &amp; Visual Narrative (section 3.9): scraper-seeded draft profiles from public data, claim provenance system (seeded/confirmed/self_reported/corrected/validated), unclaimed stub directory entries, visual narrative organized by thematic chapters (intellectual/social/athletic/professional/aesthetic/family), photo discovery from public sources + private library integration, photo metadata schema with narrative chapter mapping and validation, per-field provenance in JSON-LD</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -1995,8 +2140,9 @@ Platform                Search Star              User's Hosting
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
         <tr><td><code>v1.1</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting, AI-Powered Campaign implementation (campaign creation wizard, AI composer, batch message generation, enhanced feed rendering, send/read fee billing, campaign analytics dashboard, marketing data access controls in owner dashboard)</td></tr>
         <tr><td><code>v1.2</code></td><td>Q2 2026</td><td>Trust Score implementation: Depth/Breadth/Durability calculation engine, trust layer classification, validator relationship types, decay scheduler</td></tr>
-        <tr><td><code>v1.3</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
-        <tr><td><code>v1.4</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
+        <tr><td><code>v1.3</code></td><td>Q3 2026</td><td>Profile Seeding implementation: scraping engine (LinkedIn, GitHub, Scholar, conference archives, professional directories), claim provenance system, unclaimed stub management, visual narrative chapter builder, photo discovery + private library integration (Google Photos API), review &amp; correction UI, seeded profile → JSON-LD + HTML output pipeline</td></tr>
+        <tr><td><code>v1.4</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
+        <tr><td><code>v1.5</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
         <tr><td><code>v2.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
         <tr><td><code>v2.1</code></td><td>Q1 2027</td><td>Validator Cooperative launch: LLC operating agreement finalized, automated qualification engine, first quarterly distribution, governance voting portal, cooperative member dashboard</td></tr>
       </table>
@@ -2009,7 +2155,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v1.2 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v1.3 · MIT License</div>
       <div class="footer-links">
         <a href="/">Home</a>
         <a href="profile.html">Sample</a>
