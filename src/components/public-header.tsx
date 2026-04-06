@@ -20,10 +20,10 @@ export function PublicHeader() {
         </div>
         <nav className="flex items-center gap-4">
           <Link
-            href="/profile-seeder"
+            href="/activate"
             className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-white/50 no-underline hover:text-white/80 transition-colors"
           >
-            Seed Profile
+            Activate
           </Link>
           <Link
             href="/onboarding"

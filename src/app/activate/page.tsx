@@ -138,7 +138,7 @@ function PhotoCard({ photo, onRemove }: { photo: NarrativePhoto; onRemove: (id: 
 // Main component
 // ═══════════════════════════════════════════════════
 
-export default function ProfileSeeder() {
+export default function Activate() {
   const [step, setStep] = useState<Step>('identify')
   const [scraping, setScraping] = useState(false)
 
@@ -316,13 +316,13 @@ export default function ProfileSeeder() {
       <div className="bg-[#1a3a6b] px-8 pt-8 pb-14">
         <div className="max-w-[860px] mx-auto text-center">
           <div className="font-body text-[11px] font-bold tracking-[0.2em] uppercase text-white/40 mb-3">
-            Profile Seeder
+            Activate Your Profile
           </div>
           <h1 className="font-heading font-bold text-white text-[clamp(1.75rem,4vw,2.5rem)] leading-[1.15] mb-3">
-            We find you. You take control.
+            Your data already exists. Activate it.
           </h1>
           <p className="font-body text-sm text-white/60 max-w-[580px] mx-auto leading-relaxed">
-            Enter your name and a few details. We scrape public sources, assemble a draft profile, and hand it to you to correct, enrich, and own.
+            The internet already knows about you. Take control — we find your public footprint, you shape it into a sovereign profile you own, and people you trust validate it.
           </p>
         </div>
       </div>
@@ -464,7 +464,7 @@ export default function ProfileSeeder() {
                 Financial percentiles · Presence Composite · Family &amp; household · Dating profile · Social interests · Advertising profile
               </p>
               <p className="font-body text-[12px] text-[#b0b0b0] m-0 mt-2">
-                The seeder never guesses at private data. These sections remain empty until you choose to populate them.
+                The system never guesses at private data. These sections remain empty until you choose to populate them.
               </p>
             </div>
 
@@ -482,7 +482,7 @@ export default function ProfileSeeder() {
           <div className="card-grace p-8">
             <h2 className="font-heading text-xl font-bold mb-1">Review &amp; correct</h2>
             <p className="font-body text-sm text-[#5a5a5a] mb-6 leading-relaxed">
-              Confirm each field is accurate, correct anything the scraper got wrong, or remove fields entirely. Add information the scraper missed.
+              Confirm each field is accurate, correct anything that needs correcting, or remove fields entirely. Add information we missed.
             </p>
 
             {sections.map(section => (
@@ -552,7 +552,7 @@ export default function ProfileSeeder() {
             <div className="mt-6 p-4 border border-dashed border-[#b8cfe8] rounded-[3px] bg-[#fafcff]">
               {addingField ? (
                 <div className="space-y-3">
-                  <div className="label-grace text-[#1a3a6b]">Add a field the scraper missed</div>
+                  <div className="label-grace text-[#1a3a6b]">Add a field we missed</div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <select
                       value={newFieldSection}
@@ -582,7 +582,7 @@ export default function ProfileSeeder() {
               ) : (
                 <button onClick={() => setAddingField(true)}
                   className="font-body text-sm text-[#1a3a6b] cursor-pointer bg-transparent border-none hover:underline">
-                  + Add a field the scraper missed
+                  + Add a field we missed
                 </button>
               )}
             </div>
@@ -601,7 +601,7 @@ export default function ProfileSeeder() {
           <div className="card-grace p-8">
             <h2 className="font-heading text-xl font-bold mb-1">Private sections</h2>
             <p className="font-body text-sm text-[#5a5a5a] mb-6 leading-relaxed">
-              These sections contain data the scraper never touches. Everything here is optional — add what you want, skip what you don&apos;t.
+              These sections contain data the search never touches. Everything here is optional — add what you want, skip what you don&apos;t.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
