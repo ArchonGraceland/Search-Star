@@ -145,6 +145,7 @@ async function findGitHubCandidates(fullName: string, employer?: string, city?: 
         let score = nameMatchScore(user.name, fullName)
         if (city && user.location?.toLowerCase().includes(city.toLowerCase())) score += 0.2
         if (employer && user.company?.toLowerCase().includes(employer.toLowerCase())) score += 0.3
+        score = Math.min(score, 1)
         candidates.push({ user, score })
       }
     } catch (err) {
