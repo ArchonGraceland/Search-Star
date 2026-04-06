@@ -29,6 +29,8 @@ interface SeededField {
   dbId?: string  // UUID from profile_fields table
 }
 
+type AccessTier = 'public' | 'private' | 'marketing'
+
 interface NarrativePhoto {
   id: string
   chapter: NarrativeChapter
@@ -39,6 +41,8 @@ interface NarrativePhoto {
   sourceLabel: string
   previewUrl: string
   relatedFields: string[]
+  accessTier: AccessTier
+  hash: string
 }
 
 interface DisambiguationCandidate {
@@ -96,9 +100,9 @@ const MOCK_SEEDED_FIELDS: SeededField[] = [
 ]
 
 const MOCK_PHOTOS: NarrativePhoto[] = [
-  { id: 'p1', chapter: 'intellectual', caption: 'Keynote at PyCon 2024', date: '2024-05-18', location: 'Pittsburgh, PA', source: 'public', sourceLabel: 'pycon.org', previewUrl: '', relatedFields: ['skills.python', 'interests.intellectual.conference_speaking'] },
-  { id: 'p2', chapter: 'intellectual', caption: 'Panel at KubeCon 2023', date: '2023-11-07', location: 'Chicago, IL', source: 'public', sourceLabel: 'kubecon.io', previewUrl: '', relatedFields: ['skills.distributed_systems'] },
-  { id: 'p3', chapter: 'athletic', caption: 'Brooklyn Half Marathon finish', date: '2024-05-18', location: 'Brooklyn, NY', source: 'public', sourceLabel: 'marathonfoto.com', previewUrl: '', relatedFields: ['interests.athletic.running'] },
+  { id: 'p1', chapter: 'intellectual', caption: 'Keynote at PyCon 2024', date: '2024-05-18', location: 'Pittsburgh, PA', source: 'public', sourceLabel: 'pycon.org', previewUrl: '', relatedFields: ['skills.python', 'interests.intellectual.conference_speaking'], accessTier: 'public', hash: '' },
+  { id: 'p2', chapter: 'intellectual', caption: 'Panel at KubeCon 2023', date: '2023-11-07', location: 'Chicago, IL', source: 'public', sourceLabel: 'kubecon.io', previewUrl: '', relatedFields: ['skills.distributed_systems'], accessTier: 'public', hash: '' },
+  { id: 'p3', chapter: 'athletic', caption: 'Brooklyn Half Marathon finish', date: '2024-05-18', location: 'Brooklyn, NY', source: 'public', sourceLabel: 'marathonfoto.com', previewUrl: '', relatedFields: ['interests.athletic.running'], accessTier: 'public', hash: '' },
 ]
 
 const CHAPTERS: { key: NarrativeChapter; label: string; icon: string; description: string }[] = [
@@ -163,20 +167,36 @@ function ConfidenceIndicator({ score }: { score?: number }) {
 // Photo card component
 // ═══════════════════════════════════════════════════
 
-function PhotoCard({ photo, onRemove }: { photo: NarrativePhoto; onRemove: (id: string) => void }) {
+function PhotoCard({ photo, onRemove, onUpdateAccessTier }: {
+  photo: NarrativePhoto
+  onRemove: (id: string) => void
+  onUpdateAccessTier: (id: string, tier: AccessTier) => void
+}) {
   const chapterObj = CHAPTERS.find(c => c.key === photo.chapter)
+  const hasPreview = photo.previewUrl && (photo.previewUrl.startsWith('data:') || photo.previewUrl.startsWith('http'))
   return (
     <div className="bg-white border border-[#d4d4d4] rounded-[3px] overflow-hidden">
-      <div className="aspect-[4/3] bg-[#eef2f8] flex items-center justify-center relative">
-        <span className="text-3xl">{chapterObj?.icon || '📷'}</span>
+      <div className="aspect-[4/3] bg-[#eef2f8] flex items-center justify-center relative overflow-hidden">
+        {hasPreview ? (
+          <img src={photo.previewUrl} alt={photo.caption} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-3xl">{chapterObj?.icon || '📷'}</span>
+        )}
         <div className="absolute bottom-2 left-2 font-body text-[9px] font-bold tracking-[0.08em] uppercase bg-white/90 text-[#5a5a5a] px-2 py-[2px] rounded-[2px] border border-[#d4d4d4]">
           {photo.source === 'public' ? '🌐 ' : photo.source === 'google' ? '📸 ' : photo.source === 'upload' ? '📁 ' : '🔗 '}
           {photo.sourceLabel}
         </div>
+        {photo.hash && (
+          <div className="absolute top-2 right-2 font-mono text-[8px] bg-black/60 text-white px-1.5 py-0.5 rounded-[2px]">
+            ✓ hashed
+          </div>
+        )}
       </div>
       <div className="p-3">
         <div className="font-body text-[13px] font-medium text-[#1a1a1a] leading-tight">{photo.caption}</div>
-        <div className="font-body text-[11px] text-[#767676] mt-1">{photo.date} · {photo.location}</div>
+        <div className="font-body text-[11px] text-[#767676] mt-1">
+          {photo.date}{photo.location ? ` · ${photo.location}` : ''}
+        </div>
         <div className="flex items-center justify-between mt-2">
           <span className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-2 py-[2px] rounded-[3px]"
             style={{ background: '#eef2f8', color: '#1a3a6b' }}>
@@ -188,6 +208,23 @@ function PhotoCard({ photo, onRemove }: { photo: NarrativePhoto; onRemove: (id: 
           >
             Remove
           </button>
+        </div>
+        {/* Access tier toggle */}
+        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-[#eee]">
+          <span className="font-body text-[9px] font-bold tracking-[0.08em] uppercase text-[#767676]">Tier:</span>
+          {(['public', 'private', 'marketing'] as AccessTier[]).map(tier => (
+            <button key={tier}
+              onClick={() => onUpdateAccessTier(photo.id, tier)}
+              className={`font-body text-[9px] px-2 py-0.5 rounded-[2px] border cursor-pointer transition-colors ${
+                photo.accessTier === tier
+                  ? tier === 'public' ? 'bg-[#e8f5e9] border-[#4caf50] text-[#2e7d32] font-bold'
+                    : tier === 'private' ? 'bg-[#fff3e0] border-[#ff9800] text-[#e65100] font-bold'
+                    : 'bg-[#e3f2fd] border-[#2196f3] text-[#1565c0] font-bold'
+                  : 'bg-white border-[#d4d4d4] text-[#999] hover:border-[#999]'
+              }`}>
+              {tier}
+            </button>
+          ))}
         </div>
       </div>
     </div>
@@ -460,6 +497,8 @@ export default function Activate() {
     pollTimerRef.current = setTimeout(doPoll, interval)
   }
 
+  const [enrichingGoogle, setEnrichingGoogle] = useState(false)
+
   async function fetchPickedItems(sessionId: string) {
     try {
       const res = await fetch(
@@ -472,7 +511,17 @@ export default function Activate() {
       }
 
       if (data.photos && data.photos.length > 0) {
-        setPhotos(prev => [...prev, ...data.photos])
+        // Add accessTier and hash defaults to Google Photos imports
+        const photosWithDefaults = data.photos.map((p: NarrativePhoto) => ({
+          ...p,
+          accessTier: p.accessTier || 'public' as AccessTier,
+          hash: p.hash || '',
+        }))
+        setPhotos(prev => [...prev, ...photosWithDefaults])
+
+        // Immediately enrich Google Photos to backfill EXIF GPS + location
+        // baseUrls expire after 60 minutes so we must do this promptly
+        enrichGooglePhotos(photosWithDefaults)
       }
 
       setGPhotosLoading(false)
@@ -481,6 +530,60 @@ export default function Activate() {
       setGPhotosError(err instanceof Error ? err.message : 'Failed to retrieve photos')
       setGPhotosLoading(false)
       setGPhotosSessionId(null)
+    }
+  }
+
+  async function enrichGooglePhotos(googlePhotos: NarrativePhoto[]) {
+    setEnrichingGoogle(true)
+    try {
+      const res = await fetch('/api/activate/photos/enrich-google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          photos: googlePhotos.map(p => ({
+            id: p.id,
+            previewUrl: p.previewUrl,
+            chapter: p.chapter,
+            caption: p.caption,
+            date: p.date,
+          })),
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        if (err.code === 'TOKEN_EXPIRED') {
+          setGPhotosConnected(false)
+          setGPhotosError('Token expired during enrichment. Location data could not be extracted.')
+        }
+        return
+      }
+
+      const data = await res.json()
+
+      if (data.enriched && data.enriched.length > 0) {
+        setPhotos(prev => prev.map(photo => {
+          const enriched = data.enriched.find((e: { id: string }) => e.id === photo.id)
+          if (!enriched) return photo
+          return {
+            ...photo,
+            date: enriched.date || photo.date,
+            location: enriched.location || photo.location,
+            hash: enriched.hash || photo.hash,
+            accessTier: enriched.accessTier || photo.accessTier,
+            chapter: enriched.chapter || photo.chapter,
+            previewUrl: enriched.webpBase64 || photo.previewUrl,
+          }
+        }))
+      }
+
+      if (data.summary) {
+        console.log(`Google Photos enrichment: ${data.summary.enriched}/${data.summary.total} enriched, ${data.summary.failed} failed`)
+      }
+    } catch (err) {
+      console.error('Google Photos enrichment error:', err)
+    } finally {
+      setEnrichingGoogle(false)
     }
   }
 
@@ -615,47 +718,109 @@ export default function Activate() {
     setPhotos(prev => prev.filter(p => p.id !== id))
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, chapter: NarrativeChapter) => {
+  const handleUpdateAccessTier = (id: string, tier: AccessTier) => {
+    setPhotos(prev => prev.map(p => p.id === id ? { ...p, accessTier: tier } : p))
+  }
+
+  const [uploadingCount, setUploadingCount] = useState(0)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, chapter: NarrativeChapter) => {
     const fileList = e.target.files
     if (!fileList) return
     const chapterObj = CHAPTERS.find(c => c.key === chapter)
-    Array.from(fileList).forEach((file, i) => {
-      const newPhoto: NarrativePhoto = {
-        id: `upload-${Date.now()}-${i}`,
-        chapter,
-        caption: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
-        date: new Date().toISOString().split('T')[0],
-        location: '',
-        source: 'upload',
-        sourceLabel: 'Uploaded',
-        previewUrl: URL.createObjectURL(file),
-        relatedFields: [],
+    const files = Array.from(fileList)
+    setUploadingCount(prev => prev + files.length)
+
+    for (const file of files) {
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('chapter', chapter)
+
+        const res = await fetch('/api/activate/photos/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!res.ok) {
+          const err = await res.json()
+          console.error('Upload failed:', err.error)
+          continue
+        }
+
+        const data = await res.json()
+        const newPhoto: NarrativePhoto = {
+          id: data.id,
+          chapter: data.chapter,
+          caption: data.caption,
+          date: data.date,
+          location: data.location,
+          source: 'upload',
+          sourceLabel: 'Uploaded',
+          previewUrl: data.previewUrl,
+          relatedFields: [],
+          accessTier: data.accessTier || 'public',
+          hash: data.hash || '',
+        }
+        setPhotos(prev => [...prev, newPhoto])
+      } catch (err) {
+        console.error('Upload error:', err)
+      } finally {
+        setUploadingCount(prev => prev - 1)
       }
-      setPhotos(prev => [...prev, newPhoto])
-    })
+    }
+
     // Reset the input
     e.target.value = ''
-    // Show a prompt for the user to update caption/metadata
-    alert(`${fileList.length} photo${fileList.length > 1 ? 's' : ''} added to "${chapterObj?.label}." Edit captions and metadata after import.`)
+    alert(`${files.length} photo${files.length > 1 ? 's' : ''} processed and added to "${chapterObj?.label}." EXIF metadata extracted.`)
   }
 
-  const handleUrlImport = () => {
+  const [urlImporting, setUrlImporting] = useState(false)
+
+  const handleUrlImport = async () => {
     if (!importUrl.trim() || !importCaption.trim()) return
-    const newPhoto: NarrativePhoto = {
-      id: `url-${Date.now()}`,
-      chapter: importChapter,
-      caption: importCaption,
-      date: new Date().toISOString().split('T')[0],
-      location: '',
-      source: 'url',
-      sourceLabel: new URL(importUrl).hostname,
-      previewUrl: importUrl,
-      relatedFields: [],
+    setUrlImporting(true)
+    try {
+      const res = await fetch('/api/activate/photos/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: importUrl,
+          chapter: importChapter,
+          caption: importCaption,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        alert(`Import failed: ${err.error}`)
+        return
+      }
+
+      const data = await res.json()
+      const newPhoto: NarrativePhoto = {
+        id: data.id,
+        chapter: data.chapter,
+        caption: data.caption,
+        date: data.date,
+        location: data.location,
+        source: 'url',
+        sourceLabel: data.sourceLabel,
+        previewUrl: data.previewUrl,
+        relatedFields: [],
+        accessTier: data.accessTier || 'public',
+        hash: data.hash || '',
+      }
+      setPhotos(prev => [...prev, newPhoto])
+      setImportUrl('')
+      setImportCaption('')
+      setShowUrlImport(false)
+    } catch (err) {
+      console.error('URL import error:', err)
+      alert('Failed to import image from URL.')
+    } finally {
+      setUrlImporting(false)
     }
-    setPhotos(prev => [...prev, newPhoto])
-    setImportUrl('')
-    setImportCaption('')
-    setShowUrlImport(false)
   }
 
   const handleGooglePhotosConnect = () => {
@@ -1323,6 +1488,18 @@ export default function Activate() {
                 Waiting for photo selection in Google Photos… (this window will update automatically)
               </div>
             )}
+            {enrichingGoogle && (
+              <div className="mb-4 p-3 bg-[#f3e8ff] border border-[#b388ff] rounded-[3px] font-body text-[12px] text-[#6a1b9a] flex items-center gap-2">
+                <span className="inline-block w-3 h-3 border-2 border-[#6a1b9a] border-t-transparent rounded-full animate-spin" />
+                Extracting EXIF GPS data and reverse geocoding locations from Google Photos…
+              </div>
+            )}
+            {uploadingCount > 0 && (
+              <div className="mb-4 p-3 bg-[#fff8e1] border border-[#ffcc80] rounded-[3px] font-body text-[12px] text-[#e65100] flex items-center gap-2">
+                <span className="inline-block w-3 h-3 border-2 border-[#e65100] border-t-transparent rounded-full animate-spin" />
+                Processing {uploadingCount} photo{uploadingCount > 1 ? 's' : ''}… (EXIF extraction, WebP conversion, hashing)
+              </div>
+            )}
 
             {/* URL import form */}
             {showUrlImport && (
@@ -1342,7 +1519,7 @@ export default function Activate() {
                     </select>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={handleUrlImport} className="btn-primary text-[10px] px-4 py-2">Import</button>
+                    <button onClick={handleUrlImport} disabled={urlImporting} className="btn-primary text-[10px] px-4 py-2">{urlImporting ? 'Processing…' : 'Import'}</button>
                     <button onClick={() => setShowUrlImport(false)} className="btn-secondary text-[10px] px-4 py-2">Cancel</button>
                   </div>
                 </div>
@@ -1369,7 +1546,7 @@ export default function Activate() {
                   {chapterPhotos.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {chapterPhotos.map(photo => (
-                        <PhotoCard key={photo.id} photo={photo} onRemove={handleRemovePhoto} />
+                        <PhotoCard key={photo.id} photo={photo} onRemove={handleRemovePhoto} onUpdateAccessTier={handleUpdateAccessTier} />
                       ))}
                     </div>
                   ) : (
