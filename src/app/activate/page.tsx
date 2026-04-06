@@ -177,16 +177,31 @@ export default function Activate() {
 
   // ═══ Handlers ═══
 
-  const handleScrape = useCallback(() => {
+  const [scrapeError, setScrapeError] = useState<string | null>(null)
+
+  const handleScrape = useCallback(async () => {
     setScraping(true)
-    // Simulate scraping delay
-    setTimeout(() => {
-      setFields(MOCK_SEEDED_FIELDS)
-      setPhotos(MOCK_PHOTOS)
-      setScraping(false)
+    setScrapeError(null)
+    try {
+      const res = await fetch('/api/activate/discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, employer, city, linkedinUrl }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Discovery failed')
+      }
+      setFields(data.fields || [])
+      setPhotos(data.photos || [])
       setStep('results')
-    }, 2400)
-  }, [])
+    } catch (err) {
+      console.error('Discovery error:', err)
+      setScrapeError(err instanceof Error ? err.message : 'Discovery failed. Please try again.')
+    } finally {
+      setScraping(false)
+    }
+  }, [fullName, employer, city, linkedinUrl])
 
   const handleConfirmField = (id: string) => {
     setFields(prev => prev.map(f => f.id === id ? { ...f, provenance: 'confirmed' as Provenance } : f))
@@ -421,6 +436,10 @@ export default function Activate() {
             >
               {scraping ? 'Searching public sources...' : 'Find my profile →'}
             </button>
+
+            {scrapeError && (
+              <p className="mt-3 text-sm text-red-600">{scrapeError}</p>
+            )}
           </div>
         )}
 
