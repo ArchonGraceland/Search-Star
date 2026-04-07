@@ -195,6 +195,38 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update field', details: error.message }, { status: 500 })
     }
 
+    // ── Log to discovery_corrections for Phase 14 learning loop ──
+    // Log confirm/correct/remove actions (not self_report — no discovery source to attribute)
+    if (action !== 'self_report' && existing.profile_id) {
+      const correctionAction =
+        action === 'confirm' ? 'confirmed' :
+        action === 'correct' ? 'corrected' :
+        'removed'
+
+      const correctionRow: Record<string, unknown> = {
+        profile_id: existing.profile_id,
+        source: existing.source_name || 'unknown',
+        field_type: existing.section || 'unknown',
+        label: existing.label || 'unknown',
+        discovered_value: existing.original_value || existing.value,
+        action: correctionAction,
+      }
+
+      // Only include corrected_value when the user actually changed the value
+      if (action === 'correct' && correctedValue) {
+        correctionRow.corrected_value = correctedValue
+      }
+
+      const { error: corrErr } = await supabase
+        .from('discovery_corrections')
+        .insert(correctionRow)
+
+      if (corrErr) {
+        // Non-fatal — log but don't fail the main request
+        console.error('Corrections log error (non-fatal):', corrErr.message)
+      }
+    }
+
     return NextResponse.json({ updated: data?.[0] || null })
   } catch (err) {
     console.error('PATCH fields error:', err)

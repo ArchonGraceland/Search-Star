@@ -11,7 +11,7 @@ import JSZip from 'jszip'
 // Types
 // ═══════════════════════════════════════════════════
 
-type Step = 'identify' | 'disambiguate' | 'results' | 'review' | 'private' | 'photos' | 'publish'
+type Step = 'identity-lock' | 'identify' | 'disambiguate' | 'results' | 'review' | 'private' | 'photos' | 'publish'
 type Provenance = 'seeded' | 'confirmed' | 'corrected' | 'self_reported' | 'removed'
 type PhotoChannel = 'public' | 'google' | 'upload' | 'url'
 type NarrativeChapter = 'intellectual' | 'social' | 'athletic' | 'professional' | 'aesthetic' | 'family'
@@ -56,6 +56,18 @@ interface DisambiguationCandidate {
   avatar?: string
   confidence: number
   snippet?: string
+}
+
+// Phase 11 — v1.4 identity lock candidate
+interface LockedIdentityCandidate {
+  candidateId: string
+  name: string
+  employer?: string
+  location?: string
+  photoUrl?: string
+  summary: string
+  sourceUrls: string[]
+  confidence: number
 }
 
 interface SourceStatus {
@@ -115,6 +127,7 @@ const CHAPTERS: { key: NarrativeChapter; label: string; icon: string; descriptio
 ]
 
 const STEPS: { key: Step; num: number; label: string; sub: string }[] = [
+  { key: 'identity-lock', num: 0, label: 'You', sub: 'Pick yourself' },
   { key: 'identify', num: 1, label: 'Identify', sub: 'Name & details' },
   { key: 'disambiguate', num: 2, label: 'Match', sub: 'Pick the right you' },
   { key: 'results', num: 3, label: 'Scrape', sub: 'Public sources' },
@@ -236,8 +249,14 @@ function PhotoCard({ photo, onRemove, onUpdateAccessTier }: {
 // ═══════════════════════════════════════════════════
 
 export default function Activate() {
-  const [step, setStep] = useState<Step>('identify')
+  const [step, setStep] = useState<Step>('identity-lock')
   const [scraping, setScraping] = useState(false)
+
+  // Step 0 — Identity Lock (Phase 11 / v1.4)
+  const [identityLockLoading, setIdentityLockLoading] = useState(false)
+  const [identityLockError, setIdentityLockError] = useState('')
+  const [identityLockCandidates, setIdentityLockCandidates] = useState<LockedIdentityCandidate[]>([])
+  const [lockedIdentity, setLockedIdentity] = useState<(LockedIdentityCandidate & { lockedAt: string }) | null>(null)
 
   // Step 1 — Identify
   const [fullName, setFullName] = useState('')
@@ -318,6 +337,7 @@ export default function Activate() {
           full_name: fullName || null,
           employer: employer || null,
           city: city || null,
+          locked_identity: lockedIdentity || null,
           linkedin_url: linkedinUrl || null,
           profile_id: profileId || null,
           field_ids: fields.filter(f => f.dbId).map(f => f.dbId),
@@ -678,6 +698,49 @@ export default function Activate() {
   // ═══ Handlers ═══
 
   const [scrapeError, setScrapeError] = useState<string | null>(null)
+
+  // ── Phase 11: Identity Lock handler ──────────────────
+  const handleIdentityLock = useCallback(async () => {
+    if (!fullName.trim()) return
+    setIdentityLockLoading(true)
+    setIdentityLockError('')
+    setIdentityLockCandidates([])
+    try {
+      const res = await fetch('/api/activate/identity-lock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, employer, city, linkedinUrl }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Identity lock failed')
+      setIdentityLockCandidates(data.candidates || [])
+    } catch (err) {
+      setIdentityLockError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setIdentityLockLoading(false)
+    }
+  }, [fullName, employer, city, linkedinUrl])
+
+  const handlePickCandidate = useCallback((candidate: LockedIdentityCandidate) => {
+    const locked = { ...candidate, lockedAt: new Date().toISOString() }
+    setLockedIdentity(locked)
+    // Pre-fill identity fields from locked candidate
+    if (candidate.employer && !employer) setEmployer(candidate.employer)
+    if (candidate.location && !city) setCity(candidate.location)
+    // Persist locked identity and advance to Step 1
+    fetch('/api/activate/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locked_identity: locked, current_step: 'identify' }),
+    }).catch(console.error)
+    setStep('identify')
+  }, [employer, city])
+
+  const handleSkipIdentityLock = useCallback(() => {
+    // User has a rare or minimal web presence — skip straight to Step 1
+    setLockedIdentity(null)
+    setStep('identify')
+  }, [])
 
   const handleScrape = useCallback(async () => {
     setScraping(true)
@@ -1185,6 +1248,154 @@ Learn more: https://www.searchstar.com/spec.html
             </button>
           ))}
         </div>
+
+        {/* ═══════════════════════════════════════════ */}
+        {/* STEP 0: Identity Lock (v1.4 Phase 11)      */}
+        {/* ═══════════════════════════════════════════ */}
+        {step === 'identity-lock' && (
+          <div className="card-grace p-8">
+            <h2 className="font-heading text-xl font-bold mb-1">Who are you on the web?</h2>
+            <p className="font-body text-sm text-[#5a5a5a] mb-6 leading-relaxed">
+              Enter your name and a couple of details. We&apos;ll search the open web and show you 3–5 candidate personas — pick the one that&apos;s you. This locks your identity so the discovery pipeline stays focused.
+            </p>
+
+            <div className="space-y-3 mb-6">
+              <div>
+                <label className="label-grace text-[#767676] block mb-1">Full name <span className="text-[#c0392b]">*</span></label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  placeholder="Jane Smith"
+                  className="w-full px-4 py-3 border border-[#d4d4d4] rounded-[3px] font-body text-sm outline-none focus:border-[#1a3a6b] bg-white"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="label-grace text-[#767676] block mb-1">Employer or university <span className="font-normal normal-case tracking-normal">(optional)</span></label>
+                  <input
+                    type="text"
+                    value={employer}
+                    onChange={e => setEmployer(e.target.value)}
+                    placeholder="Datadog"
+                    className="w-full px-4 py-3 border border-[#d4d4d4] rounded-[3px] font-body text-sm outline-none focus:border-[#1a3a6b] bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="label-grace text-[#767676] block mb-1">City <span className="font-normal normal-case tracking-normal">(optional)</span></label>
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={e => setCity(e.target.value)}
+                    placeholder="Brooklyn, NY"
+                    className="w-full px-4 py-3 border border-[#d4d4d4] rounded-[3px] font-body text-sm outline-none focus:border-[#1a3a6b] bg-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="label-grace text-[#767676] block mb-1">LinkedIn URL <span className="font-normal normal-case tracking-normal">(optional, narrows results)</span></label>
+                <input
+                  type="text"
+                  value={linkedinUrl}
+                  onChange={e => setLinkedinUrl(e.target.value)}
+                  placeholder="linkedin.com/in/janesmith-eng"
+                  className="w-full px-4 py-3 border border-[#d4d4d4] rounded-[3px] font-body text-sm outline-none focus:border-[#1a3a6b] bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Search button */}
+            {identityLockCandidates.length === 0 && (
+              <button
+                onClick={handleIdentityLock}
+                disabled={!fullName.trim() || identityLockLoading}
+                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {identityLockLoading ? 'Searching the web…' : 'Find me on the web →'}
+              </button>
+            )}
+
+            {identityLockError && (
+              <p className="mt-3 text-sm text-red-600">{identityLockError}</p>
+            )}
+
+            {/* Candidate cards */}
+            {identityLockCandidates.length > 0 && (
+              <div className="mt-6">
+                <p className="font-body text-sm font-semibold text-[#1a1a1a] mb-3">Which one is you?</p>
+                <div className="space-y-3">
+                  {identityLockCandidates.map(candidate => (
+                    <div
+                      key={candidate.candidateId}
+                      className="flex items-start gap-4 p-4 border border-[#d4d4d4] rounded-[3px] bg-white hover:border-[#1a3a6b] transition-colors cursor-pointer"
+                      onClick={() => handlePickCandidate(candidate)}
+                    >
+                      {/* Photo */}
+                      <div className="shrink-0 w-14 h-14 rounded-[3px] bg-[#eef2f8] flex items-center justify-center overflow-hidden border border-[#d4d4d4]">
+                        {candidate.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={candidate.photoUrl}
+                            alt={candidate.name}
+                            className="w-full h-full object-cover"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        ) : (
+                          <span className="font-heading text-xl text-[#1a3a6b] font-bold">
+                            {candidate.name.charAt(0)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-heading text-base font-bold text-[#1a1a1a]">{candidate.name}</span>
+                          <span className="font-mono text-[10px] text-[#767676] bg-[#f4f4f4] px-2 py-[2px] rounded-[3px]">
+                            {Math.round(candidate.confidence * 100)}% match
+                          </span>
+                        </div>
+                        {(candidate.employer || candidate.location) && (
+                          <div className="font-body text-[12px] text-[#5a5a5a] mb-1">
+                            {[candidate.employer, candidate.location].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
+                        <p className="font-body text-[13px] text-[#767676] leading-relaxed">{candidate.summary}</p>
+                      </div>
+
+                      {/* Pick button */}
+                      <button
+                        onClick={e => { e.stopPropagation(); handlePickCandidate(candidate) }}
+                        className="shrink-0 px-4 py-2 bg-[#1a3a6b] text-white font-body text-[12px] font-bold rounded-[3px] hover:bg-[#0f2347] transition-colors"
+                      >
+                        This is me
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* None of these / skip option */}
+                  <div className="mt-2 pt-3 border-t border-[#e8e8e8]">
+                    <p className="font-body text-[12px] text-[#767676] mb-2">None of these match, or you have minimal web presence?</p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => { setIdentityLockCandidates([]); setIdentityLockError('') }}
+                        className="px-4 py-2 border border-[#d4d4d4] text-[#5a5a5a] font-body text-[12px] rounded-[3px] hover:border-[#1a3a6b] transition-colors"
+                      >
+                        Try different details
+                      </button>
+                      <button
+                        onClick={handleSkipIdentityLock}
+                        className="px-4 py-2 border border-[#d4d4d4] text-[#5a5a5a] font-body text-[12px] rounded-[3px] hover:border-[#1a3a6b] transition-colors"
+                      >
+                        None of these — continue anyway
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ═══════════════════════════════════════════ */}
         {/* STEP 1: Identify */}

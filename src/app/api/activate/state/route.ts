@@ -6,6 +6,18 @@ import { createClient } from '@/lib/supabase/server'
 // POST /api/activate/state — Save activation progress
 // ═══════════════════════════════════════════════════
 
+interface LockedIdentityData {
+  candidateId: string
+  name: string
+  employer?: string
+  location?: string
+  photoUrl?: string
+  summary: string
+  sourceUrls: string[]
+  confidence: number
+  lockedAt: string
+}
+
 interface ActivationState {
   current_step: string
   full_name: string | null
@@ -20,6 +32,8 @@ interface ActivationState {
   marketing_price: number
   published_handle: string | null
   published_profile_number: string | null
+  // Phase 11 — locked identity from Step 0 identity-lock
+  locked_identity: LockedIdentityData | null
 }
 
 export async function GET() {
@@ -83,6 +97,7 @@ export async function POST(request: NextRequest) {
     if (body.marketing_price !== undefined) update.marketing_price = body.marketing_price
     if (body.published_handle !== undefined) update.published_handle = body.published_handle
     if (body.published_profile_number !== undefined) update.published_profile_number = body.published_profile_number
+    if (body.locked_identity !== undefined) update.locked_identity = body.locked_identity
 
     // Upsert — create if not exists, update if exists
     const { data, error } = await supabase
