@@ -595,18 +595,20 @@ function ActivateInner() {
 
         // Check if the picker window was closed manually
         if (pickerWindow && pickerWindow.closed) {
-          // Give a brief grace period — autoclose can take a moment
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          // Do one final poll
-          const finalRes = await fetch(
-            `/api/activate/google-photos/poll?sessionId=${encodeURIComponent(sessionId)}`
-          )
-          const finalData = await finalRes.json()
-          if (finalData.mediaItemsSet) {
-            await fetchPickedItems(sessionId)
-            return
+          // Google's mediaItemsSet flag can take several seconds to propagate
+          // after the picker window autoclosess. Retry up to 5 times with 2s gaps.
+          for (let attempt = 0; attempt < 5; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            const finalRes = await fetch(
+              `/api/activate/google-photos/poll?sessionId=${encodeURIComponent(sessionId)}`
+            )
+            const finalData = await finalRes.json()
+            if (finalData.mediaItemsSet) {
+              await fetchPickedItems(sessionId)
+              return
+            }
           }
-          // User closed without picking
+          // Still not set after 10s — user closed without picking
           setGPhotosLoading(false)
           setGPhotosSessionId(null)
           return
