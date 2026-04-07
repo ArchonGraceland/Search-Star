@@ -547,7 +547,8 @@ function ActivateInner() {
       )
 
       // Start polling
-      pollForCompletion(sessionId, pollInterval, timeoutIn, pickerWindow)
+      // Cap client timeout at 60s — if user picked, mediaItemsSet arrives well within that
+      pollForCompletion(sessionId, pollInterval, Math.min(timeoutIn, 60_000), pickerWindow)
     } catch (err) {
       setGPhotosError(err instanceof Error ? err.message : 'Failed to start picker')
       setGPhotosLoading(false)
@@ -565,7 +566,7 @@ function ActivateInner() {
     async function doPoll() {
       // Check timeout
       if (Date.now() - startTime > timeout) {
-        setGPhotosError('Photo selection timed out. Please try again.')
+        setGPhotosError('No photos received — if you selected photos, please try again.')
         setGPhotosLoading(false)
         setGPhotosSessionId(null)
         return
@@ -593,26 +594,10 @@ function ActivateInner() {
           return
         }
 
-        // Check if the picker window was closed manually
-        if (pickerWindow && pickerWindow.closed) {
-          // Google's mediaItemsSet flag can take several seconds to propagate
-          // after the picker window autoclosess. Retry up to 5 times with 2s gaps.
-          for (let attempt = 0; attempt < 5; attempt++) {
-            await new Promise(resolve => setTimeout(resolve, 2000))
-            const finalRes = await fetch(
-              `/api/activate/google-photos/poll?sessionId=${encodeURIComponent(sessionId)}`
-            )
-            const finalData = await finalRes.json()
-            if (finalData.mediaItemsSet) {
-              await fetchPickedItems(sessionId)
-              return
-            }
-          }
-          // Still not set after 10s — user closed without picking
-          setGPhotosLoading(false)
-          setGPhotosSessionId(null)
-          return
-        }
+        // Keep polling even if the picker window is closed.
+        // Google's picker closes itself and shows "continue in other app"
+        // but mediaItemsSet still gets set on the session shortly after.
+        // We ignore window.closed and rely on the session timeout instead.
 
         // Continue polling with the recommended interval
         const nextInterval = data.pollInterval || interval
