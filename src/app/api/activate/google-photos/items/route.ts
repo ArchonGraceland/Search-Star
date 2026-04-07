@@ -216,14 +216,7 @@ function suggestChapter(filename: string, date: string): NarrativeChapter {
     return 'aesthetic'
   }
 
-  // Date-based heuristic: weekend photos → social, weekday → professional
-  if (date) {
-    const dayOfWeek = new Date(date).getDay()
-    if (dayOfWeek === 0 || dayOfWeek === 6) return 'social'
-    return 'professional'
-  }
-
-  return 'aesthetic' // default
+  return 'social' // default — user can reassign to correct chapter
 }
 
 function buildCaption(filename: string, date: string): string {
