@@ -312,6 +312,12 @@ export default function Activate() {
   // Database persistence
   const [profileId, setProfileId] = useState<string | null>(null)
 
+  // v1.4 synthesis pipeline state
+  const [synthesisNarrative, setSynthesisNarrative] = useState<string>('')
+  const [verificationSummary, setVerificationSummary] = useState<{
+    total: number; verified: number; failed: number; noUrl: number; verificationRate: number
+  } | null>(null)
+
   // Disambiguation
   const [disambiguationCandidates, setDisambiguationCandidates] = useState<DisambiguationCandidate[]>([])
   const [disambiguationSelections, setDisambiguationSelections] = useState<Record<string, string>>({})
@@ -749,7 +755,8 @@ export default function Activate() {
       const res = await fetch('/api/activate/discover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, employer, city, linkedinUrl }),
+        // v1.4: pass lockedIdentity so the synthesis pipeline uses identity-lock constraints
+        body: JSON.stringify({ fullName, employer, city, linkedinUrl, lockedIdentity }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -759,6 +766,10 @@ export default function Activate() {
       setPhotos(data.photos || [])
       setSourceStatuses(data.sources || [])
       if (data.profileId) setProfileId(data.profileId)
+
+      // v1.4: store synthesis narrative and verification summary
+      if (data.narrative) setSynthesisNarrative(data.narrative)
+      if (data.verificationSummary) setVerificationSummary(data.verificationSummary)
 
       // Store discovered photos separately for approve/reject flow (Phase 9)
       if (data.photos && data.photos.length > 0) {
@@ -771,21 +782,15 @@ export default function Activate() {
         setPhotos([])
       }
 
-      // If disambiguation candidates exist, show disambiguation step
-      if (data.disambiguation && data.disambiguation.length > 0) {
-        setDisambiguation(data.disambiguation)
-        setStep('disambiguate')
-      } else {
-        setDisambiguation([])
-        setStep('results')
-      }
+      setDisambiguation([])
+      setStep('results')
     } catch (err) {
       console.error('Discovery error:', err)
       setScrapeError(err instanceof Error ? err.message : 'Discovery failed. Please try again.')
     } finally {
       setScraping(false)
     }
-  }, [fullName, employer, city, linkedinUrl])
+  }, [fullName, employer, city, linkedinUrl, lockedIdentity])
 
   const handleConfirmField = (id: string) => {
     setFields(prev => prev.map(f => f.id === id ? { ...f, provenance: 'confirmed' as Provenance } : f))
@@ -1617,6 +1622,32 @@ Learn more: https://www.searchstar.com/spec.html
               Every field shows exactly where it came from. Nothing is published without your approval.
             </p>
 
+            {/* v1.4: Synthesis narrative */}
+            {synthesisNarrative && (
+              <div className="mb-5 p-4 bg-[#f8f9ff] border border-[#d0d8ef] rounded-[3px]">
+                <div className="label-grace text-[#1a3a6b] mb-2">Synthesized biography</div>
+                <p className="font-body text-[13px] text-[#3a3a3a] m-0 leading-relaxed italic">{synthesisNarrative}</p>
+              </div>
+            )}
+
+            {/* v1.4: Verification summary */}
+            {verificationSummary && verificationSummary.total > 0 && (
+              <div className="mb-5 p-3 bg-[#f0fdf4] border border-[#bbf7d0] rounded-[3px] flex flex-wrap gap-4 items-center">
+                <div className="label-grace text-[#166534]">Machine verification</div>
+                <div className="flex gap-4 font-body text-[12px]">
+                  <span className="text-[#166534] font-medium">✓ {verificationSummary.verified} verified</span>
+                  {verificationSummary.failed > 0 && (
+                    <span className="text-[#c17a00] font-medium">⚠ {verificationSummary.failed} unverified</span>
+                  )}
+                  <span className="text-[#999]">{verificationSummary.noUrl} no URL</span>
+                  <span className="text-[#999]">{Math.round(verificationSummary.verificationRate * 100)}% rate</span>
+                </div>
+                <p className="font-body text-[11px] text-[#5a7a5a] m-0 w-full mt-0.5">
+                  Verified means we fetched the cited URL and confirmed the claim text appears there. Unverified claims are flagged for your review.
+                </p>
+              </div>
+            )}
+
             {/* Source status bar */}
             {sourceStatuses.length > 0 && (
               <div className="mb-6 flex flex-wrap gap-2">
@@ -1662,10 +1693,19 @@ Learn more: https://www.searchstar.com/spec.html
                     <div className="min-w-0 flex-1">
                       <div className="font-body text-[13px] text-[#767676]">{field.label}</div>
                       <div className="font-body text-[14px] font-medium text-[#1a1a1a]">{field.value}</div>
-                      <div className="font-body text-[11px] text-[#999] mt-1">
+                      <div className="font-body text-[11px] text-[#999] mt-1 flex items-center gap-2 flex-wrap">
                         <a href={field.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[#1a3a6b] no-underline hover:underline">
                           {field.source}
                         </a>
+                        {(field as any).verifiedAt && (
+                          <span title={`Machine-verified: URL confirmed claim text`} className="text-[#2a7a4b] font-medium">✓ verified</span>
+                        )}
+                        {(field as any).verificationFailed && !(field as any).verifiedAt && (
+                          <span title="URL fetched but claim text not found — please review" className="text-[#c17a00]">⚠ review</span>
+                        )}
+                        {(field as any).singleSource === false && (
+                          <span title="Corroborated by multiple sources" className="text-[#5a5a9a]">◈</span>
+                        )}
                       </div>
                     </div>
                     <ProvenanceBadge status={field.provenance} />
@@ -1721,6 +1761,17 @@ Learn more: https://www.searchstar.com/spec.html
                             {field.value}
                           </div>
                         )}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {(field as any).verifiedAt && (
+                            <span className="font-body text-[11px] text-[#2a7a4b] font-medium">✓ verified</span>
+                          )}
+                          {(field as any).verificationFailed && !(field as any).verifiedAt && (
+                            <span className="font-body text-[11px] text-[#c17a00]" title="URL fetched but claim text not found">⚠ review recommended</span>
+                          )}
+                          {(field as any).singleSource === false && (
+                            <span className="font-body text-[11px] text-[#5a5a9a]">◈ corroborated</span>
+                          )}
+                        </div>
                       </div>
                       <ProvenanceBadge status={field.provenance} />
                       <ConfidenceIndicator score={field.confidenceScore} />

@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { discoverPhotos, DiscoveredPhoto } from '@/lib/photo-discovery'
 
+// ─── v1.4 Synthesis Pipeline imports ──────────────
+// Phase 12: replaces the six v1.3 scrapers below
+import { gatherEvidence } from '@/lib/activate/synthesis/evidence-gathering'
+import { runSynthesis } from '@/lib/activate/synthesis/synthesize'
+import { verifyClaims, verificationSummary } from '@/lib/activate/synthesis/verify'
+import type { LockedIdentity, MergedClaim } from '@/lib/activate/synthesis/types'
+
 // ═══════════════════════════════════════════════════
 // Types — mirrors the client-side SeededField type
 // ═══════════════════════════════════════════════════
@@ -81,6 +88,13 @@ function safeHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url.slice(0, 40) }
 }
 
+// ═══════════════════════════════════════════════════
+// DEPRECATED v1.3 helpers — superseded by Phase 12
+// synthesis pipeline. Retained for fallback reference.
+// Do not call these from the POST handler.
+// ═══════════════════════════════════════════════════
+
+// @deprecated v1.3 — replaced by per-claim confidence in synthesis/synthesize.ts
 function getSourceConfidence(sourceName: string): number {
   const s = sourceName.toLowerCase()
   if (s.includes('github')) return 0.9
@@ -277,6 +291,7 @@ function buildGitHubFields(user: GitHubUser, repos: GitHubRepo[]): SeededField[]
 // 2. Google Scholar Discovery (Interests intellectual)
 // ═══════════════════════════════════════════════════
 
+// @deprecated v1.3 — superseded by v1.4 synthesis pipeline (Phase 12)
 async function discoverScholar(fullName: string, employer?: string): Promise<SeededField[]> {
   const fields: SeededField[] = []
   const ts = timestamp()
@@ -405,6 +420,7 @@ interface LinkedInCandidate {
   confidence: number
 }
 
+// @deprecated v1.3 — superseded by v1.4 synthesis pipeline (Phase 12)
 async function discoverLinkedIn(
   fullName: string, employer?: string, city?: string, linkedinUrl?: string
 ): Promise<{ fields: SeededField[]; candidates: LinkedInCandidate[] }> {
@@ -503,6 +519,7 @@ async function discoverLinkedIn(
 //    (Skills, Professional history)
 // ═══════════════════════════════════════════════════
 
+// @deprecated v1.3 — superseded by v1.4 synthesis pipeline (Phase 12)
 async function discoverProfessionalDirectories(
   fullName: string, employer?: string, _city?: string
 ): Promise<SeededField[]> {
@@ -567,6 +584,7 @@ async function discoverProfessionalDirectories(
 //    (Interests athletic)
 // ═══════════════════════════════════════════════════
 
+// @deprecated v1.3 — superseded by v1.4 synthesis pipeline (Phase 12)
 async function discoverAthletic(fullName: string, _city?: string): Promise<SeededField[]> {
   const fields: SeededField[] = []
   const ts = timestamp()
@@ -625,6 +643,7 @@ async function discoverAthletic(fullName: string, _city?: string): Promise<Seede
 //    (Interests social — meetup, nonprofit, articles)
 // ═══════════════════════════════════════════════════
 
+// @deprecated v1.3 — superseded by v1.4 synthesis pipeline (Phase 12)
 async function discoverSocial(fullName: string, employer?: string, _city?: string): Promise<SeededField[]> {
   const fields: SeededField[] = []
   const ts = timestamp()
@@ -744,118 +763,116 @@ function buildDisambiguationCandidates(
 // POST handler
 // ═══════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════
+// POST /api/activate/discover
+//
+// v1.4 Synthesis Pipeline (Phase 12)
+// Replaces the v1.3 six-scraper approach.
+//
+// Stages:
+//   2. Evidence gathering — broad SerpAPI search +
+//      readability page extraction + Grok single-shot
+//   3. Dual synthesis (Claude + Grok) → merge
+//   4. Machine verification — URL fetch + content hash
+//
+// Requires: lockedIdentity in request body (from Phase 11
+// identity-lock step) OR falls back to building a minimal
+// identity from the input fields.
+// ═══════════════════════════════════════════════════
+
 export async function POST(request: NextRequest) {
   try {
     fieldIdCounter = 0
 
-    const body: DiscoverRequest = await request.json()
+    const body: DiscoverRequest & { lockedIdentity?: LockedIdentity } = await request.json()
     if (!body.fullName || body.fullName.trim().length < 2) {
       return NextResponse.json({ error: 'fullName is required (at least 2 characters)' }, { status: 400 })
     }
 
     const { fullName, employer, city, linkedinUrl } = body
-    const allFields: SeededField[] = []
+    const ts = timestamp()
     const errors: string[] = []
     const sources: DiscoverResponse['sources'] = []
-    const ts = timestamp()
 
-    // ═══ Run all 6 discovery sources in parallel ═══
-    const [githubResult, scholarResult, linkedinResult, directoryResult, athleticResult, socialResult] =
-      await Promise.allSettled([
-        (async () => {
-          const candidates = await findGitHubCandidates(fullName, employer, city)
-          if (candidates.length === 0) return { fields: [] as SeededField[], candidates }
-          const best = candidates[0]
-          const repos = await getGitHubRepos(best.user.login)
-          return { fields: buildGitHubFields(best.user, repos), candidates }
-        })(),
-        discoverScholar(fullName, employer),
-        discoverLinkedIn(fullName, employer, city, linkedinUrl),
-        discoverProfessionalDirectories(fullName, employer, city),
-        discoverAthletic(fullName, city),
-        discoverSocial(fullName, employer, city),
-      ])
-
-    // ═══ Collect results ═══
-    let githubCandidates: { user: GitHubUser; score: number }[] = []
-    let linkedinCandidates: LinkedInCandidate[] = []
-
-    if (githubResult.status === 'fulfilled') {
-      allFields.push(...githubResult.value.fields)
-      githubCandidates = githubResult.value.candidates
-      sources.push({ name: 'GitHub', status: githubResult.value.fields.length > 0 ? 'found' : 'not_found', count: githubResult.value.fields.length })
-    } else {
-      errors.push(`GitHub discovery failed: ${githubResult.reason}`)
-      sources.push({ name: 'GitHub', status: 'error', count: 0 })
+    // ─── Build locked identity ────────────────────
+    // Prefer the locked identity from Phase 11 Step 0.
+    // Fall back to a minimal identity from the input fields
+    // so the route works even if Step 0 was skipped.
+    const identity: LockedIdentity = body.lockedIdentity ?? {
+      candidateId: 'candidate-0',
+      name: fullName.trim(),
+      employer: employer?.trim(),
+      location: city?.trim(),
+      summary: [employer, city].filter(Boolean).join(', '),
+      sourceUrls: linkedinUrl ? [linkedinUrl] : [],
+      confidence: 0.5,
     }
 
-    if (scholarResult.status === 'fulfilled') {
-      allFields.push(...scholarResult.value)
-      sources.push({ name: 'Google Scholar', status: scholarResult.value.length > 0 ? 'found' : 'not_found', count: scholarResult.value.length })
-    } else {
-      errors.push(`Scholar discovery failed: ${scholarResult.reason}`)
-      sources.push({ name: 'Google Scholar', status: 'error', count: 0 })
-    }
+    // ─── Stage 2: Evidence Gathering ─────────────
+    console.log(`[v1.4 Stage 2] Gathering evidence for "${identity.name}"`)
+    const bundle = await gatherEvidence(identity)
 
-    if (linkedinResult.status === 'fulfilled') {
-      allFields.push(...linkedinResult.value.fields)
-      linkedinCandidates = linkedinResult.value.candidates
-      sources.push({ name: 'LinkedIn', status: linkedinResult.value.fields.length > 0 ? 'found' : 'not_found', count: linkedinResult.value.fields.length })
-    } else {
-      errors.push(`LinkedIn discovery failed: ${linkedinResult.reason}`)
-      sources.push({ name: 'LinkedIn', status: 'error', count: 0 })
-    }
+    sources.push({
+      name: 'Web Search',
+      status: bundle.webResults.filter(r => r.fetchOk).length > 0 ? 'found' : 'not_found',
+      count: bundle.webResults.filter(r => r.fetchOk).length,
+    })
+    sources.push({
+      name: 'Grok',
+      status: bundle.grokResponse ? 'found' : 'not_found',
+      count: bundle.grokResponse ? 1 : 0,
+    })
 
-    if (directoryResult.status === 'fulfilled') {
-      allFields.push(...directoryResult.value)
-      sources.push({ name: 'Professional Directories', status: directoryResult.value.length > 0 ? 'found' : 'not_found', count: directoryResult.value.length })
-    } else {
-      errors.push(`Directory discovery failed: ${directoryResult.reason}`)
-      sources.push({ name: 'Professional Directories', status: 'error', count: 0 })
-    }
+    // ─── Stage 3: Synthesis + Merge ──────────────
+    console.log(`[v1.4 Stage 3] Synthesizing from ${bundle.webResults.length} pages + Grok`)
+    const synthesis = await runSynthesis(bundle)
 
-    if (athleticResult.status === 'fulfilled') {
-      allFields.push(...athleticResult.value)
-      sources.push({ name: 'Athletic Records', status: athleticResult.value.length > 0 ? 'found' : 'not_found', count: athleticResult.value.length })
-    } else {
-      errors.push(`Athletic discovery failed: ${athleticResult.reason}`)
-      sources.push({ name: 'Athletic Records', status: 'error', count: 0 })
-    }
+    sources.push({
+      name: 'Synthesis (Claude)',
+      status: synthesis.claims.length > 0 ? 'found' : 'not_found',
+      count: synthesis.claims.length,
+    })
 
-    if (socialResult.status === 'fulfilled') {
-      allFields.push(...socialResult.value)
-      sources.push({ name: 'Social & Community', status: socialResult.value.length > 0 ? 'found' : 'not_found', count: socialResult.value.length })
-    } else {
-      errors.push(`Social discovery failed: ${socialResult.reason}`)
-      sources.push({ name: 'Social & Community', status: 'error', count: 0 })
-    }
+    // ─── Stage 4: Machine Verification ───────────
+    console.log(`[v1.4 Stage 4] Verifying ${synthesis.claims.filter(c => c.sourceUrl).length} URL-backed claims`)
+    const verified = await verifyClaims(synthesis)
+    const verifySummary = verificationSummary(verified.claims)
 
-    // ═══ Add user-input identity baseline ═══
-    if (fullName) {
-      allFields.unshift({ id: `input-name-${ts}`, section: 'Identity', label: 'Name',
-        value: fullName.trim(), source: 'user-input', sourceUrl: '', provenance: 'seeded', discoveredAt: ts })
-    }
-    if (employer) {
-      allFields.push({ id: `input-employer-${ts}`, section: 'Identity', label: 'Employer',
-        value: employer.trim(), source: 'user-input', sourceUrl: '', provenance: 'seeded', discoveredAt: ts })
-    }
-    if (city) {
-      allFields.push({ id: `input-city-${ts}`, section: 'Identity', label: 'City',
-        value: city.trim(), source: 'user-input', sourceUrl: '', provenance: 'seeded', discoveredAt: ts })
-    }
-    if (linkedinUrl) {
-      allFields.push({ id: `input-linkedin-${ts}`, section: 'Identity', label: 'LinkedIn',
-        value: linkedinUrl.trim(), source: 'user-input', sourceUrl: linkedinUrl.trim(), provenance: 'seeded', discoveredAt: ts })
-    }
+    console.log(
+      `[v1.4 Stage 4] Verification complete: ${verifySummary.verified} verified, ` +
+      `${verifySummary.failed} failed, ${verifySummary.noUrl} no-URL`
+    )
 
-    // ═══ Merge — preserves multi-source values ═══
-    const fields = mergeFields(allFields)
+    // ─── Map claims → SeededField format ─────────
+    // Always include user-input baseline fields
+    const baselineFields: SeededField[] = []
+    if (fullName) baselineFields.push({ id: `input-name-${ts}`, section: 'Identity', label: 'Name', value: fullName.trim(), source: 'user-input', sourceUrl: '', provenance: 'seeded', discoveredAt: ts })
+    if (employer) baselineFields.push({ id: `input-employer-${ts}`, section: 'Identity', label: 'Employer', value: employer.trim(), source: 'user-input', sourceUrl: '', provenance: 'seeded', discoveredAt: ts })
+    if (city) baselineFields.push({ id: `input-city-${ts}`, section: 'Identity', label: 'City', value: city.trim(), source: 'user-input', sourceUrl: '', provenance: 'seeded', discoveredAt: ts })
+    if (linkedinUrl) baselineFields.push({ id: `input-linkedin-${ts}`, section: 'Identity', label: 'LinkedIn', value: linkedinUrl.trim(), source: 'user-input', sourceUrl: linkedinUrl.trim(), provenance: 'seeded', discoveredAt: ts })
 
-    // ═══ Build disambiguation candidates ═══
-    const disambiguation = buildDisambiguationCandidates(githubCandidates, linkedinCandidates)
+    const synthesizedFields: SeededField[] = verified.claims.map((claim: MergedClaim, i) => ({
+      id: makeId('syn'),
+      section: claim.section,
+      label: claim.label,
+      value: claim.value,
+      source: claim.sourceLabel || 'synthesis',
+      sourceUrl: claim.sourceUrl || '',
+      provenance: 'seeded' as const,
+      discoveredAt: ts,
+      // Extended fields for synthesis pipeline
+      confidence: claim.confidence,
+      verifiedAt: claim.verifiedAt,
+      verificationHash: claim.verificationHash,
+      verificationFailed: claim.verificationFailed,
+      singleSource: claim.singleSource,
+      mergedFrom: claim.mergedFrom,
+    }))
 
-    // ═══ Photo Discovery (Phase 9) ═══
-    // Search for publicly available images per spec Section 3.9 "Photo sourcing — Public discovery"
+    // Merge baseline (user inputs) with synthesized fields
+    const fields = mergeFields([...baselineFields, ...synthesizedFields])
+
+    // ─── Photo Discovery ──────────────────────────
     let discoveredPhotos: NarrativePhoto[] = []
     try {
       const photoResult = await discoverPhotos(fullName, employer, city)
@@ -869,91 +886,67 @@ export async function POST(request: NextRequest) {
         sourceLabel: p.sourceLabel,
         previewUrl: p.previewUrl,
         relatedFields: p.relatedFields,
-        // Extended fields for discovered photos
         sourceUrl: p.sourceUrl,
         sourceContext: p.sourceContext,
       } as NarrativePhoto & { sourceUrl: string; sourceContext: string }))
 
-      // Add photo discovery sources to the sources array
       for (const ps of photoResult.sourcesSearched) {
         sources.push({ name: `Photos: ${ps.name}`, status: ps.status, count: ps.status === 'found' ? 1 : 0 })
       }
     } catch (photoErr) {
       console.error('Photo discovery error (non-fatal):', photoErr)
-      errors.push(`Photo discovery failed: ${photoErr}`)
+      errors.push(`Photo discovery: ${photoErr}`)
     }
 
-    // ═══ Persist to Supabase (best-effort — don't block response on DB errors) ═══
+    // ─── Persist to Supabase ──────────────────────
     let profileId: string | null = null
     try {
       const supabase = await createClient()
 
-      // Create or find a directory stub for this activation
       const handle = `@${fullName.toLowerCase().replace(/\s+/g, '.')}`
-      const { data: existing } = await supabase
-        .from('directory')
-        .select('id')
-        .eq('handle', handle)
-        .maybeSingle()
+      const { data: existing } = await supabase.from('directory').select('id').eq('handle', handle).maybeSingle()
 
       if (existing) {
         profileId = existing.id
       } else {
-        // Get next profile number
-        const { data: lastEntry } = await supabase
-          .from('directory')
-          .select('profile_number')
-          .order('profile_number', { ascending: false })
-          .limit(1)
-
+        const { data: lastEntry } = await supabase.from('directory').select('profile_number').order('profile_number', { ascending: false }).limit(1)
         let nextNum = 'SS-000001'
         if (lastEntry && lastEntry.length > 0) {
           const num = parseInt(lastEntry[0].profile_number.replace('SS-', ''), 10)
           nextNum = `SS-${String(num + 1).padStart(6, '0')}`
         }
-
         const { data: newEntry, error: insertError } = await supabase
           .from('directory')
-          .insert({
-            profile_number: nextNum,
-            handle,
-            display_name: fullName,
-            endpoint_url: '',
-            domain: '',
-            domain_verified: false,
-            status: 'active',
-            seeding_status: 'unclaimed',
-          })
-          .select('id')
-          .single()
-
-        if (!insertError && newEntry) {
-          profileId = newEntry.id
-        }
+          .insert({ profile_number: nextNum, handle, display_name: fullName, endpoint_url: '', domain: '', domain_verified: false, status: 'active', seeding_status: 'unclaimed' })
+          .select('id').single()
+        if (!insertError && newEntry) profileId = newEntry.id
       }
 
-      // Save fields to profile_fields table
-      if (profileId && fields.length > 0) {
-        const fieldRows = fields.map((f, i) => {
-          const sourceName = f.source || 'unknown'
-          return {
-            profile_id: profileId,
-            section: f.section,
-            label: f.label,
-            value: f.value,
-            provenance_status: 'seeded',
-            source_url: f.sourceUrl || null,
-            source_name: sourceName,
-            seeded_at: f.discoveredAt || ts,
-            confidence_score: getSourceConfidence(sourceName),
-            sort_order: i,
-          }
-        })
+      if (profileId && verified.claims.length > 0) {
+        const fieldRows = verified.claims.map((claim: MergedClaim, i) => ({
+          profile_id: profileId,
+          section: claim.section,
+          label: claim.label,
+          value: claim.value,
+          provenance_status: 'seeded',
+          source_url: claim.sourceUrl || null,
+          source_name: claim.sourceLabel || 'synthesis',
+          seeded_at: ts,
+          confidence_score: Math.min(1, Math.max(0, claim.confidence)),
+          sort_order: i,
+          // v1.4 verification columns
+          verified_at: claim.verifiedAt || null,
+          verification_hash: claim.verificationHash || null,
+          verification_failed: claim.verificationFailed || false,
+          confidence_before_verification: claim.confidenceBeforeVerification || null,
+          single_source: claim.singleSource,
+          merged_from: JSON.stringify(claim.mergedFrom),
+          synthesis_version: 'v1.4',
+        }))
 
         await supabase.from('profile_fields').insert(fieldRows)
       }
 
-      // Save discovered photos to photo_metadata table (Phase 9)
       if (profileId && discoveredPhotos.length > 0) {
         const photoRows = discoveredPhotos.map((p: any) => ({
           profile_id: profileId,
@@ -969,19 +962,28 @@ export async function POST(request: NextRequest) {
           original_url: p.sourceUrl || '',
           access_tier: 'public',
         }))
-
         await supabase.from('photo_metadata').insert(photoRows)
       }
     } catch (dbErr) {
       console.error('Database persistence error (non-fatal):', dbErr)
-      // Don't fail the discovery — fields are still returned in the response
     }
 
-    // ═══ Response ═══
-    const response: DiscoverResponse = { fields, photos: discoveredPhotos, sources }
+    // ─── Response ─────────────────────────────────
+    const response: DiscoverResponse & {
+      profileId?: string
+      narrative?: string
+      verificationSummary?: typeof verifySummary
+      synthesisVersion: string
+    } = {
+      fields,
+      photos: discoveredPhotos,
+      sources,
+      synthesisVersion: 'v1.4',
+      narrative: verified.narrative,
+      verificationSummary: verifySummary,
+    }
     if (errors.length > 0) response.errors = errors
-    if (disambiguation.length > 0) response.disambiguation = disambiguation
-    if (profileId) (response as unknown as Record<string, unknown>).profileId = profileId
+    if (profileId) response.profileId = profileId
 
     return NextResponse.json(response)
   } catch (err) {
