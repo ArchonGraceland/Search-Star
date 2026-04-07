@@ -99,7 +99,8 @@ export async function POST(request: NextRequest) {
         presence_score: null,
         interest_tags: interestTags,
         skills_tags: skillTags,
-        status: 'unclaimed',
+        status: 'active',
+        seeding_status: 'unclaimed',
       })
       .select()
 
@@ -119,7 +120,8 @@ export async function POST(request: NextRequest) {
       success: true,
       profileNumber,
       handle: handleValue,
-      status: 'unclaimed',
+      status: 'active',
+      seedingStatus: 'unclaimed',
       message: `Profile ${profileNumber} registered. Host your profile.json at your domain and verify to claim it.`,
       directoryEntry: data?.[0] || null,
     })
