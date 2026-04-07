@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════
 
 import { LockedIdentity, MergedSynthesis, MergedClaim, SynthesisClaim } from './types'
+import { getConfidencePrior } from './confidence-priors'
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages'
 const SONNET_MODEL = 'claude-sonnet-4-20250514'
@@ -380,9 +381,19 @@ export async function runDeepMode(
   const { claims, narrative, iterations, elapsedMs } = await runAgentLoop(identity, existingLabels)
   const mergedClaims = mergeDeepModeClaims(claims, existingFields)
 
+  // Phase 14: blend agent-assigned confidence with learned source prior
+  // Formula: 0.7 * agentConfidence + 0.3 * sourcePrior
+  const mergedWithPriors = await Promise.all(
+    mergedClaims.map(async (claim) => {
+      const sourcePrior = await getConfidencePrior(claim.sourceLabel || 'web-search')
+      const blended = Math.round((0.7 * claim.confidence + 0.3 * sourcePrior) * 10000) / 10000
+      return { ...claim, confidence: blended }
+    })
+  )
+
   const synthesis: MergedSynthesis = {
     narrative,
-    claims: mergedClaims,
+    claims: mergedWithPriors,
     claudeNarrative: narrative,
     grokNarrative: null,
     mergedAt: new Date().toISOString(),

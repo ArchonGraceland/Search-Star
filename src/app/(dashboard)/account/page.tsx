@@ -173,6 +173,22 @@ export default async function Account() {
     .eq('blocked', false) as { data: Message[] | null }
   const unreadCount = unreadMsgs?.length || 0
 
+  // Phase 14: Source reliability — per-source accuracy from corrections
+  const { data: reliabilityRows } = await supabase
+    .from('source_confidence_priors')
+    .select('source, total_observations, confirmed_count, removed_count, learned_confidence, confirmed_rate, removed_rate')
+    .order('total_observations', { ascending: false })
+    .limit(20)
+  const reliabilityData = (reliabilityRows || []) as Array<{
+    source: string
+    total_observations: number
+    confirmed_count: number
+    removed_count: number
+    learned_confidence: number | null
+    confirmed_rate: number | null
+    removed_rate: number | null
+  }>
+
   const completeness = calcCompleteness(profile as unknown as Profile)
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
@@ -342,6 +358,75 @@ export default async function Account() {
             </div>
           </div>
         )}
+
+        {/* ═══ Source Reliability ═══ */}
+        <div className="card-grace p-6 mb-4">
+          <h2 className="font-heading text-xl font-bold mb-1">Source reliability</h2>
+          <p className="font-body text-xs text-[#767676] mb-5">
+            Accuracy rates learned from your confirm / correct / remove actions. Sources with fewer than 10 observations use built-in priors.
+          </p>
+          {reliabilityData.length === 0 ? (
+            <div className="text-center py-8 border border-dashed border-[#e0e0e0] rounded-[3px]">
+              <div className="font-body text-sm text-[#767676] mb-1">No corrections data yet</div>
+              <div className="font-body text-xs text-[#b8b8b8]">
+                Confirm, correct, or remove discovered fields in your profile to start training source reliability.
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs font-body">
+                <thead>
+                  <tr className="border-b border-[#e8e8e8]">
+                    <th className="text-left py-2 pr-4 font-bold tracking-[0.08em] uppercase text-[#767676] text-[10px]">Source</th>
+                    <th className="text-right py-2 px-3 font-bold tracking-[0.08em] uppercase text-[#767676] text-[10px]">Observations</th>
+                    <th className="text-right py-2 px-3 font-bold tracking-[0.08em] uppercase text-[#767676] text-[10px]">Confirmed</th>
+                    <th className="text-right py-2 px-3 font-bold tracking-[0.08em] uppercase text-[#767676] text-[10px]">Removed</th>
+                    <th className="text-right py-2 pl-3 font-bold tracking-[0.08em] uppercase text-[#767676] text-[10px]">Confidence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reliabilityData.map((row) => {
+                    const hasSufficient = row.learned_confidence !== null
+                    const confirmedPct = row.confirmed_rate !== null ? Math.round(Number(row.confirmed_rate) * 100) : null
+                    const removedPct = row.removed_rate !== null ? Math.round(Number(row.removed_rate) * 100) : null
+                    const conf = hasSufficient ? Number(row.learned_confidence) : null
+                    return (
+                      <tr key={row.source} className="border-b border-[#f0f0f0] hover:bg-[#fafafa]">
+                        <td className="py-2.5 pr-4">
+                          <span className="font-mono text-[#1a1a1a]">{row.source}</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-[#1a1a1a]">{Number(row.total_observations)}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          {confirmedPct !== null ? (
+                            <span className={confirmedPct >= 70 ? 'text-[#166534]' : confirmedPct >= 40 ? 'text-[#92400e]' : 'text-[#991b1b]'}>
+                              {confirmedPct}%
+                            </span>
+                          ) : <span className="text-[#b8b8b8]">—</span>}
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          {removedPct !== null ? (
+                            <span className={removedPct <= 10 ? 'text-[#166534]' : removedPct <= 30 ? 'text-[#92400e]' : 'text-[#991b1b]'}>
+                              {removedPct}%
+                            </span>
+                          ) : <span className="text-[#b8b8b8]">—</span>}
+                        </td>
+                        <td className="py-2.5 pl-3 text-right">
+                          {hasSufficient && conf !== null ? (
+                            <span className={`font-mono font-medium ${conf >= 0.8 ? 'text-[#166534]' : conf >= 0.6 ? 'text-[#1a3a6b]' : 'text-[#92400e]'}`}>
+                              {conf.toFixed(2)}
+                            </span>
+                          ) : (
+                            <span className="text-[#b8b8b8] text-[10px]">prior</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         {/* ═══ Quick Actions ═══ */}
         <div className="card-grace p-6 mb-4">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { runDeepMode } from '@/lib/activate/synthesis/deep-mode'
+import { invalidatePriorsCache } from '@/lib/activate/synthesis/confidence-priors'
 import { verifyClaims } from '@/lib/activate/synthesis/verify'
 import { LockedIdentity } from '@/lib/activate/synthesis/types'
 
@@ -137,6 +138,16 @@ export async function GET(request: NextRequest) {
         },
       })
       .eq('id', job.id)
+
+    // Phase 14: refresh learned confidence priors after new corrections data
+    try {
+      await supabase.rpc('refresh_confidence_priors')
+      invalidatePriorsCache()
+      console.log('[cron/deep-mode] source_confidence_priors refreshed')
+    } catch (refreshErr) {
+      // Non-fatal — log and continue
+      console.warn('[cron/deep-mode] Priors refresh failed (non-fatal):', refreshErr)
+    }
 
     console.log(
       `[cron/deep-mode] Job ${job.id} completed: ${verified.claims.length} claims, ` +

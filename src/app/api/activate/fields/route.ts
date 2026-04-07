@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getConfidencePrior } from '@/lib/activate/synthesis/confidence-priors'
 
 // ═══════════════════════════════════════════════════
 // GET/POST/PATCH /api/activate/fields
 // CRUD for profile fields with provenance tracking
 // ═══════════════════════════════════════════════════
-
-// Confidence scores by source — matches the DB function source_confidence()
-function getConfidenceScore(sourceName: string): number {
-  const s = sourceName.toLowerCase()
-  if (s.includes('github')) return 0.9
-  if (s.includes('scholar')) return 0.85
-  if (s.includes('calbar') || s.includes('nysed') || s.includes('aicpa') || s.includes('npi')) return 0.8
-  if (s.includes('linkedin')) return 0.7
-  if (s.includes('athlinks') || s.includes('runsignup')) return 0.75
-  if (s.includes('meetup')) return 0.65
-  if (s === 'user-input') return 0.5
-  return 0.6
-}
 
 // ═══ GET — Load all fields for a profile ═══
 
@@ -79,9 +67,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Build rows with computed confidence scores
+    // Build rows with computed confidence scores (learned priors with hardcoded fallback)
     const now = new Date().toISOString()
-    const rows = fields.map((f, i) => ({
+    const rows = await Promise.all(fields.map(async (f, i) => ({
       profile_id: profileId,
       section: f.section,
       label: f.label,
@@ -90,9 +78,9 @@ export async function POST(request: NextRequest) {
       source_url: f.sourceUrl || null,
       source_name: f.sourceName || null,
       seeded_at: f.seededAt || now,
-      confidence_score: getConfidenceScore(f.sourceName || ''),
+      confidence_score: await getConfidencePrior(f.sourceName || ''),
       sort_order: i,
-    }))
+    })))
 
     const { data, error } = await supabase
       .from('profile_fields')
