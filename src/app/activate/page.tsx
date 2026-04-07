@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { PublicHeader } from '@/components/public-header'
 import { PublicFooter } from '@/components/public-footer'
 import { generateProfileJson } from '@/lib/activate/generate-profile-json'
@@ -249,6 +250,18 @@ function PhotoCard({ photo, onRemove, onUpdateAccessTier }: {
 // ═══════════════════════════════════════════════════
 
 export default function Activate() {
+  return (
+    <Suspense fallback={<div />}>
+      <ActivateInner />
+    </Suspense>
+  )
+}
+
+function ActivateInner() {
+  const searchParams = useSearchParams()
+  const isDeepReady = searchParams.get('deepReady') === '1'
+  const deepReadyProfileId = searchParams.get('profileId') || null
+
   const [step, setStep] = useState<Step>('identity-lock')
   const [scraping, setScraping] = useState(false)
 
@@ -308,6 +321,7 @@ export default function Activate() {
   const [publishing, setPublishing] = useState(false)
   const [publishResult, setPublishResult] = useState<{ profileNumber: string; handle: string } | null>(null)
   const [publishError, setPublishError] = useState('')
+  const [deepModeEnabled, setDeepModeEnabled] = useState(true)
 
   // Database persistence
   const [profileId, setProfileId] = useState<string | null>(null)
@@ -1157,6 +1171,8 @@ Learn more: https://www.searchstar.com/spec.html
           profileJson,
           fullName,
           handle,
+          deepModeEnabled,
+          lockedIdentity: lockedIdentity || undefined,
         }),
       })
 
@@ -1204,7 +1220,7 @@ Learn more: https://www.searchstar.com/spec.html
     } finally {
       setPublishing(false)
     }
-  }, [fullName, employer, city, fields, photos, publicPrice, privatePrice, marketingPrice, saveActivationState, completeness, activeFields])
+  }, [fullName, employer, city, fields, photos, publicPrice, privatePrice, marketingPrice, saveActivationState, completeness, activeFields, deepModeEnabled, lockedIdentity])
 
   // ═══════════════════════════════════════════════════
   // Render
@@ -1230,6 +1246,22 @@ Learn more: https://www.searchstar.com/spec.html
       </div>
 
       <main className="max-w-[860px] mx-auto px-8 py-8 flex-1 -mt-6 w-full">
+
+        {/* Deep mode ready banner */}
+        {isDeepReady && (
+          <div className="mb-5 p-4 bg-[#eef2f8] border border-[#1a3a6b] rounded-[3px] flex items-start gap-3">
+            <span className="text-lg leading-none mt-0.5">🔬</span>
+            <div className="flex-1">
+              <div className="font-heading text-[14px] font-bold text-[#1a3a6b] mb-0.5">Deep mode research complete</div>
+              <p className="font-body text-[13px] text-[#1a3a6b] m-0">
+                Additional claims were found by the background research agent. Review the new fields in your profile — confirm, correct, or remove them as usual.
+                {deepReadyProfileId && (
+                  <span className="ml-2 font-mono text-[11px] text-[#5a6a8a]">Profile ID: {deepReadyProfileId}</span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Step progress */}
         <div className="flex items-center gap-1 mb-6 overflow-x-auto">
@@ -2260,6 +2292,34 @@ Learn more: https://www.searchstar.com/spec.html
               </div>
             </div>
 
+            {/* Deep mode toggle */}
+            <div className="mb-6">
+              <div className="flex items-start gap-3 p-4 bg-[#f8f8ff] border border-[#c7d0e8] rounded-[3px]">
+                <button
+                  onClick={() => setDeepModeEnabled(v => !v)}
+                  className="mt-0.5 flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 relative"
+                  style={{ background: deepModeEnabled ? '#1a3a6b' : '#d4d4d4' }}
+                  aria-label="Toggle deep mode"
+                >
+                  <span
+                    className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+                    style={{ left: deepModeEnabled ? '18px' : '2px' }}
+                  />
+                </button>
+                <div className="flex-1">
+                  <div className="font-body text-[13px] font-bold text-[#1a3a6b]">
+                    Deep mode research <span className="font-mono text-[11px] font-normal text-[#5a6a8a] ml-1">background job</span>
+                  </div>
+                  <p className="font-body text-[12px] text-[#5a5a5a] mt-0.5 m-0">
+                    After publishing, a research agent runs up to 10 web searches to find additional claims (athletic records, publications, board memberships, etc.). Results appear in your feed — you review and approve before anything is added to your profile.
+                  </p>
+                  {!deepModeEnabled && (
+                    <p className="font-body text-[11px] text-[#92400e] mt-1 m-0">Deep mode is off — only standard synthesis results will be used.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Output files */}
             <div className="mb-6">
               <div className="label-grace text-[#767676] mb-3">Output files</div>
@@ -2290,6 +2350,11 @@ Learn more: https://www.searchstar.com/spec.html
                 <p className="font-body text-[12px] text-[#166534] mt-2 m-0">
                   Your ZIP has been downloaded. Redirecting to the registration desk to complete your directory listing…
                 </p>
+                {deepModeEnabled && (
+                  <p className="font-body text-[11px] text-[#166534] mt-1 m-0">
+                    🔬 Deep mode research queued — results will appear in your feed within 90 seconds.
+                  </p>
+                )}
                 <div className="mt-2 flex items-center gap-2">
                   <div className="w-3 h-3 border-2 border-[#166534] border-t-transparent rounded-full animate-spin" />
                   <span className="font-body text-[11px] text-[#166534]">Redirecting…</span>

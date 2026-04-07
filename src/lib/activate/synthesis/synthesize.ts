@@ -211,7 +211,7 @@ function valuesSimilar(a: string, b: string): boolean {
   return false
 }
 
-async function mergeWithSonnet(
+export async function mergeWithSonnet(
   claudeOutput: SynthesisOutput,
   grokOutput: SynthesisOutput | null,
   identity: { name: string }

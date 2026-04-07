@@ -11,6 +11,9 @@ interface PublishRequest {
   profileJson: Record<string, unknown>
   fullName: string
   handle: string
+  deepModeEnabled?: boolean
+  lockedIdentity?: Record<string, unknown>
+  profileId?: string
 }
 
 function validateJsonLd(profile: Record<string, unknown>): string | null {
@@ -42,7 +45,7 @@ async function getNextProfileNumber(supabase: Awaited<ReturnType<typeof createCl
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as PublishRequest
-    const { profileJson, fullName, handle } = body
+    const { profileJson, fullName, handle, deepModeEnabled, lockedIdentity } = body
 
     if (!profileJson || !fullName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -116,6 +119,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create directory entry', details: error.message }, { status: 500 })
     }
 
+    const newProfile = data?.[0] || null
+    const newProfileId: string | null = newProfile?.id || null
+
+    // Enqueue deep-mode background job if requested
+    let deepModeQueued = false
+    if (deepModeEnabled && lockedIdentity && newProfileId) {
+      const { error: jobErr } = await supabase
+        .from('background_jobs')
+        .insert({
+          job_type: 'deep_mode',
+          profile_id: newProfileId,
+          payload: { lockedIdentity },
+          status: 'pending',
+          run_after: new Date(Date.now() + 30_000).toISOString(),
+        })
+      if (!jobErr) deepModeQueued = true
+      else console.error('Enqueue deep-mode job error:', jobErr)
+    }
+
     return NextResponse.json({
       success: true,
       profileNumber,
@@ -123,7 +145,8 @@ export async function POST(request: NextRequest) {
       status: 'active',
       seedingStatus: 'unclaimed',
       message: `Profile ${profileNumber} registered. Host your profile.json at your domain and verify to claim it.`,
-      directoryEntry: data?.[0] || null,
+      directoryEntry: newProfile,
+      deepModeQueued,
     })
 
   } catch (err) {
