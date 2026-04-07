@@ -181,10 +181,11 @@ function ConfidenceIndicator({ score }: { score?: number }) {
 // Photo card component
 // ═══════════════════════════════════════════════════
 
-function PhotoCard({ photo, onRemove, onUpdateAccessTier }: {
+function PhotoCard({ photo, onRemove, onUpdateAccessTier, onUpdateChapter }: {
   photo: NarrativePhoto
   onRemove: (id: string) => void
   onUpdateAccessTier: (id: string, tier: AccessTier) => void
+  onUpdateChapter: (id: string, chapter: NarrativeChapter) => void
 }) {
   const chapterObj = CHAPTERS.find(c => c.key === photo.chapter)
   const hasPreview = photo.previewUrl && (photo.previewUrl.startsWith('data:') || photo.previewUrl.startsWith('http'))
@@ -212,10 +213,15 @@ function PhotoCard({ photo, onRemove, onUpdateAccessTier }: {
           {photo.date}{photo.location ? ` · ${photo.location}` : ''}
         </div>
         <div className="flex items-center justify-between mt-2">
-          <span className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-2 py-[2px] rounded-[3px]"
+          <select
+            value={photo.chapter}
+            onChange={e => onUpdateChapter(photo.id, e.target.value as NarrativeChapter)}
+            className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-2 py-[2px] rounded-[3px] border border-[#c0cfe8] cursor-pointer"
             style={{ background: '#eef2f8', color: '#1a3a6b' }}>
-            {chapterObj?.label}
-          </span>
+            {CHAPTERS.map(c => (
+              <option key={c.key} value={c.key}>{c.icon} {c.label}</option>
+            ))}
+          </select>
           <button
             onClick={() => onRemove(photo.id)}
             className="font-body text-[10px] text-[#991b1b] hover:text-[#7f1d1d] cursor-pointer bg-transparent border-none"
@@ -888,6 +894,10 @@ function ActivateInner() {
 
   const handleUpdateAccessTier = (id: string, tier: AccessTier) => {
     setPhotos(prev => prev.map(p => p.id === id ? { ...p, accessTier: tier } : p))
+  }
+
+  const handleUpdateChapter = (id: string, chapter: NarrativeChapter) => {
+    setPhotos(prev => prev.map(p => p.id === id ? { ...p, chapter } : p))
   }
 
   // ═══ Discovered photo approve/reject (Phase 9) ═══
@@ -2149,7 +2159,7 @@ Learn more: https://www.searchstar.com/spec.html
                   {chapterPhotos.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {chapterPhotos.map(photo => (
-                        <PhotoCard key={photo.id} photo={photo} onRemove={handleRemovePhoto} onUpdateAccessTier={handleUpdateAccessTier} />
+                        <PhotoCard key={photo.id} photo={photo} onRemove={handleRemovePhoto} onUpdateAccessTier={handleUpdateAccessTier} onUpdateChapter={handleUpdateChapter} />
                       ))}
                     </div>
                   ) : (
