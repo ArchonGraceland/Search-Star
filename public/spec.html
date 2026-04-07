@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search Star — Specification v1.3</title>
+<title>Search Star — Specification v1.3.0</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -94,7 +94,7 @@
   <div class="wrap">
 
     <div class="spec-meta">
-      <span><strong>Version</strong> 1.2.0</span>
+      <span><strong>Version</strong> 1.3.0</span>
       <span><strong>Date</strong> April 2026</span>
       <span><strong>Status</strong> Released</span>
       <span><strong>License</strong> MIT</span>
@@ -115,7 +115,7 @@
         <a class="toc-indent" href="#advertising">3.6 Advertising Profile <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#dating">3.7 Intimate &amp; Dating <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#contentfeed">3.8 Content Feed <span class="new-badge">New in v0.4</span></a>
-        <a class="toc-indent" href="#seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span class="new-badge">New in v1.3</span></a>
+        <a class="toc-indent" href="#seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span class="new-badge">Shipped v1.3.0</span></a>
         <a href="#access">4. Access Control &amp; Monetization</a>
         <a class="toc-indent" href="#tiers">4.1 Three Tiers</a>
         <a class="toc-indent" href="#pricing">4.2 Pricing Model</a>
@@ -691,7 +691,7 @@
 
       <!-- ═══════════ 3.9 ACTIVATE ═══════════ -->
 
-      <h3 id="seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v1.3</span></h3>
+      <h3 id="seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">Shipped v1.3.0</span></h3>
       <p>The current profile creation flow (section 8.4) requires the individual to build their profile from scratch — pasting a prompt into an AI and answering questions for 30–60 minutes. This works, but it creates a cold-start problem: the person does all the work before getting any value. Activate inverts this. The system discovers the individual's existing public footprint, assembles a draft profile, and hands it to the individual to correct, enrich, and own. The barrier drops from "build your profile" to "review what we found and fix what's wrong." The individual transitions from a passive data subject to an active participant who controls their own information.</p>
       <p>This is the Grokipedia model applied to everyone, with a critical difference: Grokipedia builds profiles of famous people that those people do not control. Search Star discovers public data and then <em>hands ownership to the individual</em>. The draft is a starting point, not a final product. The individual corrects inaccuracies, adds private information the system could not find, removes anything they do not want published, and hosts the result on their own infrastructure.</p>
 
@@ -831,6 +831,48 @@
       <p>Consistent with the architectural principle in section 1, Search Star never stores photos. Visual narrative images are hosted by the individual on their own infrastructure. Search Star indexes only the URL, the hash, and the narrative metadata. The individual retains full control — deleting a photo from their hosting removes it from their profile. Photos should be served as WebP at a maximum of 2048px on the long edge, with appropriate cache headers (minimum 24h). The hash allows platforms to verify that a referenced photo has not been altered since it was validated.</p>
 
       <div class="callout callout-info"><strong>The combined effect:</strong> A scraped data draft, enriched by the individual, illustrated by a curated visual narrative, and vouched for by people who stake real money — this is a fundamentally different kind of online profile. It is not a résumé. It is not a social media page. It is not a dating profile. It is a comprehensive, validated, owner-controlled representation of a person's life, backed by evidence and trust. The visual narrative makes it human in a way that pure data cannot.</div>
+
+      <h4>Implementation status (v1.3.0 — shipped)</h4>
+      <p>Activate v1 is built and live at <code>searchstar.com/activate</code>. The full pipeline runs end-to-end: identify → discover → review → private sections → visual narrative → publish. The notes below document the as-built implementation, which differs in a few details from the original design above.</p>
+
+      <p><strong>Discovery sources.</strong> Six discovery modules run in parallel from <code>POST /api/activate/discover</code>:</p>
+      <table>
+        <tr><th>Module</th><th>Method</th><th>Profile sections populated</th><th>Confidence</th></tr>
+        <tr><td>GitHub</td><td>GitHub REST API (v3) — search/users + per-user repo enumeration with name/employer/city scoring</td><td>Skills (per-language proficiency from repo count + stars), Identity</td><td>0.90</td></tr>
+        <tr><td>Google Scholar</td><td>Scraped via SerpAPI <code>google_scholar_author</code> engine</td><td>Interests (intellectual) — publications, h-index, fields of study</td><td>0.85</td></tr>
+        <tr><td>LinkedIn</td><td>SerpAPI Google search restricted to <code>site:linkedin.com/in/</code>, with disambiguation when multiple matches return</td><td>Identity, Professional history</td><td>0.70</td></tr>
+        <tr><td>Professional Directories</td><td>Targeted lookups against state bar associations (CalBar, NYSED), CPA registries (AICPA), medical boards (NPI)</td><td>Skills &amp; credentials</td><td>0.80</td></tr>
+        <tr><td>Athletic</td><td>Athlinks and RunSignUp public race result scraping</td><td>Interests (athletic)</td><td>0.75</td></tr>
+        <tr><td>Social &amp; Community</td><td>Meetup public profiles, nonprofit board listings, civic group rosters</td><td>Interests (social)</td><td>0.65</td></tr>
+      </table>
+      <p>All six modules run inside a single <code>Promise.allSettled</code>, and per-source failures are returned to the client in the <code>errors</code> array without blocking other modules. Each <code>SeededField</code> response includes <code>source</code>, <code>sourceUrl</code>, <code>discoveredAt</code>, and <code>provenance: 'seeded'</code>. The merge step preserves all values when sources disagree (multi-value rows in <code>profile_fields</code> for the same section + label).</p>
+
+      <p><strong>Database schema — <code>profile_fields</code>.</strong> Migration <code>20260406_profile_fields.sql</code> creates the per-field provenance store. Each row holds <code>profile_id</code>, <code>section</code>, <code>label</code>, <code>value</code>, and a <code>provenance_status</code> column constrained to the five spec states plus an operational <code>removed</code> state used for soft-delete:</p>
+      <table>
+        <tr><th>Status</th><th>Set when</th></tr>
+        <tr><td><code>seeded</code></td><td>Discovery engine wrote the field — user has not reviewed</td></tr>
+        <tr><td><code>confirmed</code></td><td>User clicked confirm in the review step (Step 3)</td></tr>
+        <tr><td><code>self_reported</code></td><td>User typed it in directly with no public source</td></tr>
+        <tr><td><code>corrected</code></td><td>User edited a discovered value — original is preserved in <code>original_value</code> column</td></tr>
+        <tr><td><code>validated</code></td><td>Reserved for the trust system (Phase 8+) — the column exists but no writes yet</td></tr>
+      </table>
+      <p>The table also stores <code>source_url</code>, <code>source_name</code>, <code>seeded_at</code>, <code>confirmed_at</code>, <code>corrected_at</code>, <code>validated_at</code>, <code>confidence_score</code> (numeric, 0–1, computed per source), and <code>sort_order</code>. RLS policies allow profile owners to read/write their own rows but block all writes when the parent directory row has <code>seeding_status = 'unclaimed'</code> — this is the freeze enforcement.</p>
+
+      <p><strong>Database schema — <code>photo_metadata</code>.</strong> Migration <code>20260406_photo_metadata.sql</code> stores narrative photos with three provenance states: <code>discovered</code> (found by Phase 9 public discovery), <code>confirmed</code> (user approved a discovered photo), and <code>self_reported</code> (uploaded directly via Google Photos Picker, device upload, or URL import). Each row carries <code>chapter</code>, <code>caption</code>, <code>photo_date</code>, <code>location</code>, <code>provenance_source</code>, <code>source_channel</code> (<code>public</code>/<code>google</code>/<code>upload</code>/<code>url</code>), <code>access_tier</code>, and a hash. Photos themselves are never stored — only metadata.</p>
+
+      <p><strong>Public photo discovery (Phase 9).</strong> <code>src/lib/photo-discovery.ts</code> searches six categories of public sources: conference speaker pages, university faculty pages, company about pages, published articles with author headshots, race &amp; athletic event archives, and event photography. Each source comes with a default chapter assignment per the rules in the spec table above (conference/university → intellectual, company → professional, race → athletic, event → aesthetic). Discovered photos are never auto-included — they appear in Step 5 alongside uploaded photos and require explicit per-photo approval. A blocklist filters out social media CDNs, stock photo aggregators, and avatar generators.</p>
+
+      <p><strong>Unclaimed profile freeze.</strong> The directory table gained a <code>seeding_status</code> column (<code>'claimed'</code> or <code>'unclaimed'</code>, default <code>'claimed'</code>). Background discovery and the discover route both create rows with <code>seeding_status: 'unclaimed'</code>. Three enforcement points:</p>
+      <ol>
+        <li><strong>RLS on <code>profile_fields</code>:</strong> INSERT, UPDATE, and DELETE all subquery the directory row and require <code>seeding_status = 'claimed'</code>. Unclaimed stubs cannot be modified by anyone, including the row's eventual owner, until the claim flow flips the bit.</li>
+        <li><strong>Platform query route:</strong> <code>POST /api/platform/query</code> short-circuits with a 403 when the target row is unclaimed, preventing paid queries on data that nobody has consented to monetize.</li>
+        <li><strong>Marketing send route:</strong> <code>POST /api/platform/send-marketing</code> blocks message delivery to unclaimed profiles for the same reason.</li>
+      </ol>
+      <p>Claiming a stub (<code>POST /api/activate/claim</code>) verifies identity, transfers ownership of the directory row to the claiming user, and updates <code>seeding_status</code> to <code>'claimed'</code>. Deletion (<code>POST /api/activate/delete-stub</code>) removes the stub immediately with no appeals process — cascading deletes drop all <code>profile_fields</code> and <code>photo_metadata</code> rows.</p>
+
+      <p><strong>JSON-LD export pipeline.</strong> The publish step (Step 6) calls <code>src/lib/activate/generate-profile-json.ts</code>, which builds a JSON-LD document with <code>@context: "https://schema.searchstar.org/v1.3"</code> and <code>@type: "SearchStarProfile"</code>. The output is structured into <code>identity</code>, <code>skills</code>, <code>interests</code> (athletic / social / intellectual), <code>professional</code>, <code>media</code>, <code>narrativeChapters</code> (count per chapter), <code>accessPolicy</code>, and a <code>_meta</code> block with a provenance breakdown summary. Every field carries an inline <code>provenance</code> object matching the spec's per-field example. Removed fields (<code>provenance_status = 'removed'</code>) are filtered out before serialization. <code>generate-profile-html.ts</code> emits the matching <code>index.html</code> using the Graceland design system. Both files are returned to the user as downloadable artifacts and the directory entry is registered via <code>POST /api/activate/publish</code>.</p>
+
+      <div class="callout callout-green"><strong>Developer documentation.</strong> Full request/response shapes for the discovery API, the <code>SeededField</code> and <code>NarrativePhoto</code> type definitions, source-by-source confidence scoring, and provenance state transitions are documented at <code>/docs/activate-api.html</code>.</div>
 
       <!-- ═══════════ 4. ACCESS ═══════════ -->
 
@@ -1882,6 +1924,7 @@ Platform                Search Star              User's Hosting
       <!-- ═══════════ 8.4 AI-ASSISTED PROFILE CREATION ═══════════ -->
 
       <h3 id="profile-creation">8.4 AI-Assisted Profile Creation <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v0.8</span></h3>
+      <div class="callout callout-info"><strong>As of v1.3.0, Activate is the primary onboarding path.</strong> The flow described in this section remains supported as a fallback for users who prefer to compose their profile from scratch with an AI of their choice rather than starting from a discovered draft. New users should be directed to <code>/activate</code> first; the AI prompt approach below is the secondary path. See section 3.9 for the Activate pipeline.</div>
       <p>Search Star profiles are built using an AI assistant. The user copies a prompt package from <code>searchstar.com/create.html</code>, pastes it into any AI (Claude, ChatGPT, Grok, Gemini), and the AI conducts a conversational interview that produces both the <code>profile.json</code> and <code>index.html</code> files.</p>
 
       <h4>The creation flow</h4>
@@ -2122,6 +2165,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v1.1</code></td><td>April 2026</td><td>AI-Powered Campaigns: campaign data model, AI message composer with platform ↔ AI conversation, send fee + read fee structure, generated message lifecycle, enhanced feed experience (campaign_marketing type with AI-tailored body, AI-generated media, tracked CTAs), marketing data access controls (category toggles, frequency preferences, category preferences), campaign management portal (six-stage creation wizard, pause/resume/stop), campaign analytics (per-campaign metrics, aggregate insights, AI recommendations)</td></tr>
         <tr><td><code>v1.2</code></td><td>April 2026</td><td>Trust as Love: rewritten core philosophy (section 5.1) — trust score as measure of reciprocal love, explicit adversarial positioning against top-down social credit and celebrity/influencer economies, the convergence principle (gaming the trust metric produces genuine virtue), distributional answer via relational density vs. attention inequality. Reciprocal network bonus (1.25x for mutual validation within broader communities). Aristotelian-Thomistic philosophical framework.</td></tr>
         <tr><td><code>v1.3</code></td><td>April 2026</td><td>Activate: Profile Discovery &amp; Visual Narrative (section 3.9): public-source profile discovery from scattered internet data, claim provenance system (seeded/confirmed/self_reported/corrected/validated), unclaimed frozen stub directory entries, visual narrative organized by thematic chapters (intellectual/social/athletic/professional/aesthetic/family), photo discovery from public sources + private library integration (Google Photos Picker, device upload, URL import), photo metadata schema with narrative chapter mapping and validation, per-field provenance in JSON-LD, multi-value conflict preservation for fields with multiple sources</td></tr>
+        <tr><td><code>v1.3.0</code></td><td>April 2026</td><td>Activate v1 fully implemented across phases 1–9: discovery engine wired to six live sources (GitHub API, Google Scholar via SerpAPI, LinkedIn via SerpAPI, professional directories, Athletic, Social), <code>profile_fields</code> table with five provenance states + multi-value conflict preservation + per-field confidence scoring, <code>photo_metadata</code> table with discovered/confirmed/self_reported provenance, public photo discovery across six source categories (conference, university, company, articles, race, event), unclaimed profile freeze enforced via RLS + platform query/marketing block, JSON-LD export pipeline emitting <code>schema.searchstar.org/v1.3</code> documents with inline per-field provenance, registration desk integration, claim and delete-stub flows. Section 3.9 implementation notes added. Developer documentation at <code>/docs/activate-api.html</code>.</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -2133,6 +2177,7 @@ Platform                Search Star              User's Hosting
         <tr><td>Phase 3</td><td>✅ Complete</td><td>Account dashboard with earnings, revenue breakdown by tier/platform, settlement tracking, endpoint URL management</td></tr>
         <tr><td>Phase 4</td><td>✅ Complete</td><td>Admin panel: financial dashboard, user management, trust score adjustment, support ticket system</td></tr>
         <tr><td>Phase 5</td><td>✅ Complete</td><td>Platform Portal: platform signup + auth, credit deposits, API key management, directory browser with search/filters, paid query execution (90/10 split), marketing message composer, sent messages with block rate, spending analytics with forecast</td></tr>
+        <tr><td>Phase 6 (Activate v1)</td><td>✅ Complete</td><td>Six-source discovery engine (GitHub, Google Scholar, LinkedIn, professional directories, Athletic, Social), <code>profile_fields</code> table with five provenance states + multi-value support, <code>photo_metadata</code> table with three provenance states, public photo discovery across six categories, unclaimed profile freeze via RLS + query/marketing blocks, JSON-LD + HTML export pipeline, registration desk integration, claim flow, delete-stub flow, developer documentation</td></tr>
       </table>
 
       <h4>Future milestones</h4>
@@ -2140,7 +2185,6 @@ Platform                Search Star              User's Hosting
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
         <tr><td><code>v1.1</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting, AI-Powered Campaign implementation (campaign creation wizard, AI composer, batch message generation, enhanced feed rendering, send/read fee billing, campaign analytics dashboard, marketing data access controls in owner dashboard)</td></tr>
         <tr><td><code>v1.2</code></td><td>Q2 2026</td><td>Trust Score implementation: Depth/Breadth/Durability calculation engine, trust layer classification, validator relationship types, decay scheduler</td></tr>
-        <tr><td><code>v1.3</code></td><td>Q3 2026</td><td>Activate implementation: discovery engine (LinkedIn, GitHub, Scholar, conference archives, professional directories, Athlinks), claim provenance system, multi-value conflict resolution, unclaimed frozen stub management, visual narrative chapter builder, photo discovery + Google Photos Picker + device upload + URL import, review &amp; correction UI with per-field confidence indicators, profile JSON-LD + HTML output pipeline with schema v1.3</td></tr>
         <tr><td><code>v1.4</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
         <tr><td><code>v1.5</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
         <tr><td><code>v2.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
@@ -2155,7 +2199,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v1.3 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v1.3.0 · MIT License</div>
       <div class="footer-links">
         <a href="/">Home</a>
         <a href="profile.html">Sample</a>

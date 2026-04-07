@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activate Discovery API — Search Star Developer Docs</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1a3a6b; --navy-dk: #112a4f; --white: #ffffff; --black: #1a1a1a;
+    --gray-2: #5a5a5a; --gray-3: #767676; --gray-5: #e8e8e8; --gray-6: #f5f5f5;
+    --border: #d4d4d4; --cream: #eef2f8; --green: #166534; --green-bg: #f0fdf4;
+    --amber: #92400e; --amber-bg: #fffbeb;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --radius: 6px;
+  }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Crimson Text', Georgia, serif; background: var(--gray-6); color: var(--black); font-size: 18px; line-height: 1.7; }
+  .site-header { background: var(--navy); border-bottom: 3px solid var(--navy-dk); padding: 36px 0 32px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 32px; }
+  .wrap-wide { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+  .header-top { font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .header-top svg { width: 22px; height: 22px; }
+  .site-header h1 { font-family: 'Crimson Text', Georgia, serif; font-weight: 700; font-size: clamp(1.75rem, 4vw, 2.5rem); color: var(--white); line-height: 1.15; margin-bottom: 6px; }
+  .header-sub { font-family: 'Roboto', sans-serif; font-size: 14px; color: rgba(255,255,255,0.7); max-width: 640px; line-height: 1.6; }
+  .header-nav { display: flex; gap: 8px; margin-top: 20px; }
+  .header-nav a { font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 7px 16px; border: 1px solid rgba(255,255,255,0.25); border-radius: 3px; background: transparent; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.2s; }
+  .header-nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .header-nav a.active { background: var(--white); color: var(--navy); }
+
+  main { padding: 48px 0 80px; }
+  .doc-meta { font-family: 'Roboto', sans-serif; font-size: 12px; color: var(--gray-3); margin-bottom: 32px; display: flex; gap: 24px; flex-wrap: wrap; }
+  .doc-meta span { display: flex; align-items: center; gap: 6px; }
+
+  .doc { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 48px 56px; box-shadow: var(--shadow-sm); margin-bottom: 32px; }
+  .doc h2 { font-family: 'Crimson Text', Georgia, serif; font-size: 28px; font-weight: 700; margin-top: 40px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--gray-5); }
+  .doc h2:first-child { margin-top: 0; }
+  .doc h3 { font-family: 'Crimson Text', Georgia, serif; font-size: 22px; font-weight: 700; margin-top: 32px; margin-bottom: 8px; }
+  .doc h4 { font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-3); margin-top: 24px; margin-bottom: 8px; }
+  .doc p { margin-bottom: 16px; }
+  .doc ul, .doc ol { margin: 0 0 16px 24px; }
+  .doc li { margin-bottom: 6px; }
+  .doc code { font-family: 'JetBrains Mono', monospace; font-size: 14px; background: var(--cream); padding: 2px 6px; border-radius: 3px; }
+  .doc pre { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #1a1a1a; color: #e0ddd5; padding: 24px; border-radius: var(--radius); overflow-x: auto; margin-bottom: 16px; line-height: 1.7; }
+  .doc pre code { background: transparent; padding: 0; color: inherit; font-size: 13px; }
+  .doc table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 16px; }
+  .doc th { font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-3); text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--gray-5); }
+  .doc td { padding: 10px 12px; border-bottom: 1px solid var(--gray-5); vertical-align: top; }
+  .doc td code { font-size: 13px; }
+  .callout { padding: 16px 20px; border-radius: var(--radius); margin-bottom: 16px; font-size: 16px; }
+  .callout-info { background: var(--cream); border-left: 3px solid var(--navy); }
+  .callout-warn { background: var(--amber-bg); border-left: 3px solid var(--amber); }
+  .callout-green { background: var(--green-bg); border-left: 3px solid var(--green); }
+
+  .endpoint { font-family: 'JetBrains Mono', monospace; font-size: 14px; padding: 14px 18px; background: var(--cream); border-left: 3px solid var(--navy); border-radius: 3px; margin-bottom: 16px; }
+  .method { display: inline-block; font-weight: 700; padding: 2px 10px; border-radius: 3px; margin-right: 10px; font-size: 12px; letter-spacing: 0.05em; }
+  .method-post { background: var(--navy); color: white; }
+
+  .site-footer { background: var(--black); color: rgba(255,255,255,0.55); padding: 32px 0; }
+  .footer-inner { font-family: 'Roboto', sans-serif; font-size: 12px; display: flex; justify-content: space-between; }
+  .footer-inner strong { color: rgba(255,255,255,0.8); }
+  .footer-links { display: flex; gap: 24px; }
+  .footer-links a { color: rgba(255,255,255,0.5); text-decoration: none; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; }
+  .footer-links a:hover { color: rgba(255,255,255,0.8); }
+
+  @media (max-width: 800px) { .wrap { padding: 0 20px; } .doc { padding: 24px; } }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap-wide">
+    <div class="header-top">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"/><polygon points="32,6 36,24 32,20 28,24" fill="#fff"/><polygon points="32,6 36,24 32,28 28,24" fill="rgba(255,255,255,0.6)"/><polygon points="58,32 40,28 44,32 40,36" fill="#fff" opacity="0.6"/><polygon points="32,58 28,40 32,44 36,40" fill="#fff" opacity="0.6"/><polygon points="6,32 24,36 20,32 24,28" fill="#fff" opacity="0.6"/><circle cx="32" cy="32" r="3" fill="#fff"/></svg>
+      Search Star · Developer Documentation
+    </div>
+    <h1>Activate Discovery API</h1>
+    <div class="header-sub">Request and response shapes for the profile discovery pipeline. Source-by-source confidence scoring, provenance state machine, and integration patterns for Phase 9 photo discovery.</div>
+    <div class="header-nav">
+      <a href="/">Home</a>
+      <a href="/spec.html">Specification</a>
+      <a href="/spec.html#seeding">Section 3.9</a>
+      <a href="/activate">Try Activate</a>
+      <a href="/docs/activate-api.html" class="active">API Docs</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <div class="doc-meta">
+      <span><strong>Version</strong> 1.3.0</span>
+      <span><strong>Endpoint</strong> /api/activate/discover</span>
+      <span><strong>Status</strong> Stable</span>
+      <span><strong>Spec ref</strong> Section 3.9</span>
+    </div>
+
+    <div class="doc">
+
+      <h2>Overview</h2>
+      <p>The Activate Discovery API takes minimal identifying information about an individual and returns a draft profile assembled from public sources scattered across the internet. The response is a flat array of <code>SeededField</code> objects (one per discovered claim) and a parallel array of <code>NarrativePhoto</code> objects (one per discovered image), each tagged with provenance metadata so the reviewing user can confirm, correct, or remove anything before publishing.</p>
+
+      <p>This is the backend that powers Step 2 of the <code>/activate</code> flow. It is internal to the Search Star application — there is no public API key for it. This documentation exists for contributors working on the Activate codebase and for anyone evaluating the JSON-LD output downstream of the publish step.</p>
+
+      <div class="callout callout-info"><strong>Where this fits in the spec.</strong> The conceptual design of the discovery system is in <a href="/spec.html#seeding">Section 3.9</a> of the Search Star specification. This document describes the as-built v1.3.0 implementation: which sources are wired up, what their request and response shapes look like, how confidence scores are derived, and how provenance states transition through the pipeline.</div>
+
+      <h2>Endpoint</h2>
+      <div class="endpoint"><span class="method method-post">POST</span>/api/activate/discover</div>
+
+      <h4>Request body</h4>
+      <pre><code>{
+  "fullName": "Jane Smith",            // required
+  "employer": "Anthropic",             // optional but improves disambiguation
+  "city": "San Francisco",             // optional but improves disambiguation
+  "linkedinUrl": "https://...",        // optional, used as a strong hint
+  "disambiguationSelections": {        // optional, see "Disambiguation" below
+    "github": "janesmith",
+    "linkedin": "jane-smith-123"
+  }
+}</code></pre>
+
+      <h4>Response (200 OK)</h4>
+      <pre><code>{
+  "fields": SeededField[],
+  "photos": NarrativePhoto[],
+  "sources": [
+    { "name": "GitHub",                  "status": "found",     "count": 12 },
+    { "name": "Google Scholar",          "status": "not_found", "count": 0  },
+    { "name": "LinkedIn",                "status": "found",     "count": 5  },
+    { "name": "Professional Directories","status": "not_found", "count": 0  },
+    { "name": "Athletic Records",        "status": "found",     "count": 3  },
+    { "name": "Social &amp; Community",      "status": "not_found", "count": 0  }
+  ],
+  "errors": ["Athletic discovery failed: timeout"],   // present only if any module errored
+  "disambiguation": [DisambiguationCandidate],        // present only if multiple matches
+  "profileId": "uuid"                                 // present if a directory stub was created
+}</code></pre>
+
+      <p>If the Supabase write fails, <code>profileId</code> will be omitted but the discovered fields are still returned in the response — the discovery API is best-effort on persistence and never blocks the user-visible result on a database error.</p>
+
+      <h2>Core types</h2>
+
+      <h3>SeededField</h3>
+      <p>One row per discovered claim. The same logical field (e.g. "Skills · Python") can appear multiple times if more than one source produced a value — this is the multi-value preservation rule from the spec. The reviewing user resolves the conflict by confirming one and removing the others, or by editing one into a corrected value.</p>
+      <pre><code>interface SeededField {
+  id: string                  // stable identifier for the row
+  section: string             // 'Identity' | 'Skills' | 'Interests (athletic)' |
+                              // 'Interests (social)' | 'Interests (intellectual)' |
+                              // 'Professional history' | 'Skills &amp; credentials'
+  label: string               // 'Python', 'Marathon time', 'Current title', ...
+  value: string               // The discovered value, ready to display
+  source: string              // 'github.com', 'scholar.google.com', 'linkedin.com', ...
+  sourceUrl: string           // direct link to the source page
+  provenance: 'seeded'        // always 'seeded' on first discovery; client mutates it
+                              // to 'confirmed' / 'corrected' / 'self_reported' / 'removed'
+                              // as the user reviews
+  discoveredAt?: string       // ISO 8601 timestamp of when the source was scraped
+}</code></pre>
+
+      <h4>Section names — what to expect</h4>
+      <table>
+        <tr><th>Section</th><th>Typical sources</th><th>Example label / value</th></tr>
+        <tr><td><code>Identity</code></td><td>user input, GitHub bio, LinkedIn header</td><td><code>Name</code> / "Jane Smith"</td></tr>
+        <tr><td><code>Skills</code></td><td>GitHub repo languages</td><td><code>Python</code> / "Expert · 24 repos, 1,840 stars"</td></tr>
+        <tr><td><code>Skills &amp; credentials</code></td><td>Bar associations, NPI, AICPA</td><td><code>Bar admission</code> / "California, active 2018–"</td></tr>
+        <tr><td><code>Interests (intellectual)</code></td><td>Google Scholar</td><td><code>h-index</code> / "14 (2012–2025, 47 papers)"</td></tr>
+        <tr><td><code>Interests (athletic)</code></td><td>Athlinks, RunSignUp</td><td><code>Marathon</code> / "Boston 2024, 3:42:11"</td></tr>
+        <tr><td><code>Interests (social)</code></td><td>Meetup, nonprofit boards</td><td><code>Meetup</code> / "SF Python, member since 2019"</td></tr>
+        <tr><td><code>Professional history</code></td><td>LinkedIn, company about pages</td><td><code>Current title</code> / "Senior Engineer at Anthropic"</td></tr>
+      </table>
+
+      <h3>NarrativePhoto</h3>
+      <p>One row per discovered image. Returned alongside fields from the same <code>/api/activate/discover</code> call — Phase 9 photo discovery runs as part of the same pipeline. All photos require explicit user approval in Step 5 of the Activate UI; nothing is auto-included in the published profile.</p>
+      <pre><code>interface NarrativePhoto {
+  id: string
+  chapter: 'intellectual' | 'social' | 'athletic'
+         | 'professional' | 'aesthetic' | 'family'
+  caption: string             // human-readable caption inferred from source context
+  date: string                // ISO 8601 if extractable, else empty string
+  location: string            // city/venue if extractable, else empty string
+  source: 'public'            // for discovered photos; 'google' / 'upload' / 'url'
+                              // for the other photo channels
+  sourceLabel: string         // 'Conference speaker pages', 'University faculty pages', ...
+  previewUrl: string          // direct image URL for thumbnail rendering
+  relatedFields: string[]     // array of profile field paths the photo illustrates
+                              // e.g. ['skills.python', 'interests.intellectual.conference_speaking']
+  // Discovered photos additionally include:
+  sourceUrl?: string          // page the image was found on
+  sourceContext?: string      // surrounding text snippet, used for caption inference
+}</code></pre>
+
+      <h4>Chapter assignment rules</h4>
+      <p>Each public photo source maps to a default chapter. The user can reassign in the UI but the defaults are:</p>
+      <table>
+        <tr><th>Photo source category</th><th>Default chapter</th><th>Rationale</th></tr>
+        <tr><td>Conference speaker pages</td><td><code>intellectual</code></td><td>Speaking at a conference is intellectual life</td></tr>
+        <tr><td>University faculty pages</td><td><code>intellectual</code></td><td>Teaching/research is intellectual life</td></tr>
+        <tr><td>Company about pages</td><td><code>professional</code></td><td>Corporate identity is professional life</td></tr>
+        <tr><td>Published articles</td><td><code>intellectual</code></td><td>Author headshots accompany intellectual work</td></tr>
+        <tr><td>Race &amp; athletic photos</td><td><code>athletic</code></td><td>Direct match to athletic chapter</td></tr>
+        <tr><td>Event photography</td><td><code>aesthetic</code></td><td>Galas and award ceremonies showcase visual presence</td></tr>
+      </table>
+
+      <h3>DisambiguationCandidate</h3>
+      <p>When more than one credible match is found in a single source (commonly LinkedIn or GitHub for common names), the API returns up to a handful of candidates and lets the client present them for the user to pick from. The client then re-calls the endpoint with <code>disambiguationSelections</code> set to lock in the choice.</p>
+      <pre><code>interface DisambiguationCandidate {
+  id: string                  // stable identifier within the source
+  source: string              // 'github' | 'linkedin'
+  name: string                // display name as it appears on the source
+  title?: string              // current title if known
+  location?: string
+  employer?: string
+  url: string                 // canonical URL of the candidate's profile
+  avatar?: string             // avatar URL if available
+  confidence: number          // 0..1 — how confident the matcher is
+  snippet?: string            // a short bio or tagline for context
+}</code></pre>
+
+      <h2>Discovery sources</h2>
+      <p>Six modules run in parallel inside a single <code>Promise.allSettled</code>. Per-source failures surface in the <code>errors</code> array but never block other modules. The <code>sources</code> array in the response always contains exactly six entries (one per module) plus an additional entry for each photo source category that returned results, so the client can show progress regardless of which modules succeeded.</p>
+
+      <table>
+        <tr><th>Module</th><th>Method</th><th>Confidence</th><th>Notes</th></tr>
+        <tr><td><strong>GitHub</strong></td><td>GitHub REST API v3</td><td><code>0.90</code></td><td>Searches users by name, scores candidates by name + employer + city overlap, fetches each candidate's full profile and top 100 owned repos. Requires <code>GITHUB_PAT</code> env var to avoid the unauthenticated 60-req/hour limit. Output: per-language Skills rows with proficiency derived from repo count and total stars.</td></tr>
+        <tr><td><strong>Google Scholar</strong></td><td>SerpAPI <code>google_scholar_author</code></td><td><code>0.85</code></td><td>Returns h-index, total citations, top publications, and fields of study. Mapped to <code>Interests (intellectual)</code>.</td></tr>
+        <tr><td><strong>LinkedIn</strong></td><td>SerpAPI Google search restricted to <code>site:linkedin.com/in/</code></td><td><code>0.70</code></td><td>Returns Identity and Professional history fields. Triggers disambiguation when multiple matches return for a common name. Lower confidence than GitHub because the underlying data is scraped from search snippets rather than a structured API.</td></tr>
+        <tr><td><strong>Professional Directories</strong></td><td>Targeted lookups against CalBar, NYSED, AICPA, NPI</td><td><code>0.80</code></td><td>Returns Skills &amp; credentials rows. Each directory has its own scraper; failures are isolated per-directory.</td></tr>
+        <tr><td><strong>Athletic Records</strong></td><td>Athlinks and RunSignUp public race result pages</td><td><code>0.75</code></td><td>Returns Interests (athletic) rows including event names, dates, finishing times.</td></tr>
+        <tr><td><strong>Social &amp; Community</strong></td><td>Meetup public profiles, nonprofit board listings</td><td><code>0.65</code></td><td>Returns Interests (social) rows. Lowest confidence of the six modules — many false positives on common names.</td></tr>
+      </table>
+
+      <p>User-supplied identity fields (the request body's <code>fullName</code>, <code>employer</code>, <code>city</code>, <code>linkedinUrl</code>) are also written to the response as <code>SeededField</code> rows under the <code>Identity</code> section, with <code>source: "user-input"</code> and confidence <code>0.5</code>. This guarantees the reviewing user always sees the inputs they just typed alongside whatever was discovered.</p>
+
+      <h2>Confidence scores</h2>
+      <p>Each <code>SeededField</code> is persisted to the <code>profile_fields</code> table with a <code>confidence_score</code> in the range 0–1. The number is derived from the source the field came from, not from the field's content. The mapping lives in <code>getSourceConfidence()</code> in <code>src/app/api/activate/discover/route.ts</code>:</p>
+
+      <table>
+        <tr><th>Source</th><th>Score</th><th>Why</th></tr>
+        <tr><td>GitHub API</td><td><code>0.90</code></td><td>Authoritative API with verified ownership</td></tr>
+        <tr><td>Google Scholar</td><td><code>0.85</code></td><td>Scholar profiles are claimed by the author</td></tr>
+        <tr><td>Professional directories (CalBar, NYSED, AICPA, NPI)</td><td><code>0.80</code></td><td>Government or industry registries with legal weight</td></tr>
+        <tr><td>Athletic records (Athlinks, RunSignUp)</td><td><code>0.75</code></td><td>Events verify identity at registration</td></tr>
+        <tr><td>LinkedIn (via SerpAPI)</td><td><code>0.70</code></td><td>Self-reported but commonly verified by employers</td></tr>
+        <tr><td>Meetup &amp; community</td><td><code>0.65</code></td><td>Self-reported, no verification</td></tr>
+        <tr><td>Generic web scrape</td><td><code>0.60</code></td><td>Fallback for unrecognized sources</td></tr>
+        <tr><td>User input</td><td><code>0.50</code></td><td>Unverified at the time of entry — boosted to 0.70 once <code>provenance_status</code> becomes <code>self_reported</code> after publish</td></tr>
+      </table>
+
+      <p>Clients should display the confidence score as a visual indicator (e.g. a small bar) next to each discovered field so the user can prioritize their review. Scores should be treated as advisory, not gating — the user always gets the final say.</p>
+
+      <h2>Provenance state machine</h2>
+      <p>Every field that survives discovery flows through the <code>profile_fields.provenance_status</code> column. The five spec states plus the operational <code>removed</code> state form a directed graph:</p>
+
+      <pre><code>seeded ─┬─→ confirmed     (user clicks "looks right")
+        ├─→ corrected     (user edits the value; original is preserved)
+        └─→ removed       (user deletes the row; soft-delete, not hard-delete)
+
+self_reported              (user adds a brand-new field that no source produced)
+        ├─→ corrected
+        └─→ removed
+
+validated                  (set by the trust system in a later phase — Activate
+                            never writes this state directly)
+</code></pre>
+
+      <p>The five canonical states from <a href="/spec.html#seeding">Section 3.9</a> are <code>seeded</code>, <code>confirmed</code>, <code>self_reported</code>, <code>corrected</code>, and <code>validated</code>. The implementation also recognizes <code>removed</code> as an operational sixth state used to filter rows out of the published JSON-LD without losing them from the database — this lets the user undo a deletion before publishing. <code>removed</code> rows are excluded from the final JSON-LD by <code>generateProfileJson()</code>.</p>
+
+      <h4>Photo provenance is separate</h4>
+      <p>Photos use a smaller three-state machine in <code>photo_metadata.provenance_status</code>:</p>
+      <ul>
+        <li><code>discovered</code> — Phase 9 public discovery wrote the row, user has not approved</li>
+        <li><code>confirmed</code> — user approved a discovered photo</li>
+        <li><code>self_reported</code> — user uploaded directly via Google Photos Picker, device upload, or URL import</li>
+      </ul>
+
+      <h2>Disambiguation flow</h2>
+      <p>When multiple credible matches are found for a single source (most common with LinkedIn for common names like "John Smith"), the response includes a <code>disambiguation</code> array. The recommended client flow:</p>
+      <ol>
+        <li>First call: <code>POST /api/activate/discover</code> with the user's input.</li>
+        <li>If <code>disambiguation</code> is non-empty, render the candidates and let the user pick one per source.</li>
+        <li>Second call: re-issue <code>POST /api/activate/discover</code> with the same body plus <code>disambiguationSelections: { github: "janesmith", linkedin: "jane-smith-123" }</code>.</li>
+        <li>The discovery engine respects the locked-in candidates and skips the disambiguation step.</li>
+      </ol>
+
+      <div class="callout callout-warn"><strong>Don't auto-pick.</strong> The client should always show all candidates and let the user choose, even when one has a much higher confidence score than the others. Auto-picking the "best" match risks attributing someone else's professional record to the user — this is exactly the failure mode that makes scraped profiles untrustworthy in the first place.</div>
+
+      <h2>Persistence model</h2>
+      <p>The discovery API writes to two tables in addition to returning the response:</p>
+
+      <h4>directory</h4>
+      <p>If the user is starting a new activation, a row is created with <code>seeding_status: 'unclaimed'</code> and <code>status: 'active'</code>. The handle is derived from the user's name (<code>@first.last</code>). The row will eventually be flipped to <code>seeding_status: 'claimed'</code> when the user completes the publish flow.</p>
+
+      <h4>profile_fields</h4>
+      <p>Every discovered row is persisted with:</p>
+      <pre><code>{
+  profile_id: uuid,            // FK to directory.id
+  section: string,
+  label: string,
+  value: string,
+  provenance_status: 'seeded',
+  source_url: string | null,
+  source_name: string,         // 'github.com', 'linkedin.com', ...
+  seeded_at: timestamptz,
+  confidence_score: numeric(3,2),
+  sort_order: integer
+}</code></pre>
+
+      <p>RLS policies on this table prevent writes when the parent <code>directory</code> row has <code>seeding_status = 'unclaimed'</code>. Discovery itself bypasses this constraint by running with the service role; subsequent edits from the Activate UI use the user's session and are blocked until the claim flow flips the row to <code>'claimed'</code>.</p>
+
+      <h4>photo_metadata</h4>
+      <p>Photos discovered by Phase 9 are persisted with <code>provenance_status: 'discovered'</code> and <code>source_channel: 'public'</code>. No image bytes are stored — only the URL, the inferred caption, the chapter, and the source context.</p>
+
+      <h2>Error handling</h2>
+      <ul>
+        <li><strong>400 Bad Request</strong> — request body missing <code>fullName</code></li>
+        <li><strong>500 Internal Server Error</strong> — unhandled exception in the discovery engine. The user should be told to retry; the response body includes a generic message and the error is logged server-side.</li>
+        <li><strong>200 OK with <code>errors</code> array</strong> — at least one source module failed but others succeeded. The client should still render the successful results and surface the per-source errors as warnings.</li>
+      </ul>
+
+      <p>Per-source failures never bubble up as 500s. The pipeline is designed to degrade gracefully — if Athlinks is down but GitHub returns data, the user still sees their GitHub-derived skills.</p>
+
+      <h2>Schema compatibility downstream</h2>
+      <p>The fields and photos returned by this API are persisted to <code>profile_fields</code> and <code>photo_metadata</code> respectively. When the user reaches Step 6 and clicks Publish, <code>src/lib/activate/generate-profile-json.ts</code> reads back the active rows (excluding <code>removed</code>) and emits a JSON-LD document keyed <code>@context: "https://schema.searchstar.org/v1.3"</code>. The publish route (<code>POST /api/activate/publish</code>) validates the document, creates a directory entry with <code>status: 'active', seeding_status: 'unclaimed'</code>, and returns the assigned profile number.</p>
+
+      <p>Platform queries against the resulting profile go through <code>POST /api/platform/query</code>, which filters on <code>status = 'active'</code> and rejects unclaimed rows with a 403. Marketing sends through <code>POST /api/platform/send-marketing</code> apply the same check. The JSON-LD output is the contract between the discovery pipeline, the registration desk, and the platform query system — all three agree on the v1.3 schema.</p>
+
+      <div class="callout callout-green"><strong>Source code.</strong> The reference implementation lives in the Search Star repo on GitHub. Key files: <code>src/app/api/activate/discover/route.ts</code> (this endpoint), <code>src/lib/photo-discovery.ts</code> (Phase 9), <code>src/lib/activate/generate-profile-json.ts</code> (publish-time export), <code>supabase/migrations/20260406_profile_fields.sql</code> and <code>20260406_photo_metadata.sql</code> (schema).</div>
+
+    </div>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap-wide">
+    <div class="footer-inner">
+      <div><strong>Search Star</strong> — Specification v1.3.0 · MIT License</div>
+      <div class="footer-links">
+        <a href="/">Home</a>
+        <a href="/spec.html">Spec</a>
+        <a href="/spec.html#seeding">Section 3.9</a>
+        <a href="https://github.com/ArchonGraceland/Search-Star">GitHub</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -43,12 +43,28 @@ export default async function Home() {
           <p className="font-body text-sm text-white/70 max-w-[640px] leading-relaxed">
             The sovereign personal data standard. You host your profile, platforms query your API, and you get paid per query.
           </p>
+          <div className="mt-4 inline-flex items-center gap-3 px-4 py-2.5 bg-white/10 border border-white/20 rounded-[3px]">
+            <span className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-white/50">New</span>
+            <span className="font-body text-sm text-white/85">Already have a digital footprint?</span>
+            <Link
+              href="/activate"
+              className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-white hover:text-white underline decoration-white/40 underline-offset-4"
+            >
+              Claim it in minutes →
+            </Link>
+          </div>
           <div className="flex flex-wrap gap-2 mt-5">
             <Link
-              href="/signup"
+              href="/activate"
               className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] bg-white text-[#1a3a6b] rounded-[3px] no-underline transition-all hover:bg-white/90"
             >
-              Create Profile
+              Activate Profile
+            </Link>
+            <Link
+              href="/signup"
+              className="font-body text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-[7px] border border-white/25 text-white/70 rounded-[3px] no-underline transition-all hover:bg-white/10 hover:text-white"
+            >
+              Build From Scratch
             </Link>
             <Link
               href="/onboarding/estimate"
@@ -166,7 +182,7 @@ export default async function Home() {
       <footer className="bg-[#1a1a1a] text-white/55 py-8">
         <div className="max-w-[1120px] mx-auto px-8">
           <div className="font-body text-xs flex justify-between">
-            <div><strong className="text-white/80">Search Star</strong> — Specification v1.3 · MIT License</div>
+            <div><strong className="text-white/80">Search Star</strong> — Specification v1.3.0 · MIT License</div>
             <div className="flex gap-6">
               <Link href="/spec.html" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">Spec</Link>
               <Link href="/roadmap.html" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">Roadmap</Link>

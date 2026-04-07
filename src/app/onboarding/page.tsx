@@ -23,6 +23,44 @@ export default function Onboarding() {
       </div>
 
       <main className="max-w-[860px] mx-auto px-8 py-10 flex-1 -mt-6">
+        {/* Featured: Activate (recommended path) */}
+        <div className="bg-white border-2 border-[#166534] rounded-[3px] shadow-sm p-10 mb-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 bg-[#166534] text-white font-body text-[10px] font-bold tracking-[0.1em] uppercase px-3 py-1 rounded-bl-[3px]">
+            Recommended · Shipped v1.3.0
+          </div>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 bg-[#166534] rounded-[3px] flex items-center justify-center font-body text-sm font-bold text-white shrink-0">★</div>
+            <h2 className="font-heading text-[22px] font-bold m-0">Start with Activate</h2>
+          </div>
+          <p className="font-body text-sm text-[#5a5a5a] leading-relaxed mb-4">
+            Already have a digital footprint? Activate finds your existing public data — GitHub, Google Scholar, LinkedIn, professional directories, race results, conference talks — and assembles a draft profile in minutes. You review what was found, correct anything wrong, add what&apos;s missing, and publish.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+            <div className="p-3 bg-[#f0fdf4] border-l-[3px] border-[#166534] rounded-[3px]">
+              <div className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#166534] mb-1">Discover</div>
+              <p className="font-body text-[13px] text-[#5a5a5a] m-0">Six sources run in parallel. You provide a name and 2–3 disambiguating details.</p>
+            </div>
+            <div className="p-3 bg-[#f0fdf4] border-l-[3px] border-[#166534] rounded-[3px]">
+              <div className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#166534] mb-1">Review</div>
+              <p className="font-body text-[13px] text-[#5a5a5a] m-0">Confirm, correct, or remove each field. Provenance and confidence shown inline.</p>
+            </div>
+            <div className="p-3 bg-[#f0fdf4] border-l-[3px] border-[#166534] rounded-[3px]">
+              <div className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#166534] mb-1">Publish</div>
+              <p className="font-body text-[13px] text-[#5a5a5a] m-0">Download your JSON-LD + HTML, host on your domain, register with Search Star.</p>
+            </div>
+          </div>
+          <Link
+            href="/activate"
+            className="inline-block font-body text-[11px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 bg-[#166534] text-white rounded-[3px] no-underline hover:bg-[#14532d]"
+          >
+            Start Activate →
+          </Link>
+        </div>
+
+        <div className="text-center mb-6">
+          <p className="font-body text-xs text-[#767676] tracking-[0.05em]">— or build your profile manually using the steps below —</p>
+        </div>
+
         {/* Step 1: Build Your Profile */}
         <div className="bg-white border border-[#d4d4d4] rounded-[3px] shadow-sm p-10 mb-4">
           <div className="flex items-center gap-3 mb-4">
@@ -175,8 +213,14 @@ export default function Onboarding() {
         {/* CTA */}
         <div className="text-center py-6">
           <Link
-            href="/onboarding/estimate"
+            href="/activate"
             className="btn-primary inline-block no-underline mr-3"
+          >
+            Start with Activate
+          </Link>
+          <Link
+            href="/onboarding/estimate"
+            className="btn-secondary inline-block no-underline mr-3"
           >
             Estimate Your Earnings
           </Link>
@@ -184,7 +228,7 @@ export default function Onboarding() {
             href="/signup"
             className="btn-secondary inline-block no-underline"
           >
-            Create Your Profile
+            Build From Scratch
           </Link>
         </div>
       </main>
