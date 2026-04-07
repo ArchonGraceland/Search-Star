@@ -27,7 +27,13 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({
+        // Required: tells Google where to signal completion
+        // Without this, mediaItemsSet never becomes true via polling
+        redirectUri: process.env.NEXT_PUBLIC_BASE_URL
+          ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/activate/google-photos/picker-callback`
+          : 'https://www.searchstar.com/api/activate/google-photos/picker-callback',
+      }),
     })
 
     if (!sessionResponse.ok) {
