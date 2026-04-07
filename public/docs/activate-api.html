@@ -104,6 +104,8 @@
 
       <p>This is the backend that powers Step 2 of the <code>/activate</code> flow. It is internal to the Search Star application — there is no public API key for it. This documentation exists for contributors working on the Activate codebase and for anyone evaluating the JSON-LD output downstream of the publish step.</p>
 
+      <div class="callout callout-warn"><strong>Deprecation notice (v1.4 draft).</strong> This document describes the v1.3.0 six-source scraper pipeline that shipped to production. Beginning with v1.4, the discovery API is being replaced by a synthesis architecture (identity lock + parallel evidence gathering + dual Claude/Grok synthesis + machine verification). The endpoint URL stays the same but the internal pipeline changes substantially. See <a href="/spec.html#seeding">Section 3.9 "v1.4 synthesis architecture"</a> for the new design and the project plan at <code>docs/activate-project-plan.md</code> in the repository for Phases 11-14. This document will be rewritten when Phase 12 ships.</div>
+
       <div class="callout callout-info"><strong>Where this fits in the spec.</strong> The conceptual design of the discovery system is in <a href="/spec.html#seeding">Section 3.9</a> of the Search Star specification. This document describes the as-built v1.3.0 implementation: which sources are wired up, what their request and response shapes look like, how confidence scores are derived, and how provenance states transition through the pipeline.</div>
 
       <h2>Endpoint</h2>
@@ -336,7 +338,7 @@ validated                  (set by the trust system in a later phase — Activat
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v1.3.0 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v1.4.0-draft · MIT License</div>
       <div class="footer-links">
         <a href="/">Home</a>
         <a href="/spec.html">Spec</a>

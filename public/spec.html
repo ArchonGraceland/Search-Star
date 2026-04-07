@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search Star — Specification v1.3.0</title>
+<title>Search Star — Specification v1.4.0-draft</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a3a6b'/%3E%3Cpolygon points='32,6 36,24 32,20 28,24' fill='%23fff'/%3E%3Cpolygon points='32,6 36,24 32,28 28,24' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='58,32 40,28 44,32 40,36' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='32,58 28,40 32,44 36,40' fill='%23fff' opacity='0.6'/%3E%3Cpolygon points='6,32 24,36 20,32 24,28' fill='%23fff' opacity='0.6'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -94,9 +94,9 @@
   <div class="wrap">
 
     <div class="spec-meta">
-      <span><strong>Version</strong> 1.3.0</span>
+      <span><strong>Version</strong> 1.4.0-draft</span>
       <span><strong>Date</strong> April 2026</span>
-      <span><strong>Status</strong> Released</span>
+      <span><strong>Status</strong> Synthesis architecture in progress</span>
       <span><strong>License</strong> MIT</span>
     </div>
 
@@ -115,7 +115,7 @@
         <a class="toc-indent" href="#advertising">3.6 Advertising Profile <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#dating">3.7 Intimate &amp; Dating <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#contentfeed">3.8 Content Feed <span class="new-badge">New in v0.4</span></a>
-        <a class="toc-indent" href="#seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span class="new-badge">Shipped v1.3.0</span></a>
+        <a class="toc-indent" href="#seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span class="new-badge">v1.4 in progress</span></a>
         <a href="#access">4. Access Control &amp; Monetization</a>
         <a class="toc-indent" href="#tiers">4.1 Three Tiers</a>
         <a class="toc-indent" href="#pricing">4.2 Pricing Model</a>
@@ -691,7 +691,7 @@
 
       <!-- ═══════════ 3.9 ACTIVATE ═══════════ -->
 
-      <h3 id="seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">Shipped v1.3.0</span></h3>
+      <h3 id="seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--amber-bg); color:var(--amber); vertical-align:middle; margin-left:8px;">v1.4 in progress</span></h3>
       <p>The current profile creation flow (section 8.4) requires the individual to build their profile from scratch — pasting a prompt into an AI and answering questions for 30–60 minutes. This works, but it creates a cold-start problem: the person does all the work before getting any value. Activate inverts this. The system discovers the individual's existing public footprint, assembles a draft profile, and hands it to the individual to correct, enrich, and own. The barrier drops from "build your profile" to "review what we found and fix what's wrong." The individual transitions from a passive data subject to an active participant who controls their own information.</p>
       <p>This is the Grokipedia model applied to everyone, with a critical difference: Grokipedia builds profiles of famous people that those people do not control. Search Star discovers public data and then <em>hands ownership to the individual</em>. The draft is a starting point, not a final product. The individual corrects inaccuracies, adds private information the system could not find, removes anything they do not want published, and hosts the result on their own infrastructure.</p>
 
@@ -832,8 +832,10 @@
 
       <div class="callout callout-info"><strong>The combined effect:</strong> A scraped data draft, enriched by the individual, illustrated by a curated visual narrative, and vouched for by people who stake real money — this is a fundamentally different kind of online profile. It is not a résumé. It is not a social media page. It is not a dating profile. It is a comprehensive, validated, owner-controlled representation of a person's life, backed by evidence and trust. The visual narrative makes it human in a way that pure data cannot.</div>
 
-      <h4>Implementation status (v1.3.0 — shipped)</h4>
-      <p>Activate v1 is built and live at <code>searchstar.com/activate</code>. The full pipeline runs end-to-end: identify → discover → review → private sections → visual narrative → publish. The notes below document the as-built implementation, which differs in a few details from the original design above.</p>
+      <h4>v1.3.0 implementation (shipped, deprecated by v1.4 architecture below)</h4>
+      <div class="callout callout-warn"><strong>Deprecation notice.</strong> The six-source scraper pipeline described below shipped in v1.3.0 and runs in production today, but it is being replaced by the v1.4 synthesis architecture (see next subsection). The output quality of independent per-source scraping has proven thin compared to LLM synthesis over a broad search corpus. The v1.3.0 code remains in the repository as historical reference and will be retired once Phase 12 (the v1.4 synthesis pipeline) ships. If a specific scraper proves uniquely valuable for some field type that synthesis handles poorly, it may be promoted back to a Stage 2 evidence collector at that time.</div>
+
+      <p>Activate v1 is built and live at <code>searchstar.com/activate</code>. The full pipeline runs end-to-end: identify → discover → review → private sections → visual narrative → publish. The notes below document the as-built v1.3.0 implementation.</p>
 
       <p><strong>Discovery sources.</strong> Six discovery modules run in parallel from <code>POST /api/activate/discover</code>:</p>
       <table>
@@ -873,6 +875,61 @@
       <p><strong>JSON-LD export pipeline.</strong> The publish step (Step 6) calls <code>src/lib/activate/generate-profile-json.ts</code>, which builds a JSON-LD document with <code>@context: "https://schema.searchstar.org/v1.3"</code> and <code>@type: "SearchStarProfile"</code>. The output is structured into <code>identity</code>, <code>skills</code>, <code>interests</code> (athletic / social / intellectual), <code>professional</code>, <code>media</code>, <code>narrativeChapters</code> (count per chapter), <code>accessPolicy</code>, and a <code>_meta</code> block with a provenance breakdown summary. Every field carries an inline <code>provenance</code> object matching the spec's per-field example. Removed fields (<code>provenance_status = 'removed'</code>) are filtered out before serialization. <code>generate-profile-html.ts</code> emits the matching <code>index.html</code> using the Graceland design system. Both files are returned to the user as downloadable artifacts and the directory entry is registered via <code>POST /api/activate/publish</code>.</p>
 
       <div class="callout callout-green"><strong>Developer documentation.</strong> Full request/response shapes for the discovery API, the <code>SeededField</code> and <code>NarrativePhoto</code> type definitions, source-by-source confidence scoring, and provenance state transitions are documented at <code>/docs/activate-api.html</code>.</div>
+
+      <h4>v1.4 synthesis architecture (in progress)</h4>
+      <p>The v1.3.0 pipeline above shipped and works, but its output quality is thin compared to what users get from search-grounded LLMs like Grok or Grokipedia. The diagnosis is straightforward: scrapers parse, but they don't synthesize. Six independent parsers each looking at one source in isolation cannot produce the coherent narrative that an LLM reading the open web produces in a single pass. v1.4 replaces the parsing architecture with a synthesis architecture across five stages.</p>
+
+      <div class="callout callout-info"><strong>What's changing.</strong> The six-source scraper pipeline becomes deprecated. The new pipeline locks identity once up front, gathers evidence broadly (web search + Grok + Claude research agent), runs dual synthesis with Claude and Grok in parallel, machine-verifies every cited URL against its claim, then hands the result to humans for review. The trust system gains a new primitive: machine-verified provenance.</div>
+
+      <p><strong>Stage 1 — Identity lock.</strong> One broad search and one Haiku call disambiguate the user from everyone else with their name. The user picks themselves from 3-5 candidate personas, each shown with a photo, employer, location, and one-line summary. The chosen persona becomes a set of locked identity constraints — canonical name, employer, location, social handles, key URLs — that anchor every downstream stage. This solves the disambiguation problem at the entry point rather than per-source after the fact.</p>
+
+      <p><strong>Stage 2 — Parallel evidence gathering.</strong> Three evidence streams run in parallel, none of them merged yet:</p>
+      <table>
+        <tr><th>Stream</th><th>Method</th><th>Mode</th></tr>
+        <tr><td>Broad web search</td><td>SerpAPI or Tavily, top 30-50 results, fetch top ~15 pages, extract main content with Readability</td><td>Standard + Deep</td></tr>
+        <tr><td>Grok API single-shot</td><td>One call to xAI's Grok with the locked identity, asking for a structured profile</td><td>Standard + Deep</td></tr>
+        <tr><td>Claude research agent</td><td>Claude with <code>web_search</code> and <code>web_fetch</code> tools, running a 30-90 second agentic loop</td><td>Deep only</td></tr>
+      </table>
+      <p>The output of this stage is a raw evidence bundle — text snippets, URLs, structured rows. Nothing is merged or synthesized yet; that happens in Stage 3.</p>
+
+      <p><strong>Stage 3 — Dual synthesis with confidence-based merge.</strong> Two parallel Sonnet calls each read the evidence bundle independently. Each produces a 200-word narrative biography in third person (with inline source URL citations) and a structured field array with per-claim confidence scores. A third call then merges the two outputs claim-by-claim:</p>
+      <ul>
+        <li>If both sources produced the claim and agree on the value: keep the value, set confidence to <code>max(claude_confidence, grok_confidence)</code>.</li>
+        <li>If both sources produced the claim and disagree: take the value from whichever source has higher confidence on that specific claim.</li>
+        <li>If only one source produced the claim: keep it at its original confidence with a <code>single_source</code> flag.</li>
+      </ul>
+      <p>The narrative output becomes the profile's hero section. The structured fields populate the existing review UI. Because both come from one self-consistent synthesis (rather than from six independent scrapers that don't know about each other), they hang together in a way the v1.3.0 output does not.</p>
+
+      <p><strong>Stage 4 — Machine verification (hard commitment).</strong> For every claim with a cited URL, the verification stage fetches the URL and checks that the claim text appears in the page content. Verified claims are persisted with <code>verified_at</code> (timestamp) and <code>verification_hash</code> (SHA-256 of the page content at verification time). Claims whose citations don't verify are not dropped — instead, their confidence is downgraded by 0.3 and they are flagged for human review with a visible warning indicator. This is a hard product commitment, not a best-effort behavior, and it is part of the trust system (see Section 5).</p>
+
+      <p>This is a meaningful strengthening of the provenance story. v1.3.0 provenance was a <em>claim</em> about where data came from — nothing checked whether the cited URL actually contained the data. v1.4 provenance is <em>machine-verified</em>: every claim's URL is fetched and grep'd at activation time, and the verification status becomes part of the row's metadata. This is a stronger guarantee than Grokipedia (where source links are decorative and nothing checks them) or LinkedIn (where there are no sources at all).</p>
+
+      <p><strong>Stage 5 — Human review and corrections logging.</strong> Machine verification is necessary but not sufficient. The existing v1.3.0 review UI applies unchanged: the user confirms, corrects, or removes each field. New in v1.4: every user action is logged to a <code>discovery_corrections</code> table with the source, field type, discovered value, corrected value, and action. These corrections become training data for per-source-per-field-type confidence priors that replace the hardcoded <code>getSourceConfidence()</code> table over time. The system gets sharper with use — sources whose values get corrected often are auto-downweighted, sources whose values are confirmed often are auto-upweighted.</p>
+
+      <p>The combination is the point: machines do the labor (find claims, verify URLs), humans do the judgment (is this the right person, is this current, is this how I want to be represented). Best of both worlds — scale from machines, accuracy from humans.</p>
+
+      <h4>Standard mode vs deep mode</h4>
+      <table>
+        <tr><th>Property</th><th>Standard mode</th><th>Deep mode</th></tr>
+        <tr><td>When it runs</td><td>Synchronously on activation</td><td>Background job after publish</td></tr>
+        <tr><td>Stage 2 streams</td><td>Broad search + Grok</td><td>Broad search + Grok + Claude research agent</td></tr>
+        <tr><td>Latency</td><td>~15 seconds</td><td>~60-90 seconds</td></tr>
+        <tr><td>Cost per activation</td><td>~$0.10-0.15</td><td>~$0.30-0.50</td></tr>
+        <tr><td>User experience</td><td>Immediate results</td><td>Notification when results land</td></tr>
+        <tr><td>Default behavior</td><td>Runs on every activation</td><td>Runs in background after standard publish, opt-out available</td></tr>
+      </table>
+      <p>Both modes ship. Standard mode runs first so the user gets fast value immediately. Deep mode runs in the background after publish and notifies the user via the unified feed when richer results are ready. Users can review and accept the new claims the same way they reviewed the standard results.</p>
+
+      <h4>Implementation phases</h4>
+      <p>The v1.4 architecture is being built across four phases (Phases 11-14 of the Activate project plan):</p>
+      <table>
+        <tr><th>Phase</th><th>Deliverable</th><th>Status</th></tr>
+        <tr><td>Phase 11</td><td>Identity lock endpoint (Stage 1) + corrections logging table (Stage 5)</td><td>Planned</td></tr>
+        <tr><td>Phase 12</td><td>Synthesis pipeline standard mode (Stages 2-4): broad search + Grok + dual synthesis + machine verification. Replaces v1.3.0 scrapers.</td><td>Planned</td></tr>
+        <tr><td>Phase 13</td><td>Deep mode background research agent</td><td>Planned</td></tr>
+        <tr><td>Phase 14</td><td>Learned confidence priors from corrections data, replacing hardcoded values</td><td>Planned</td></tr>
+      </table>
+      <p>The full project plan with chat prompts, file lists, and end-of-phase checklists lives in the repository at <code>docs/activate-project-plan.md</code>.</p>
 
       <!-- ═══════════ 4. ACCESS ═══════════ -->
 
@@ -1205,6 +1262,8 @@
       <p>Search Star's trust system is built on a single insight: <strong>trust is not a status — trust is an action.</strong> You demonstrate trust when you're willing to put your reputation on the line to validate someone else's information. Every member is a potential validator within their network. Trust is measured by what people are willing to vouch for. Reputation — not money alone — is the cost of endorsement. At its deepest level, trust is love made legible — the willingness to bind your reputation to another person because you know them, you have walked alongside them, and you believe in the accuracy of who they say they are.</p>
 
       <div class="callout callout-warn"><strong>Architectural principle: Search Star is a directory and payment layer, not a hosting platform.</strong> Search Star never hosts, stores, or caches user profiles, photos, or media. The user hosts all of their own data on infrastructure they control (see section 8.1). Search Star's database contains only: the directory index (profile numbers, handles, endpoint URLs, trust scores, tier pricing), the earnings ledger (query transactions, revenue splits, settlement records), and the validation layer (validator relationships, trust scores, affiliate associations, disputes). If Search Star disappeared tomorrow, every user's profile would still exist at their own URL.</div>
+
+      <div class="callout callout-info"><strong>Machine-verified provenance is part of the trust system (v1.4).</strong> Beginning with the v1.4 synthesis architecture (see section 3.9), every claim discovered by Activate is machine-verified before it reaches the human review step: the cited URL is fetched and the claim text is checked against the page content. Verified claims carry a <code>verified_at</code> timestamp and a <code>verification_hash</code> (SHA-256 of the page content at verification time) that platforms can read. This is a fundamentally stronger guarantee than self-reported claims with decorative source links — and it composes with human validation rather than replacing it. Machine verification establishes that a claim was found in the cited place at a specific moment; human validation establishes that a person who knows the owner believes the claim is true. The two operate at different layers of credibility and are both required for a fully trusted profile. See section 3.9 "v1.4 synthesis architecture" for the verification pipeline.</div>
 
       <h3 id="trustphilosophy">5.1 Trust as Love (Core Philosophy) <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">Rewritten in v1.2</span></h3>
 
@@ -2166,6 +2225,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v1.2</code></td><td>April 2026</td><td>Trust as Love: rewritten core philosophy (section 5.1) — trust score as measure of reciprocal love, explicit adversarial positioning against top-down social credit and celebrity/influencer economies, the convergence principle (gaming the trust metric produces genuine virtue), distributional answer via relational density vs. attention inequality. Reciprocal network bonus (1.25x for mutual validation within broader communities). Aristotelian-Thomistic philosophical framework.</td></tr>
         <tr><td><code>v1.3</code></td><td>April 2026</td><td>Activate: Profile Discovery &amp; Visual Narrative (section 3.9): public-source profile discovery from scattered internet data, claim provenance system (seeded/confirmed/self_reported/corrected/validated), unclaimed frozen stub directory entries, visual narrative organized by thematic chapters (intellectual/social/athletic/professional/aesthetic/family), photo discovery from public sources + private library integration (Google Photos Picker, device upload, URL import), photo metadata schema with narrative chapter mapping and validation, per-field provenance in JSON-LD, multi-value conflict preservation for fields with multiple sources</td></tr>
         <tr><td><code>v1.3.0</code></td><td>April 2026</td><td>Activate v1 fully implemented across phases 1–9: discovery engine wired to six live sources (GitHub API, Google Scholar via SerpAPI, LinkedIn via SerpAPI, professional directories, Athletic, Social), <code>profile_fields</code> table with five provenance states + multi-value conflict preservation + per-field confidence scoring, <code>photo_metadata</code> table with discovered/confirmed/self_reported provenance, public photo discovery across six source categories (conference, university, company, articles, race, event), unclaimed profile freeze enforced via RLS + platform query/marketing block, JSON-LD export pipeline emitting <code>schema.searchstar.org/v1.3</code> documents with inline per-field provenance, registration desk integration, claim and delete-stub flows. Section 3.9 implementation notes added. Developer documentation at <code>/docs/activate-api.html</code>.</td></tr>
+        <tr><td><code>v1.4.0-draft</code></td><td>April 2026</td><td>Activate v2 synthesis architecture (section 3.9, "v1.4 synthesis architecture" subsection): five-stage pipeline replacing the v1.3.0 six-source scrapers. Stage 1 identity lock via broad search + Haiku disambiguation. Stage 2 parallel evidence gathering from broad web search + Grok API + Claude research agent (deep mode). Stage 3 dual synthesis with Claude and Grok in parallel + confidence-based per-claim merge. Stage 4 machine verification — every cited URL is fetched and the claim is verified against page content, with <code>verified_at</code> + <code>verification_hash</code> persisted. Stage 5 human review with corrections logging into a new <code>discovery_corrections</code> table. Standard mode (15s, ~$0.12) runs synchronously; deep mode (60-90s, ~$0.40) runs as a background job after publish. Machine-verified provenance becomes a trust system primitive (section 5 callout). Implementation across Phases 11-14. v1.3.0 scrapers deprecated.</td></tr>
       </table>
 
       <h4>MVP implementation (live at searchstar.com)</h4>
@@ -2185,7 +2245,8 @@ Platform                Search Star              User's Hosting
         <tr><th>Version</th><th>Target</th><th>Features</th></tr>
         <tr><td><code>v1.1</code></td><td>Q2 2026</td><td>Stripe Connect integration (live payments), per-query metering, platform API keys with rate limiting, AI-Powered Campaign implementation (campaign creation wizard, AI composer, batch message generation, enhanced feed rendering, send/read fee billing, campaign analytics dashboard, marketing data access controls in owner dashboard)</td></tr>
         <tr><td><code>v1.2</code></td><td>Q2 2026</td><td>Trust Score implementation: Depth/Breadth/Durability calculation engine, trust layer classification, validator relationship types, decay scheduler</td></tr>
-        <tr><td><code>v1.4</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
+        <tr><td><code>v1.4 (Activate v2)</code></td><td>Q2 2026</td><td>Activate synthesis architecture (Phases 11-14): identity lock + corrections logging (Phase 11), synthesis pipeline standard mode with broad search + Grok + dual synthesis + machine verification (Phase 12, replaces v1.3.0 scrapers), deep mode background research agent (Phase 13), learned confidence priors from corrections data (Phase 14)</td></tr>
+        <tr><td><code>v1.4 (Affiliate)</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
         <tr><td><code>v1.5</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
         <tr><td><code>v2.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
         <tr><td><code>v2.1</code></td><td>Q1 2027</td><td>Validator Cooperative launch: LLC operating agreement finalized, automated qualification engine, first quarterly distribution, governance voting portal, cooperative member dashboard</td></tr>
@@ -2199,7 +2260,7 @@ Platform                Search Star              User's Hosting
 <footer class="site-footer">
   <div class="wrap-wide">
     <div class="footer-inner">
-      <div><strong>Search Star</strong> — Specification v1.3.0 · MIT License</div>
+      <div><strong>Search Star</strong> — Specification v1.4.0-draft · MIT License</div>
       <div class="footer-links">
         <a href="/">Home</a>
         <a href="profile.html">Sample</a>
