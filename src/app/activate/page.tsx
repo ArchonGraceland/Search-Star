@@ -539,9 +539,9 @@ function ActivateInner() {
       const { sessionId, pickerUri, pollInterval, timeoutIn } = data
       setGPhotosSessionId(sessionId)
 
-      // Open picker in a new window with /autoclose
+      // Open picker using the pickerUri exactly as returned by Google Picker API
       const pickerWindow = window.open(
-        `${pickerUri}/autoclose`,
+        pickerUri,
         'google-photos-picker',
         'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no'
       )
