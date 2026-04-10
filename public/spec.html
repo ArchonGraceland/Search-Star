@@ -140,6 +140,7 @@
         <a class="toc-indent" href="#antigaming">5.9 Anti-Gaming Protections <span class="new-badge">New in v0.9</span></a>
         <a class="toc-indent" href="#networkvalue">5.10 Network Value Multiplier <span class="new-badge">New in v0.9</span></a>
         <a class="toc-indent" href="#cooperative">5.11 Validator Cooperative <span class="new-badge">New in v1.0</span></a>
+        <a class="toc-indent" href="#practicelayer">5.12 Practice Layer <span class="new-badge">New in v1.5</span></a>
         <a href="#numbering">6. Profile Numbering</a>
         <a href="#directory">7. Directory, Registration &amp; Search API <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#registration">7.1 Profile Registration</a>
@@ -785,6 +786,7 @@
         <tr><td><strong>Professional life</strong></td><td>Skills, Content Feed</td><td>Workspace, team photos, speaking engagements, project milestones, awards, office environments</td></tr>
         <tr><td><strong>Aesthetic identity</strong></td><td>Presence (Drip, Vibe)</td><td>Outfit photos, living space, curated environments, travel destinations, artistic output</td></tr>
         <tr><td><strong>Family life</strong></td><td>Family &amp; Household</td><td>Family photos the individual chooses to share — always private tier by default</td></tr>
+        <tr><td><strong>Practice life</strong></td><td>Practice Layer (section 5.12)</td><td>Discipline in action — training sessions, primary source texts, instruments, notebooks, field journals, lab or studio habits. Photos document the unglamorous repetition, not the peak performance.</td></tr>
       </table>
 
       <h4>Photo sourcing</h4>
@@ -1535,6 +1537,163 @@ member_payout = validator_revenue_pool × member_share</pre>
 
       <div class="callout callout-info"><strong>The cooperative's narrative.</strong> "The people who keep Search Star honest own a piece of it." Validator cooperative membership is designed to be a genuine badge of honor — a recognition that this person has staked real money, maintained accuracy, and participated in the trust infrastructure over a sustained period. It is the highest status a non-operator can hold in the Search Star ecosystem.</div>
 
+      <h3 id="practicelayer">5.12 Practice Layer <span style="font-family:'Roboto',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:1px 6px; border-radius:2px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:4px;">New in v1.5</span></h3>
+
+      <p>The Trust Score measures the structure of a person's relationships — who vouches for them, across how many independent communities, and for how long. The Practice Layer adds a complementary signal: the behavioral record of what a person actually does, day after day, in pursuit of genuine understanding. Where the Trust Score is relational, the Practice Layer is personal. Together they answer two different questions platforms care about: <em>is this person embedded in real human communities?</em> (Trust Score) and <em>is this the kind of person who keeps showing up?</em> (Practice Layer).</p>
+
+      <h4>The core inversion</h4>
+      <p>Most social platforms reward performance — highlight reels curated for impression. The Practice Layer inverts this. Its profile surface is a seismic record of unglamorous, repeated acts: the daily Latin declension, the pages of primary source read before bed, the BJJ session logged at 6am. The depth signal is not what a person has achieved but what they keep returning to. A 400-day reading streak is a different kind of credential than a certificate — it is unforgiving, unpadded, timestamped on the server, and cannot be inflated.</p>
+
+      <h4>Discipline taxonomy</h4>
+      <p>A discipline is any sustained practice a person logs over time. Disciplines are grouped into five categories, each with its own epistemic character:</p>
+      <table>
+        <tr><th>Category</th><th>Examples</th><th>What it signals</th></tr>
+        <tr><td><strong>Primary sources</strong></td><td>Reading original texts rather than summaries — Kant not a podcast about Kant, Thucydides not a Wikipedia summary</td><td>Willingness to engage with difficulty at the source rather than consuming pre-digested conclusions</td></tr>
+        <tr><td><strong>Practice disciplines</strong></td><td>Martial arts, instrument, language, drawing, chess — skills with long learning curves and no shortcut</td><td>Tolerance for slow, non-linear progress; relationship to difficulty as a practice rather than an obstacle</td></tr>
+        <tr><td><strong>Slow media</strong></td><td>Long-form reading, documentary series, lecture courses — logged by time or pages, not just completion</td><td>Sustained attention and resistance to the summary economy</td></tr>
+        <tr><td><strong>Reflection logs</strong></td><td>Journaling, note-taking, annotation — the processing layer on top of input</td><td>Integration, not just consumption; evidence that new material is being worked into existing understanding</td></tr>
+        <tr><td><strong>Belief updates</strong></td><td>Timestamped public record of positions changed, including what changed them</td><td>Epistemic honesty; willingness to update under evidence rather than defend prior positions</td></tr>
+      </table>
+
+      <h4>Streak mechanics</h4>
+      <p>A streak is a consecutive-day (or consecutive-week, for lower-frequency disciplines) count of logged engagement with a discipline. Streaks are binary and append-only: each day either has a log entry or it does not. There is no backfill — entries are timestamped server-side at submission and cannot be added for prior days. Gaps are permanent and visible on the profile. The system does not hide them; a gap is part of the record.</p>
+      <p>Streak length alone is not the signal. The system surfaces three streak metrics for each discipline:</p>
+      <ul>
+        <li><strong>Current streak</strong> — consecutive days with a log entry up to today</li>
+        <li><strong>Longest streak</strong> — the best unbroken run in the discipline's history</li>
+        <li><strong>Gap history</strong> — a count and reason log for streak breaks; gap acknowledgment posts (see below) feed this field</li>
+      </ul>
+      <p>Gap acknowledgment is an explicit post type: when a streak breaks, the user is prompted to log briefly what interrupted it and what that reveals. This is not punitive — a thoughtful gap acknowledgment is itself an epistemic act, and the post carries the same social weight as a milestone reflection.</p>
+
+      <h4>Post types</h4>
+      <p>The Practice Layer generates four post types that surface in the profile feed and, optionally, in a shared community feed (see Feed mechanics below):</p>
+      <table>
+        <tr><th>Post type</th><th>Trigger</th><th>Content</th></tr>
+        <tr><td><strong>Log entry</strong></td><td>Any daily/weekly check-in</td><td>Brief note on what was engaged with. Required: discipline name, date. Optional: a sentence or two of reflection. <em>Day 47 of Latin. Finally understood the ablative absolute.</em></td></tr>
+        <tr><td><strong>Milestone reflection</strong></td><td>Streak thresholds: 30, 100, 365, 1000 days</td><td>Longer prompted reflection: what has changed in your thinking over this period? How has the discipline changed you? These are the posts most likely to be validator-worthy (see co-signing below).</td></tr>
+        <tr><td><strong>Gap acknowledgment</strong></td><td>Streak break</td><td>What interrupted the practice, and what does that reveal? Honest gap acknowledgments are surfaced positively — they demonstrate the epistemic honesty the system rewards.</td></tr>
+        <tr><td><strong>Convergence post</strong></td><td>User-initiated</td><td>When two disciplines intersect in understanding. <em>My reading of Aquinas and my BJJ practice are saying the same thing to me right now.</em> These are linked to both discipline records and create cross-discipline edges in the profile graph.</td></tr>
+      </table>
+
+      <h4>The Practice Profile surface</h4>
+      <p>The Practice chapter of a Search Star profile displays:</p>
+      <ul>
+        <li>A <strong>depth map</strong> — a visual grid showing active disciplines, current streaks, and visible gaps. Gaps are not hidden.</li>
+        <li>A <strong>currently confused about</strong> field — live open questions the person is sitting with. This field decays: questions older than 90 days with no update are marked stale.</li>
+        <li>A <strong>belief changelog</strong> — append-only timestamped record of positions updated. The changelog can only grow; prior entries cannot be modified or deleted.</li>
+        <li>A <strong>reading trail</strong> — not a bookshelf but a chain: each item records what it led to next, creating a navigable graph of intellectual lineage.</li>
+        <li>A <strong>validator co-signs</strong> panel — humans who have staked reputation on the quality of engagement in a specific discipline (see Validator co-signing below).</li>
+      </ul>
+
+      <h4>Validator co-signing</h4>
+      <p>Human validators from the existing Trust Score architecture (section 5.4) can extend their staking to disciplines in the Practice Layer. A co-sign is a validator attesting not just to a person's existence in a community but to the <em>quality</em> of their engagement with a discipline. Co-signing a discipline is a stronger claim than a community validation — it says: <em>I have watched this person practice, and I can attest to the depth of what they have built.</em></p>
+      <p>Co-signing mechanics:</p>
+      <ul>
+        <li>A validator may co-sign any discipline on a profile they are already validating at the Practice Group layer (2x multiplier tier).</li>
+        <li>Co-signing requires a minimum stake of $10 (the same floor as a standard validation stake).</li>
+        <li>The co-sign includes a short attestation: what the validator has observed about the depth of engagement, and how long they have observed it.</li>
+        <li>If a co-signed streak is later found to be inflated or the claimed understanding demonstrably shallow (via dispute resolution, section 5.6), the validator forfeits their stake and their own Practice Depth sub-score is penalized.</li>
+        <li>A co-signed discipline milestone reflection is surfaced more prominently in the feed — the validator's attestation appears alongside the post as context.</li>
+      </ul>
+      <p>Co-signing creates a natural formation mechanic for Practice Groups. People practicing the same disciplines find each other through the feed, validate each other's work, and form the tight-knit groups that earn the highest trust multipliers in the existing architecture. The economic incentive and the social one are aligned: you want to be in a Practice Group with people whose habits you can honestly attest to.</p>
+
+      <h4>Contribution to Trust Score</h4>
+      <p>The Practice Layer adds two new sub-components to the Trust Score calculation. These components do not replace the existing Depth / Breadth / Durability sub-scores — they augment them with an individual-level behavioral prior that informs how much weight relational validations carry.</p>
+      <table>
+        <tr><th>Sub-component</th><th>Range</th><th>Derivation</th><th>Notes</th></tr>
+        <tr><td><strong>Practice Depth</strong></td><td>0–20</td><td>Weighted average of (streak length × discipline difficulty rating × validator co-signs) across all active disciplines</td><td>Discipline difficulty ratings are community-set by Practice Group validators, not system-defined. A 200-day Latin streak co-signed by two classicists scores higher than a 200-day podcast-listening streak with no co-signs.</td></tr>
+        <tr><td><strong>Epistemic Honesty</strong></td><td>0–10</td><td>Activity rate on belief changelog + gap acknowledgment ratio (acknowledged gaps / total gaps) + open questions field freshness</td><td>Updating beliefs publicly increases the score. Never updating over 12+ months of active streaks decreases it — sustained engagement without any intellectual movement is treated as a signal of performative logging.</td></tr>
+      </table>
+      <p>The existing Trust Score maximum of 100 is preserved. Practice Depth and Epistemic Honesty are allocated from within the existing Depth sub-score ceiling (0–40), reducing the maximum relational Depth contribution from 40 to 20 and adding up to 30 from the Practice sub-components. This means the Practice Layer does not inflate Trust Scores — it redistributes weight toward individual behavioral evidence and away from pure relational structure.</p>
+
+      <div class="callout callout-info"><strong>Convergence bonus.</strong> When a person's Practice Group validators are the same people co-signing their discipline streaks — i.e., the relational and behavioral layers are mutually reinforcing — a convergence multiplier of 1.15× applies to the Practice Depth sub-score. Gaming this requires building a genuine practice community around shared disciplines. The manipulation and the virtue converge.</div>
+
+      <h4>Feed mechanics</h4>
+      <p>Practice Layer posts can be shared to a community feed — an opt-in surface where log entries, milestone reflections, and convergence posts from followed profiles appear in chronological order. The feed has no algorithmic ranking. There are no likes. Three interaction types are available:</p>
+      <table>
+        <tr><th>Interaction</th><th>Meaning</th></tr>
+        <tr><td><strong>Echo</strong></td><td><em>I am sitting with the same question.</em> A signal of shared confusion or shared practice, not validation of the post's content.</td></tr>
+        <tr><td><strong>Fork</strong></td><td><em>This led me somewhere different.</em> Links the responder's reading trail or belief changelog to the poster's at a divergence point. Creates a navigable graph of intellectual paths taken from a shared origin.</td></tr>
+        <tr><td><strong>Confirmation</strong></td><td><em>I reached this same place via a different path.</em> Links two reading trails that converged independently. The strongest social signal in the feed — convergent discovery from independent paths is the system's proxy for truth.</td></tr>
+      </table>
+      <p>Follow relationships in the Practice feed are asymmetric and discipline-specific. You can follow a person's Latin streak without following their BJJ streak. Discovery surfaces people whose active disciplines overlap or complement yours — not people with the most followers or the highest engagement rate.</p>
+
+      <h4>Activate integration</h4>
+      <p>When a user runs the Activate flow (section 3.9), the synthesis pipeline seeds the Practice Layer with evidence of existing habits from the public digital footprint:</p>
+      <ul>
+        <li>Goodreads public shelves and reading activity → seeds Primary sources and Slow media disciplines</li>
+        <li>GitHub commit history → seeds Practice disciplines (software craft)</li>
+        <li>Strava or Garmin public logs → seeds Practice disciplines (athletic)</li>
+        <li>Duolingo public profiles → seeds Practice disciplines (language)</li>
+        <li>Google Scholar or ORCID publication history → seeds Primary sources and Slow media</li>
+      </ul>
+      <p>These seeds are presented in the review UI with their source provenance and confidence scores from the learned priors system (section 3.9, Phase 14). The user confirms which represent genuine engagement — performative or abandoned activity is common in external sources and the review step is critical. Confirmed seeds establish a backdated discipline record with <code>provenance_status = 'seeded_confirmed'</code>; streaks begin fresh from the confirmation date. There is no backfill of daily entries — the sovereign record starts clean, timestamped, append-only in Supabase.</p>
+
+      <h4>Data model</h4>
+      <pre>disciplines (
+  id            uuid primary key,
+  user_id       uuid references auth.users,
+  name          text not null,
+  category      text check (category in ('primary_sources','practice','slow_media','reflection','belief_updates')),
+  started_at    timestamptz not null,
+  current_streak int default 0,
+  longest_streak int default 0,
+  total_days    int default 0,
+  difficulty    int default 50,          -- 0–100, community-set by co-signers
+  created_at    timestamptz default now()
+)
+
+discipline_logs (
+  id            uuid primary key,
+  discipline_id uuid references disciplines,
+  user_id       uuid references auth.users,
+  logged_at     timestamptz not null,    -- server-set, not client-supplied
+  note          text,
+  post_type     text check (post_type in ('log','milestone','gap','convergence')),
+  created_at    timestamptz default now()
+)
+
+belief_changelog (
+  id            uuid primary key,
+  user_id       uuid references auth.users,
+  claim         text not null,
+  prior_belief  text,
+  updated_belief text not null,
+  changed_by    text,                    -- what caused the update
+  recorded_at   timestamptz default now()
+  -- append-only: no updates or deletes permitted
+)
+
+open_questions (
+  id            uuid primary key,
+  user_id       uuid references auth.users,
+  question      text not null,
+  added_at      timestamptz default now(),
+  resolved_at   timestamptz,
+  stale_at      timestamptz             -- set to added_at + 90 days; refreshed on any update
+)
+
+reading_trail (
+  id            uuid primary key,
+  user_id       uuid references auth.users,
+  item          text not null,
+  item_type     text,                   -- book, article, lecture, paper, other
+  completed_at  timestamptz,
+  led_to        uuid[],                 -- array of reading_trail ids this item led to
+  discipline_id uuid references disciplines
+)
+
+discipline_cosigns (
+  id            uuid primary key,
+  validator_id  uuid references auth.users,
+  discipline_id uuid references disciplines,
+  attestation   text not null,
+  stake_amount  numeric not null,
+  cosigned_at   timestamptz default now()
+)</pre>
+
+      <div class="callout callout-info"><strong>The economic flywheel.</strong> Consistent daily habit → streak builds on profile → Practice Group validators co-sign → Trust Score increases via Practice Depth sub-component → profile query value increases → platforms pay more per query → financial reward for genuine practice → incentive to maintain the habit. The sovereign data economy makes authentic self-development economically rational. You are not just intrinsically motivated to build good habits — the system pays you for them.</div>
+
       <!-- ═══════════ 6. NUMBERING ═══════════ -->
 
       <h2 id="numbering">6. Profile Numbering</h2>
@@ -2248,6 +2407,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v1.4 (Activate v2)</code></td><td>Q2 2026</td><td>Activate synthesis architecture (Phases 11-14): identity lock + corrections logging (Phase 11), synthesis pipeline standard mode with broad search + Grok + dual synthesis + machine verification (Phase 12, replaces v1.3.0 scrapers), deep mode background research agent (Phase 13), learned confidence priors from corrections data (Phase 14)</td></tr>
         <tr><td><code>v1.4 (Affiliate)</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
         <tr><td><code>v1.5</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
+        <tr><td><code>v1.5 (Practice Layer)</code></td><td>Q3 2026</td><td>Practice Layer (section 5.12): habit streaks as depth signals on the sovereign profile. Discipline taxonomy (primary sources, practice disciplines, slow media, reflection logs, belief updates). Append-only server-timestamped streak records with gap history. Four post types (log entry, milestone reflection, gap acknowledgment, convergence post). Practice Profile surface: depth map, belief changelog, reading trail, open questions, validator co-signs. Validator co-signing of disciplines at Practice Group layer. Two new Trust Score sub-components: Practice Depth (0–20) and Epistemic Honesty (0–10), redistributed from within existing Depth ceiling. Convergence bonus (1.15×) when relational and behavioral layers reinforce. Practice feed with Echo / Fork / Confirmation interactions — no likes, no algorithmic ranking, discipline-specific follows. Activate integration seeding from Goodreads, GitHub, Strava, Duolingo, Google Scholar. Practice narrative chapter added to visual narrative. Six new Supabase tables: disciplines, discipline_logs, belief_changelog, open_questions, reading_trail, discipline_cosigns.</td></tr>
         <tr><td><code>v2.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
         <tr><td><code>v2.1</code></td><td>Q1 2027</td><td>Validator Cooperative launch: LLC operating agreement finalized, automated qualification engine, first quarterly distribution, governance voting portal, cooperative member dashboard</td></tr>
       </table>
@@ -2272,3 +2432,4 @@ Platform                Search Star              User's Hosting
 
 </body>
 </html>
+
