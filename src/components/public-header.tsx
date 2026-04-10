@@ -20,8 +20,14 @@ export function PublicHeader() {
         </div>
         <nav className="flex items-center gap-4">
           <Link
-            href="/activate"
+            href="/commitment"
             className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-white/50 no-underline hover:text-white/80 transition-colors"
+          >
+            Commit
+          </Link>
+          <Link
+            href="/activate"
+            className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-white/30 no-underline hover:text-white/60 transition-colors"
           >
             Activate
           </Link>
