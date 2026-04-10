@@ -51,6 +51,7 @@ export default async function DashboardLayout({
         {/* Nav */}
         <nav className="flex-1 px-3 py-4">
           <NavLink href="/dashboard" label="Dashboard" icon="📊" />
+          <NavLink href="/practice" label="Practice" icon="🌱" />
           <NavLink href="/profile-builder" label="Register Profile" icon="⚡" />
           <NavLink href="/feed" label="Feed" icon="💬" />
           <NavLink href="/account" label="Account" icon="👤" />
