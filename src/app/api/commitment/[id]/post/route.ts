@@ -37,6 +37,31 @@ export async function POST(
   const newLongest = Math.max(commitment.longest_streak || 0, newStreak)
   const isMilestone = [10, 20, 30, 40].includes(newLoggedDays)
 
+  // Milestone posts require media evidence if there are any fundraises or sponsorships
+  if (isMilestone) {
+    const { data: hasFundraise } = await supabase
+      .from('commitment_fundraises')
+      .select('id')
+      .eq('commitment_id', id)
+      .in('status', ['open', 'active'])
+      .single()
+
+    const { data: hasSponsorship } = await supabase
+      .from('practice_sponsorships')
+      .select('id')
+      .eq('commitment_id', id)
+      .eq('status', 'active')
+      .single()
+
+    if ((hasFundraise || hasSponsorship) && !media_urls.length) {
+      return NextResponse.json({
+        error: 'Milestone day with active funding requires photo or video evidence',
+        requires_evidence: true,
+        day: newLoggedDays,
+      }, { status: 422 })
+    }
+  }
+
   let newStatus = commitment.status
   if (newLoggedDays >= 40 && commitment.status === 'active') newStatus = 'ongoing'
 
@@ -60,82 +85,52 @@ export async function POST(
     .update({ logged_days: newLoggedDays, current_streak: newStreak, longest_streak: newLongest, status: newStatus })
     .eq('id', id)
 
-  // ── Sponsorship hooks ────────────────────────────────────────
-  const milestoneBounties: { day: number; amount: number }[] = []
-  let gatedOffersDelivered = 0
+  // ── Evidence submission on milestone days ─────────────────
+  let evidenceId: string | null = null
+  let evidenceStatus: string | null = null
 
-  const { data: sponsorships } = await supabase
-    .from('practice_sponsorships')
-    .select('*')
-    .eq('commitment_id', id)
-    .eq('status', 'active')
-
-  if (sponsorships?.length) {
-    // Get user's profile id once
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
+  if (isMilestone && media_urls.length > 0) {
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+    const { data: evidence } = await supabase
+      .from('evidence_submissions')
+      .insert({
+        commitment_id: id,
+        post_id: post.id,
+        user_id: user.id,
+        day_number: newLoggedDays,
+        media_urls,
+        status: 'pending',
+        required_validators: 3,
+        expires_at: expiresAt,
+      })
+      .select('id, status')
       .single()
+    evidenceId = evidence?.id || null
+    evidenceStatus = 'pending'
+  }
 
-    for (const sponsorship of sponsorships) {
-      // Milestone bounty
-      if (isMilestone) {
-        const bountyMap: Record<number, number> = {
-          10: Number(sponsorship.bounty_day10 || 0),
-          20: Number(sponsorship.bounty_day20 || 0),
-          30: Number(sponsorship.bounty_day30 || 0),
-          40: Number(sponsorship.bounty_day40 || 0),
-        }
-        const bountyAmount = bountyMap[newLoggedDays] || 0
+  // ── Gated offer delivery (not payment-gated) ──────────────
+  let gatedOffersDelivered = 0
+  if (isMilestone) {
+    const { data: userProfile } = await supabase
+      .from('profiles').select('id').eq('user_id', user.id).single()
 
-        if (bountyAmount > 0 && Number(sponsorship.escrow_remaining) >= bountyAmount) {
-          const ssFee = +(bountyAmount * 0.1).toFixed(2)
-          const netAmount = +(bountyAmount * 0.9).toFixed(2)
+    const { data: sponsorships } = await supabase
+      .from('practice_sponsorships')
+      .select('id, gated_offer_body, gated_offer_threshold, gated_offer_delivered, gated_offer_price')
+      .eq('commitment_id', id)
+      .eq('status', 'active')
 
-          await supabase.from('sponsorship_milestone_payments').insert({
-            sponsorship_id: sponsorship.id,
-            commitment_id: id,
-            user_id: user.id,
-            day_number: newLoggedDays,
-            gross_amount: bountyAmount,
-            ss_fee: ssFee,
-            net_amount: netAmount,
-          })
-
-          await supabase
-            .from('practice_sponsorships')
-            .update({ escrow_remaining: +(Number(sponsorship.escrow_remaining) - bountyAmount).toFixed(2) })
-            .eq('id', sponsorship.id)
-
-          milestoneBounties.push({ day: newLoggedDays, amount: netAmount })
-        }
-      }
-
-      // Gated offer delivery
-      if (
-        !sponsorship.gated_offer_delivered &&
-        sponsorship.gated_offer_body &&
-        newLoggedDays >= Number(sponsorship.gated_offer_threshold) &&
-        userProfile?.id
-      ) {
+    for (const s of sponsorships || []) {
+      if (!s.gated_offer_delivered && s.gated_offer_body && newLoggedDays >= Number(s.gated_offer_threshold) && userProfile?.id) {
         await supabase.from('messages').insert({
-          recipient_id: userProfile.id,
-          sender_id: null,
-          type: 'marketing',
-          subject: 'Offer from your sponsor',
-          body: sponsorship.gated_offer_body,
-          price_paid: Number(sponsorship.gated_offer_price),
-          read: false,
-          blocked: false,
+          recipient_id: userProfile.id, sender_id: null, type: 'marketing',
+          subject: 'Offer from your sponsor', body: s.gated_offer_body,
+          price_paid: Number(s.gated_offer_price), read: false, blocked: false,
         }).maybeSingle()
-
-        const newSponsorshipStatus = newLoggedDays >= 40 ? 'completed' : 'active'
-        await supabase
-          .from('practice_sponsorships')
-          .update({ gated_offer_delivered: true, status: newSponsorshipStatus })
-          .eq('id', sponsorship.id)
-
+        await supabase.from('practice_sponsorships')
+          .update({ gated_offer_delivered: true })
+          .eq('id', s.id)
         gatedOffersDelivered++
       }
     }
@@ -146,6 +141,12 @@ export async function POST(
     logged_days: newLoggedDays,
     status: newStatus,
     is_milestone: isMilestone,
-    sponsorship: { milestone_bounties: milestoneBounties, gated_offers_delivered: gatedOffersDelivered },
+    evidence_id: evidenceId,
+    evidence_status: evidenceStatus,
+    validation_required: isMilestone && media_urls.length > 0,
+    gated_offers_delivered: gatedOffersDelivered,
+    message: isMilestone && evidenceId
+      ? 'Milestone posted. 3 validators must confirm your evidence to release payments.'
+      : null,
   })
 }

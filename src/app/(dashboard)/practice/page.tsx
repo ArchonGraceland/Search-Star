@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { PracticeClient } from './practice-client'
+import { ValidationQueue } from './validation-queue'
 
 export default async function PracticePage() {
   const supabase = await createClient()
@@ -13,7 +14,7 @@ export default async function PracticePage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <h1 className="font-heading text-[32px] font-bold mb-1">Practice</h1>
-          <p className="font-body text-sm text-[#767676]">Your active commitments and ongoing streaks.</p>
+          <p className="font-body text-sm text-[#767676]">Your commitments, fundraises, and validation queue.</p>
         </div>
         <Link
           href="/commitment"
@@ -22,7 +23,20 @@ export default async function PracticePage() {
           + new commitment
         </Link>
       </div>
-      <PracticeClient />
+
+      <div className="space-y-10">
+        <section>
+          <PracticeClient />
+        </section>
+
+        <section>
+          <h2 className="font-heading text-xl font-bold mb-1">Validate others</h2>
+          <p className="font-body text-sm text-[#767676] mb-4">
+            People you support who have posted milestone evidence. Three confirmations release their payments.
+          </p>
+          <ValidationQueue />
+        </section>
+      </div>
     </div>
   )
 }
