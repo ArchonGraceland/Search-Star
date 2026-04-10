@@ -76,6 +76,7 @@ export default async function PlatformLayout({
           <PlatformNavLink href="/platform/directory" label="Directory" icon="🔍" />
           <PlatformNavLink href="/platform/messages" label="Messages" icon="✉️" />
           <PlatformNavLink href="/platform/analytics" label="Analytics" icon="📈" />
+          <PlatformNavLink href="/platform/sponsorships" label="Sponsorships" icon="🌱" />
 
           {profile.role === 'admin' && (
             <>

@@ -32,11 +32,19 @@ export async function GET() {
     .select('commitment_id, supporter_id, role')
     .in('commitment_id', ids)
 
+  // Fetch active sponsorships
+  const { data: sponsorships } = await supabase
+    .from('practice_sponsorships')
+    .select('id, commitment_id, sponsor_label, bounty_day10, bounty_day20, bounty_day30, bounty_day40, escrow_remaining, weekly_rate, gated_offer_threshold, gated_offer_delivered, status')
+    .in('commitment_id', ids)
+    .eq('status', 'active')
+
   // Attach posts and supporters to each commitment
   const enriched = commitments.map(c => ({
     ...c,
     posts: (posts || []).filter(p => p.commitment_id === c.id).slice(0, 10),
     supporters: (supporters || []).filter(s => s.commitment_id === c.id),
+    sponsorships: (sponsorships || []).filter(s => s.commitment_id === c.id),
   }))
 
   return NextResponse.json({ commitments: enriched })

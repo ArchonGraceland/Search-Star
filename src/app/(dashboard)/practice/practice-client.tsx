@@ -25,6 +25,19 @@ interface Supporter {
   role: SupportRole
 }
 
+interface Sponsorship {
+  id: string
+  sponsor_label: string | null
+  bounty_day10: number
+  bounty_day20: number
+  bounty_day30: number
+  bounty_day40: number
+  escrow_remaining: number
+  weekly_rate: number
+  gated_offer_threshold: number
+  gated_offer_delivered: boolean
+}
+
 interface Commitment {
   id: string
   habit: string
@@ -37,6 +50,7 @@ interface Commitment {
   prior_attempt_id: string | null
   posts: Post[]
   supporters: Supporter[]
+  sponsorships: Sponsorship[]
 }
 
 // ═══════════════════════════════════════════════════
@@ -320,6 +334,42 @@ function CommitmentCard({
             <span className="font-body text-[11px] text-[#767676]">
               {commitment.supporters.length} supporter{commitment.supporters.length !== 1 ? 's' : ''}
             </span>
+          </div>
+        )}
+
+        {/* Sponsor badges */}
+        {commitment.sponsorships?.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {commitment.sponsorships.map(s => (
+              <div key={s.id} className="flex items-center gap-1.5 px-2.5 py-1 bg-[#fffbeb] border border-[#92400e]/20 rounded-full">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#92400e]" />
+                <span className="font-body text-[10px] font-bold text-[#92400e]">
+                  {s.sponsor_label || 'Sponsored'}
+                </span>
+              </div>
+            ))}
+            {/* Upcoming bounties */}
+            {commitment.sponsorships.some(s => s.bounty_day10 || s.bounty_day20 || s.bounty_day30 || s.bounty_day40) && (
+              <div className="flex gap-1.5 flex-wrap">
+                {([10, 20, 30, 40] as const).map(day => {
+                  const total = commitment.sponsorships.reduce((sum, s) => {
+                    const key = `bounty_day${day}` as keyof typeof s
+                    return sum + Number(s[key] || 0)
+                  }, 0)
+                  if (!total) return null
+                  const reached = commitment.logged_days >= day
+                  return (
+                    <span key={day} className={`font-body text-[10px] px-2 py-0.5 rounded-full border ${
+                      reached
+                        ? 'bg-[#f0fdf4] border-[#166534]/20 text-[#166534]'
+                        : 'bg-[#f5f5f5] border-[#d4d4d4] text-[#767676]'
+                    }`}>
+                      {reached ? '✓' : ''} Day {day} ${total.toFixed(0)}
+                    </span>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
