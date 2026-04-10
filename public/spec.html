@@ -115,7 +115,8 @@
         <a class="toc-indent" href="#advertising">3.6 Advertising Profile <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#dating">3.7 Intimate &amp; Dating <span class="new-badge">New in v0.3</span></a>
         <a class="toc-indent" href="#contentfeed">3.8 Content Feed <span class="new-badge">New in v0.4</span></a>
-        <a class="toc-indent" href="#seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span class="new-badge">v1.4 in progress</span></a>
+        <a class="toc-indent" href="#seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span class="new-badge">Deprecated in v2.0</span></a>
+        <a class="toc-indent" href="#commitment">3.10 Commitment: Habit-First Onboarding <span class="new-badge">New in v2.0</span></a>
         <a href="#access">4. Access Control &amp; Monetization</a>
         <a class="toc-indent" href="#tiers">4.1 Three Tiers</a>
         <a class="toc-indent" href="#pricing">4.2 Pricing Model</a>
@@ -692,7 +693,8 @@
 
       <!-- ═══════════ 3.9 ACTIVATE ═══════════ -->
 
-      <h3 id="seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--amber-bg); color:var(--amber); vertical-align:middle; margin-left:8px;">v1.4 in progress</span></h3>
+      <h3 id="seeding">3.9 Activate: Profile Discovery &amp; Visual Narrative <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--red-bg,#fde8e8); color:var(--red,#c0392b); vertical-align:middle; margin-left:8px;">Deprecated in v2.0</span></h3>
+      <div class="callout callout-warn"><strong>Deprecation notice.</strong> The Activate flow described in this section — scraping a user's existing public digital footprint to assemble a retrospective profile — is deprecated as the primary onboarding path in v2.0. The fundamental problem: it replicates what already exists. It assembles a LinkedIn-style credential portrait from public sources, which is performative by design. The v2.0 model replaces it entirely with Commitment: Habit-First Onboarding (section 3.10), where the profile is built forward through practice rather than backward through discovery. The Activate infrastructure (synthesis pipeline, machine-verified provenance, confidence priors) remains in the codebase and may be reintroduced as an optional secondary enrichment path for users who want to import existing context after establishing their practice record. It is no longer the entry point.</div>
       <p>The current profile creation flow (section 8.4) requires the individual to build their profile from scratch — pasting a prompt into an AI and answering questions for 30–60 minutes. This works, but it creates a cold-start problem: the person does all the work before getting any value. Activate inverts this. The system discovers the individual's existing public footprint, assembles a draft profile, and hands it to the individual to correct, enrich, and own. The barrier drops from "build your profile" to "review what we found and fix what's wrong." The individual transitions from a passive data subject to an active participant who controls their own information.</p>
       <p>This is the Grokipedia model applied to everyone, with a critical difference: Grokipedia builds profiles of famous people that those people do not control. Search Star discovers public data and then <em>hands ownership to the individual</em>. The draft is a starting point, not a final product. The individual corrects inaccuracies, adds private information the system could not find, removes anything they do not want published, and hosts the result on their own infrastructure.</p>
 
@@ -932,6 +934,125 @@
         <tr><td>Phase 14</td><td>Learned confidence priors from corrections data, replacing hardcoded values</td><td>Planned</td></tr>
       </table>
       <p>The full project plan with chat prompts, file lists, and end-of-phase checklists lives in the repository at <code>docs/activate-project-plan.md</code>.</p>
+
+      <!-- ═══════════ 3.10 COMMITMENT ═══════════ -->
+
+      <h3 id="commitment">3.10 Commitment: Habit-First Onboarding <span style="font-family:'Roboto',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; background:var(--green-bg); color:var(--green); vertical-align:middle; margin-left:8px;">New in v2.0</span></h3>
+
+      <p>The fundamental problem with every prior onboarding model — including Activate — is that it starts with who you <em>are</em>. A credential portrait. A retrospective footprint. A LinkedIn assembled from public sources. This is performative by design: the signal is status, not character. It optimizes for the impression made rather than the life lived.</p>
+
+      <p>v2.0 onboarding starts with who you are <em>trying to become</em>. The first act on Search Star is not filling in a form or confirming scraped data. It is making a commitment: a habit you will practice for the next 40 days, posted publicly, witnessed by others. Your profile is not assembled from what already exists — it is built forward, in real time, through the accumulation of practice.</p>
+
+      <div class="callout callout-info"><strong>Why 40 days.</strong> Forty days is long enough to be a genuine test of character — short enough to be imaginable from the start. It appears across traditions precisely because it sits at the boundary between resolution and transformation. It is also sufficient time for a support network to form around the commitment: people who witness day 1 are invested in day 40.</div>
+
+      <h4>The commitment object</h4>
+      <p>A commitment is the atomic unit of the Search Star profile. It has:</p>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+        <tr><td><code>habit</code></td><td>String</td><td>Free-text description of the habit. <em>Read 20 pages of primary source material before noon. Practice BJJ three times a week. Write one page of observation daily.</em> No taxonomy enforced — the user defines their own.</td></tr>
+        <tr><td><code>started_at</code></td><td>Timestamp</td><td>Server-set at commitment creation. Cannot be backdated.</td></tr>
+        <tr><td><code>status</code></td><td>Enum</td><td><code>active</code> (days 1–40), <code>ongoing</code> (day 41+, streak continues), <code>restart_eligible</code> (abandoned, can be restarted), <code>completed</code> (40 days reached, user chose to archive rather than continue)</td></tr>
+        <tr><td><code>day</code></td><td>Integer</td><td>Current day number. Computed from <code>started_at</code> and number of logged posts. Does not advance automatically — only advances when a post is logged. A day with no post is not a gap; it is simply a day not yet logged. The 40-day window is based on logged days, not calendar days.</td></tr>
+        <tr><td><code>streak</code></td><td>Integer</td><td>Consecutive calendar days with at least one post. Separate from the 40-day commitment day count. Streak breaks are visible on the profile.</td></tr>
+        <tr><td><code>prior_attempts</code></td><td>Array</td><td>If this commitment was previously abandoned and restarted, prior attempt records are preserved and linked. Each shows how far the prior run reached and what date it was paused.</td></tr>
+      </table>
+
+      <h4>The 40-day window</h4>
+      <p>Progress through the 40-day commitment is measured in <em>logged days</em>, not calendar days. This is intentional: life interrupts. A week of illness does not destroy a commitment. What matters is that the person returns. The commitment window stays open until 40 days have been logged or the user marks it abandoned.</p>
+      <p>The calendar streak (consecutive days with a post) is tracked separately and is visible on the profile alongside the logged-day count. Both signals matter: a person who logged 40 days over 41 calendar days has a different profile than a person who logged 40 days over 8 months. Both completed. The texture is different.</p>
+
+      <h4>What happens at day 41</h4>
+      <p>When the 40th day is logged, the commitment status transitions from <code>active</code> to <code>ongoing</code>. The habit becomes a permanent streak with no end date. The profile shows: <em>started [date] · 40-day commitment completed · now on day [N]</em>. The 40-day arc is the foundation of something with no ceiling. There is no prompt to stop, no ceremony of completion that ends the practice. The 40 days is the proof of concept; what follows is the life.</p>
+
+      <h4>Abandonment and restart eligibility</h4>
+      <p>If a user stops posting without logging 40 days, the commitment does not disappear. It becomes <code>restart_eligible</code> and remains visible on the profile with its prior attempt record intact. The record shows: <em>attempted [date] · reached day [N] · paused.</em></p>
+      <p>This is not a failure state. It is an honest record of an attempt that was not ready. When the user restarts the same habit later, the prior attempt becomes context — visible to their support network and to anyone viewing the profile. A person who attempted something three times before completing it has demonstrated more character than someone who coasted through it once. The restart history is a feature, not a scar.</p>
+      <p>Users can have any number of restart-eligible commitments alongside active ones. There is no pressure to archive or hide prior attempts. There is no delete.</p>
+
+      <h4>Post format</h4>
+      <p>Posts during a commitment are freeform: image, text, video link, or any combination. No structure is enforced. The system does not require a fixed format, a word count, or a check-box. The only requirement is that a post is submitted — what it contains is the user's choice.</p>
+      <p>The freeform format is deliberate. A photo of the book open to the page you finished, a two-sentence observation about what changed today, a link to a video of the practice session — these are all valid posts. The diversity of format is itself a signal of genuine engagement. A feed of identically-structured check-box posts would be a log. A feed of varied, honest, imperfect posts is a practice journal.</p>
+      <p>Milestone prompts (days 10, 20, 30, 40) surface an optional reflection question in the posting interface: <em>What has changed since day 1?</em> The prompt is never mandatory. Milestone reflections that are submitted are surfaced more prominently in the supporter feed and carry additional weight in the Practice Depth sub-score (section 5.12).</p>
+
+      <h4>The support network</h4>
+      <p>Three support roles exist for any active commitment, each representing a different depth of relational investment. Support roles map directly to the Trust Layer architecture (section 5.2):</p>
+      <table>
+        <tr><th>Role</th><th>Mechanics</th><th>Trust layer</th><th>What it signals</th></tr>
+        <tr><td><strong>Witness</strong></td><td>Follow a commitment. Receive posts in feed. Can echo, fork, or confirm posts (section 5.12). No stake required.</td><td>Cross-Network layer</td><td>Presence and attention. The outer ring of care — you are watching and you let them know.</td></tr>
+        <tr><td><strong>Co-practitioner</strong></td><td>Declare the same habit simultaneously, or join an in-progress commitment. Your streaks are linked and visible together on both profiles. If one person's streak breaks, their co-practitioner is notified.</td><td>Community layer (2x multiplier)</td><td>Shared accountability. You have put your own practice record alongside theirs. Your support is not observation — it is participation.</td></tr>
+        <tr><td><strong>Stakeholder</strong></td><td>Stake a minimum of $5 on a person completing their 40-day commitment. Stake is held in escrow. On completion, stake is returned plus a share of the platform's commitment completion pool. On abandonment, stake is forfeited to the platform's trust reserve.</td><td>Practice Group layer (2x multiplier, section 5.12)</td><td>Reputational and financial confidence in the person. The strongest signal: you are willing to lose something if you are wrong about them.</td></tr>
+      </table>
+
+      <div class="callout callout-info"><strong>Trust accumulates during the hard part.</strong> In every prior model, trust is validated after success — a credential is earned, then endorsed. In the Commitment model, trust is built during the difficulty. A stakeholder who watched a person fail on day 17 and restart on day 18 and reach day 40 has witnessed something that no credential can replicate. The validator's trust is worth more because it was formed through observation of struggle, not through confirmation of outcome.</div>
+
+      <h4>The profile that emerges</h4>
+      <p>A Search Star profile built through commitments contains no imported credentials, no scraped footprint, and no self-reported claims that have not been tested by time. It contains:</p>
+      <ul>
+        <li><strong>Active commitments</strong> — habits currently in progress, with a live post feed visible to supporters</li>
+        <li><strong>Ongoing streaks</strong> — completed 40-day commitments that have rolled into permanent practice, showing current streak, longest streak, and the original 40-day arc</li>
+        <li><strong>Restart-eligible commitments</strong> — prior attempts with their reach and restart history, visible and uneditable</li>
+        <li><strong>Support network</strong> — who witnessed, co-practiced, and staked across which commitments; the relational record built through shared practice</li>
+        <li><strong>Belief changelog</strong> — optional append-only record of positions updated during a commitment period, timestamped to the day they changed</li>
+        <li><strong>Reading trail</strong> — optional chain of materials engaged during practice: what was read, what it led to, what it changed</li>
+      </ul>
+      <p>This profile is a <em>history of attempts</em>, not a trophy case. It tells the story of what a person keeps returning to, who showed up for them while they did it, and what it cost them to get there. That is a fundamentally different kind of identity signal than any credential portrait can produce.</p>
+
+      <h4>Onboarding flow</h4>
+      <ol>
+        <li><strong>Create account.</strong> Email and password via Supabase Auth. No profile fields required at signup.</li>
+        <li><strong>Declare a commitment.</strong> The first screen after account creation is a single prompt: <em>What habit do you want to build?</em> Free text. No category selection, no template. The user writes what they mean in their own words.</li>
+        <li><strong>Set visibility.</strong> The commitment and its posts can be public (visible to all Search Star users and queryable by platforms), community (visible to supporters and connected users), or private (visible only to the user). Default is community. The user can change this at any time.</li>
+        <li><strong>Post day 1.</strong> Immediately after committing, the user is prompted to post their first entry. What are you starting? What does day 1 look like? This post anchors the commitment and makes it real. A commitment with no day 1 post is a declaration; a commitment with a day 1 post is a beginning.</li>
+        <li><strong>Find co-practitioners and witnesses.</strong> After day 1 is posted, the system surfaces other users with active or completed commitments in the same habit domain. The user can invite witnesses, join a co-practice, or proceed alone.</li>
+        <li><strong>The profile builds itself.</strong> Each post adds to the commitment record. Each supporter adds to the relational layer. Each milestone reflection adds to the practice depth signal. By day 40, the profile is not a form that was filled in — it is a record that was lived.</li>
+      </ol>
+
+      <h4>Data model</h4>
+      <pre>commitments (
+  id              uuid primary key,
+  user_id         uuid references auth.users,
+  habit           text not null,
+  started_at      timestamptz not null default now(),
+  status          text check (status in ('active','ongoing','restart_eligible','completed')),
+  logged_days     int default 0,
+  current_streak  int default 0,
+  longest_streak  int default 0,
+  visibility      text check (visibility in ('public','community','private')) default 'community',
+  prior_attempt_id uuid references commitments(id),   -- links restart to prior attempt
+  created_at      timestamptz default now()
+)
+
+commitment_posts (
+  id              uuid primary key,
+  commitment_id   uuid references commitments,
+  user_id         uuid references auth.users,
+  body            text,
+  media_urls      text[],                              -- image/video links; media never stored directly
+  day_number      int not null,                        -- which logged day this advances the commitment to
+  is_milestone    boolean default false,               -- days 10, 20, 30, 40
+  posted_at       timestamptz not null default now(),  -- server-set; not client-supplied
+  created_at      timestamptz default now()
+)
+
+commitment_supporters (
+  id              uuid primary key,
+  commitment_id   uuid references commitments,
+  supporter_id    uuid references auth.users,
+  role            text check (role in ('witness','co_practitioner','stakeholder')),
+  stake_amount    numeric,                             -- null unless role = 'stakeholder'
+  stake_status    text check (stake_status in ('held','returned','forfeited')),
+  linked_commitment_id uuid references commitments,   -- for co_practitioner: their parallel commitment
+  joined_at       timestamptz default now()
+)
+
+post_interactions (
+  id              uuid primary key,
+  post_id         uuid references commitment_posts,
+  user_id         uuid references auth.users,
+  type            text check (type in ('echo','fork','confirmation')),
+  note            text,                                -- required for fork and confirmation
+  created_at      timestamptz default now()
+)</pre>
 
       <!-- ═══════════ 4. ACCESS ═══════════ -->
 
@@ -1618,16 +1739,9 @@ member_payout = validator_revenue_pool × member_share</pre>
       </table>
       <p>Follow relationships in the Practice feed are asymmetric and discipline-specific. You can follow a person's Latin streak without following their BJJ streak. Discovery surfaces people whose active disciplines overlap or complement yours — not people with the most followers or the highest engagement rate.</p>
 
-      <h4>Activate integration</h4>
-      <p>When a user runs the Activate flow (section 3.9), the synthesis pipeline seeds the Practice Layer with evidence of existing habits from the public digital footprint:</p>
-      <ul>
-        <li>Goodreads public shelves and reading activity → seeds Primary sources and Slow media disciplines</li>
-        <li>GitHub commit history → seeds Practice disciplines (software craft)</li>
-        <li>Strava or Garmin public logs → seeds Practice disciplines (athletic)</li>
-        <li>Duolingo public profiles → seeds Practice disciplines (language)</li>
-        <li>Google Scholar or ORCID publication history → seeds Primary sources and Slow media</li>
-      </ul>
-      <p>These seeds are presented in the review UI with their source provenance and confidence scores from the learned priors system (section 3.9, Phase 14). The user confirms which represent genuine engagement — performative or abandoned activity is common in external sources and the review step is critical. Confirmed seeds establish a backdated discipline record with <code>provenance_status = 'seeded_confirmed'</code>; streaks begin fresh from the confirmation date. There is no backfill of daily entries — the sovereign record starts clean, timestamped, append-only in Supabase.</p>
+      <h4>Commitment integration</h4>
+      <p>The Practice Layer is populated entirely through the Commitment flow (section 3.10) — not through Activate scraping. When a user completes their first 40-day commitment, a discipline record is created automatically from the commitment object. Subsequent commitments to the same or related habits extend the same discipline record. There is no import step, no external source to confirm, and no confidence prior to apply. Every entry in the Practice Layer was posted by the user in real time, server-timestamped, witnessed by their support network.</p>
+      <p>The six Supabase tables defined in the data model below are populated directly from commitment activity: <code>disciplines</code> from commitments, <code>discipline_logs</code> from commitment posts, <code>discipline_cosigns</code> from stakeholder support roles, and <code>belief_changelog</code>, <code>open_questions</code>, and <code>reading_trail</code> from optional structured posts during commitment periods.</p>
 
       <h4>Data model</h4>
       <pre>disciplines (
@@ -2408,7 +2522,7 @@ Platform                Search Star              User's Hosting
         <tr><td><code>v1.4 (Affiliate)</code></td><td>Q3 2026</td><td>Affiliate portal: organization signup, member onboarding tools, trust density dashboard, referral tracking, affiliate payout management</td></tr>
         <tr><td><code>v1.5</code></td><td>Q3 2026</td><td>Network value: family/community cluster detection, network multiplier pricing, cross-network verification bonus, aggregate trust display for platforms</td></tr>
         <tr><td><code>v1.5 (Practice Layer)</code></td><td>Q3 2026</td><td>Practice Layer (section 5.12): habit streaks as depth signals on the sovereign profile. Discipline taxonomy (primary sources, practice disciplines, slow media, reflection logs, belief updates). Append-only server-timestamped streak records with gap history. Four post types (log entry, milestone reflection, gap acknowledgment, convergence post). Practice Profile surface: depth map, belief changelog, reading trail, open questions, validator co-signs. Validator co-signing of disciplines at Practice Group layer. Two new Trust Score sub-components: Practice Depth (0–20) and Epistemic Honesty (0–10), redistributed from within existing Depth ceiling. Convergence bonus (1.15×) when relational and behavioral layers reinforce. Practice feed with Echo / Fork / Confirmation interactions — no likes, no algorithmic ranking, discipline-specific follows. Activate integration seeding from Goodreads, GitHub, Strava, Duolingo, Google Scholar. Practice narrative chapter added to visual narrative. Six new Supabase tables: disciplines, discipline_logs, belief_changelog, open_questions, reading_trail, discipline_cosigns.</td></tr>
-        <tr><td><code>v2.0</code></td><td>Q4 2026</td><td>Open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement (velocity caps, reciprocity limits, decay), response likelihood scoring</td></tr>
+        <tr><td><code>v2.0</code></td><td>Q4 2026</td><td>Commitment: Habit-First Onboarding (section 3.10): replaces Activate as the primary onboarding path. Profile built forward through 40-day habit commitments, not backward through digital footprint discovery. Freeform posts (image, text, video). Logged-day progress (not calendar-day). Three support roles: witness (Cross-Network layer), co-practitioner (Community layer), stakeholder (Practice Group layer, staked escrow). Day-41 streak continuation with no end date. Restart-eligible abandonment — prior attempts preserved, visible, unlinkable. Milestone prompts at days 10/20/30/40 (optional). Four new Supabase tables: commitments, commitment_posts, commitment_supporters, post_interactions. Activate (section 3.9) deprecated as primary entry point; infrastructure retained as optional secondary enrichment path. Also: open-source SDK, self-hosting toolkit, ZK proof integration, OAuth 2.0 endpoint auth, anti-gaming enforcement.</td></tr>
         <tr><td><code>v2.1</code></td><td>Q1 2027</td><td>Validator Cooperative launch: LLC operating agreement finalized, automated qualification engine, first quarterly distribution, governance voting portal, cooperative member dashboard</td></tr>
       </table>
 
