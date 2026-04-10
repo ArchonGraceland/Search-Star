@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Suspense } from 'react'
 
-type Step = 'url' | 'validate' | 'pricing' | 'confirm' | 'success'
+// ═══════════════════════════════════════════════════
+// Types
+// ═══════════════════════════════════════════════════
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ProfileJSON = Record<string, any>
+type Step = 'practice' | 'pricing' | 'confirm' | 'success' | 'legacy-url' | 'legacy-validate'
 
 interface Pricing {
   publicPrice: string
@@ -17,7 +17,30 @@ interface Pricing {
   marketingPrice: string
 }
 
-interface ExtractedData {
+interface CommitmentSummary {
+  id: string
+  habit: string
+  status: 'active' | 'ongoing' | 'restart_eligible' | 'completed'
+  logged_days: number
+  current_streak: number
+  longest_streak: number
+  supporter_count: number
+}
+
+interface PracticeData {
+  commitments: CommitmentSummary[]
+  total_days: number
+  active_count: number
+  completed_count: number
+  ongoing_count: number
+  total_supporters: number
+  practice_depth_score: number
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ProfileJSON = Record<string, any>
+
+interface LegacyExtracted {
   display_name: string
   handle: string | null
   tagline: string | null
@@ -35,9 +58,55 @@ interface ExtractedData {
   has_content_feed: boolean
 }
 
+function generateProfileNumber() {
+  const num = Math.floor(Math.random() * 999999) + 1
+  return `SS-${num.toString().padStart(6, '0')}`
+}
+
+function computePracticeDepthScore(data: PracticeData): number {
+  const completedPts = (data.completed_count + data.ongoing_count) * 10
+  const ongoingPts = data.commitments
+    .filter(c => c.status === 'ongoing')
+    .reduce((sum, c) => sum + Math.floor(Math.max(0, c.logged_days - 40) / 10), 0)
+  const activePts = data.commitments
+    .filter(c => c.status === 'active')
+    .reduce((sum, c) => sum + Math.floor(c.logged_days / 10), 0)
+  const supporterPts = Math.min(data.total_supporters * 2, 20)
+  return Math.min(completedPts + ongoingPts + activePts + supporterPts, 100)
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  active: 'in progress',
+  ongoing: 'ongoing streak',
+  restart_eligible: 'paused',
+  completed: 'completed',
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  active: 'bg-[#EAF3DE] text-[#3B6D11]',
+  ongoing: 'bg-[#E6F1FB] text-[#185FA5]',
+  restart_eligible: 'bg-[#FAEEDA] text-[#854F0B]',
+  completed: 'bg-[#F1EFE8] text-[#444441]',
+}
+
+function ArcMini({ filled, total = 40 }: { filled: number; total?: number }) {
+  const show = Math.min(total, 40)
+  return (
+    <div className="flex flex-wrap gap-[2px]">
+      {Array.from({ length: show }).map((_, i) => (
+        <div
+          key={i}
+          style={{ width: 8, height: 8, borderRadius: 1, flexShrink: 0 }}
+          className={i < Math.min(filled, show) ? 'bg-[#639922]' : 'bg-[#f0f0f0] border border-[#d4d4d4]'}
+        />
+      ))}
+    </div>
+  )
+}
+
 export default function ProfileBuilderPage() {
   return (
-    <Suspense fallback={<div className="p-8 max-w-[720px] mx-auto"><div className="font-body text-sm text-[#767676]">Loading…</div></div>}>
+    <Suspense fallback={<div className="p-8"><p className="font-body text-sm text-[#767676]">Loading…</p></div>}>
       <ProfileBuilder />
     </Suspense>
   )
@@ -47,260 +116,163 @@ function ProfileBuilder() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isFromActivate = searchParams.get('source') === 'activate'
-  const [step, setStep] = useState<Step>(isFromActivate ? 'validate' : 'url')
+
+  const [step, setStep] = useState<Step>('practice')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [validating, setValidating] = useState(false)
-  const [activateSource, setActivateSource] = useState(isFromActivate)
+  const [profileNumber, setProfileNumber] = useState('')
+  const [practiceData, setPracticeData] = useState<PracticeData | null>(null)
+  const [practiceLoading, setPracticeLoading] = useState(true)
+  const [pricing, setPricing] = useState<Pricing>({ publicPrice: '0.02', privatePrice: '0.50', marketingPrice: '5.00' })
 
-  // Data
   const [endpointUrl, setEndpointUrl] = useState('')
   const [profileJson, setProfileJson] = useState<ProfileJSON | null>(null)
-  const [extracted, setExtracted] = useState<ExtractedData | null>(null)
-  const [validationErrors, setValidationErrors] = useState<string[]>([])
-  const [profileNumber, setProfileNumber] = useState('')
-  const [pricing, setPricing] = useState<Pricing>({
-    publicPrice: '0.02', privatePrice: '0.50', marketingPrice: '5.00'
-  })
-
-  // Manual JSON paste fallback
+  const [legacyExtracted, setLegacyExtracted] = useState<LegacyExtracted | null>(null)
+  const [legacyValidating, setLegacyValidating] = useState(false)
+  const [legacyErrors, setLegacyErrors] = useState<string[]>([])
   const [showManualPaste, setShowManualPaste] = useState(false)
   const [manualJson, setManualJson] = useState('')
 
-  // ═══ Activate handoff: load data from sessionStorage ═══
-  useEffect(() => {
-    if (!isFromActivate) return
-
+  const loadPractice = useCallback(async () => {
+    setPracticeLoading(true)
     try {
-      const raw = sessionStorage.getItem('activate_handoff')
-      if (!raw) {
-        // No handoff data — fall back to normal URL step
-        setStep('url')
-        setActivateSource(false)
-        return
-      }
-
-      const data = JSON.parse(raw)
-
-      // Build ExtractedData from activation handoff
-      const activateExtracted: ExtractedData = {
-        display_name: data.display_name || 'Unknown',
-        handle: data.handle || null,
-        tagline: null,
-        location: data.location || null,
-        age: null,
-        age_cohort: null,
-        presence_score: data.presence_score || 0,
-        net_worth_percentile: null,
-        income_percentile: null,
-        skills_count: data.skills_count || 0,
-        interests_tags: data.interests_tags || [],
-        has_financial: false,
-        has_dating: false,
-        has_advertising: false,
-        has_content_feed: false,
-      }
-
-      setExtracted(activateExtracted)
-
-      // Set pricing from activation
-      if (data.public_price || data.private_price || data.marketing_price) {
-        setPricing({
-          publicPrice: data.public_price || '0.02',
-          privatePrice: data.private_price || '0.50',
-          marketingPrice: data.marketing_price || '5.00',
-        })
-      }
-
-      // Use the profile number from activation if available
-      if (data.profile_number) {
-        setProfileNumber(data.profile_number)
-      }
-
-      setStep('validate')
-    } catch (err) {
-      console.error('Failed to load activation handoff data:', err)
-      setStep('url')
-      setActivateSource(false)
+      const res = await fetch('/api/commitment/mine')
+      const data = await res.json()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const commitments: CommitmentSummary[] = (data.commitments || []).map((c: any) => ({
+        id: c.id, habit: c.habit, status: c.status,
+        logged_days: c.logged_days, current_streak: c.current_streak,
+        longest_streak: c.longest_streak, supporter_count: (c.supporters || []).length,
+      }))
+      const total_days = commitments.reduce((s, c) => s + c.logged_days, 0)
+      const active_count = commitments.filter(c => c.status === 'active').length
+      const completed_count = commitments.filter(c => c.status === 'completed').length
+      const ongoing_count = commitments.filter(c => c.status === 'ongoing').length
+      const total_supporters = commitments.reduce((s, c) => s + c.supporter_count, 0)
+      const pd: PracticeData = { commitments, total_days, active_count, completed_count, ongoing_count, total_supporters, practice_depth_score: 0 }
+      pd.practice_depth_score = computePracticeDepthScore(pd)
+      setPracticeData(pd)
+    } catch {
+      setPracticeData({ commitments: [], total_days: 0, active_count: 0, completed_count: 0, ongoing_count: 0, total_supporters: 0, practice_depth_score: 0 })
+    } finally {
+      setPracticeLoading(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const generateProfileNumber = () => {
-    const num = Math.floor(Math.random() * 999999) + 1
-    return `SS-${num.toString().padStart(6, '0')}`
+  useEffect(() => {
+    loadPractice()
+    if (isFromActivate) {
+      try {
+        const raw = sessionStorage.getItem('activate_handoff')
+        if (raw) {
+          const d = JSON.parse(raw)
+          if (d.public_price) setPricing({ publicPrice: d.public_price, privatePrice: d.private_price || '0.50', marketingPrice: d.marketing_price || '5.00' })
+        }
+      } catch { /* ignore */ }
+    }
+  }, [loadPractice, isFromActivate])
+
+  async function handleLegacyFetch() {
+    setLegacyValidating(true); setLegacyErrors([])
+    try {
+      const res = await fetch(`/api/activate/fields?url=${encodeURIComponent(endpointUrl)}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      const errors = validateLegacyJSON(json)
+      setLegacyErrors(errors)
+      if (errors.length === 0) { setProfileJson(json); setLegacyExtracted(extractLegacyData(json)); setStep('legacy-validate') }
+    } catch (e) {
+      setLegacyErrors([e instanceof Error ? e.message : 'Failed to fetch profile'])
+    } finally { setLegacyValidating(false) }
   }
 
-  // Validate JSON-LD structure (supports v0.8 and v1.3 schemas)
-  const validateProfileJSON = (json: ProfileJSON): string[] => {
+  function handleLegacyManualPaste() {
+    try {
+      const json = JSON.parse(manualJson)
+      const errors = validateLegacyJSON(json)
+      setLegacyErrors(errors)
+      if (errors.length === 0) { setProfileJson(json); setLegacyExtracted(extractLegacyData(json)); setStep('legacy-validate') }
+    } catch { setLegacyErrors(['Invalid JSON — make sure you copied the complete profile.json contents.']) }
+  }
+
+  function validateLegacyJSON(json: ProfileJSON): string[] {
     const errors: string[] = []
-    if (!json['@context'] && !json.identity && !json.presenceComposite) {
-      errors.push('This doesn\'t look like a Search Star profile. Expected @context, identity, or presenceComposite fields.')
-      return errors
-    }
-    // Accept both v0.8 and v1.3 context URIs
-    if (json['@context'] &&
-        json['@context'] !== 'https://schema.searchstar.org/v0.8' &&
-        json['@context'] !== 'https://schema.searchstar.org/v1.3') {
-      errors.push(`Unrecognized schema context: ${json['@context']}. Expected v0.8 or v1.3.`)
-    }
-    if (!json.identity?.displayName) errors.push('Missing identity.displayName (required)')
+    if (!json['@context']) errors.push('Missing @context — not a valid Search Star profile')
+    if (!json.identity?.displayName) errors.push('Missing identity.displayName')
+    if (!json.accessPolicy) errors.push('Missing accessPolicy')
     return errors
   }
 
-  // Extract directory metadata from JSON-LD (v0.8 + v1.3 compatible)
-  const extractFromJSON = (json: ProfileJSON): ExtractedData => {
-    const id = json.identity || {}
-    const fin = json.financial || {}
-    const pc = json.presenceComposite || {}
-    const sk = json.skills || []
-    const int = json.interests || {}
-
-    const presenceScore = pc.score || (pc.rizz?.score && pc.vibe?.score && pc.drip?.score
-      ? Math.round((pc.rizz.score + pc.vibe.score + pc.drip.score) / 3) : 0)
-
-    const allInterests = [
-      ...(int.athletic || []).map((i: { name?: string }) => i.name),
-      ...(int.social || []).map((i: { name?: string }) => i.name),
-      ...(int.intellectual || []).map((i: { name?: string }) => i.name),
-    ].filter(Boolean)
-
-    // v1.3: extract pricing from accessPolicy if present
-    const ap = json.accessPolicy?.tiers
-    if (ap) {
-      setPricing({
-        publicPrice: String(ap.public?.pricePerQuery ?? '0.02'),
-        privatePrice: String(ap.private?.pricePerQuery ?? '0.50'),
-        marketingPrice: String(ap.marketing?.pricePerMessage ?? '5.00'),
-      })
-    }
-
+  function extractLegacyData(json: ProfileJSON): LegacyExtracted {
+    const identity = json.identity || {}
+    const financial = json.financial || {}
+    const skills = json.skills || []
+    const interests = json.interests || {}
+    const interestTags = [
+      ...(interests.athletic || []).map((i: { name?: string }) => i.name || i),
+      ...(interests.social || []).map((i: { name?: string }) => i.name || i),
+      ...(interests.intellectual || []).map((i: { name?: string }) => i.name || i),
+    ].filter(Boolean).slice(0, 10)
     return {
-      display_name: id.displayName || 'Unknown',
-      handle: id.handle || null,
-      tagline: id.tagline || null,
-      location: id.location || null,
-      age: id.age || null,
-      age_cohort: id.ageCohort || fin.ageCohort || null,
-      presence_score: presenceScore,
-      net_worth_percentile: fin.netWorth?.percentile || null,
-      income_percentile: fin.income?.percentile || null,
-      skills_count: sk.length,
-      interests_tags: allInterests,
-      has_financial: !!fin.ageCohort || !!fin.netWorth,
-      has_dating: !!json.dating,
-      has_advertising: !!json.advertising,
-      has_content_feed: !!json.contentFeed,
+      display_name: identity.displayName || 'Unknown', handle: identity.handle || null,
+      tagline: identity.tagline || null, location: identity.location || null,
+      age: identity.age || null, age_cohort: identity.ageCohort || null,
+      presence_score: json.presence?.composite || 0,
+      net_worth_percentile: financial.netWorthPercentile || null,
+      income_percentile: financial.incomePercentile || null,
+      skills_count: Array.isArray(skills) ? skills.length : 0,
+      interests_tags: interestTags as string[],
+      has_financial: !!json.financial, has_dating: !!json.intimateDating,
+      has_advertising: !!json.advertisingProfile, has_content_feed: !!json.contentFeed,
     }
   }
 
-  // Step 1: Fetch and validate from URL
-  const handleFetchUrl = async () => {
-    setError(null)
-    setValidationErrors([])
-    setValidating(true)
+  const isLegacyPath = step === 'legacy-url' || step === 'legacy-validate' || (step === 'confirm' && !!legacyExtracted && !practiceData?.commitments.length)
 
-    try {
-      // Try fetching the profile.json from the URL
-      const res = await fetch(endpointUrl)
-      if (!res.ok) {
-        setError(`Could not fetch profile: ${res.status} ${res.statusText}. Make sure the URL is correct and the file is publicly accessible.`)
-        setValidating(false)
-        return
-      }
-
-      const json = await res.json()
-      const errors = validateProfileJSON(json)
-      if (errors.length > 0) {
-        setValidationErrors(errors)
-        setValidating(false)
-        return
-      }
-
-      setProfileJson(json)
-      const data = extractFromJSON(json)
-      setExtracted(data)
-
-      // Pre-fill pricing from JSON if available
-      if (json.accessPolicy?.tiers) {
-        const t = json.accessPolicy.tiers
-        if (t.public?.pricePerQuery) setPricing(p => ({ ...p, publicPrice: String(t.public.pricePerQuery) }))
-        if (t.private?.pricePerQuery) setPricing(p => ({ ...p, privatePrice: String(t.private.pricePerQuery) }))
-        if (t.marketing?.pricePerMessage) setPricing(p => ({ ...p, marketingPrice: String(t.marketing.pricePerMessage) }))
-      }
-
-      setStep('validate')
-    } catch (err) {
-      // CORS will block most cross-origin fetches from the browser
-      // Fall back to manual paste
-      setError('Could not fetch the URL directly (this is normal — most hosts block cross-origin requests from browsers). Paste your profile.json contents below instead.')
-      setShowManualPaste(true)
-    } finally {
-      setValidating(false)
-    }
-  }
-
-  // Handle manual JSON paste
-  const handleManualPaste = () => {
-    setError(null)
-    setValidationErrors([])
-    try {
-      const json = JSON.parse(manualJson.trim())
-      const errors = validateProfileJSON(json)
-      if (errors.length > 0) {
-        setValidationErrors(errors)
-        return
-      }
-      setProfileJson(json)
-      const data = extractFromJSON(json)
-      setExtracted(data)
-
-      if (json.accessPolicy?.tiers) {
-        const t = json.accessPolicy.tiers
-        if (t.public?.pricePerQuery) setPricing(p => ({ ...p, publicPrice: String(t.public.pricePerQuery) }))
-        if (t.private?.pricePerQuery) setPricing(p => ({ ...p, privatePrice: String(t.private.pricePerQuery) }))
-        if (t.marketing?.pricePerMessage) setPricing(p => ({ ...p, marketingPrice: String(t.marketing.pricePerMessage) }))
-      }
-
-      setStep('validate')
-    } catch {
-      setError('Invalid JSON. Make sure you copied the complete profile.json contents.')
-    }
-  }
-
-  // Save to Supabase
   const handleRegister = async () => {
-    if (!extracted || !profileJson) return
-    setSaving(true)
-    setError(null)
-
+    setSaving(true); setError(null)
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
-
       const pNum = generateProfileNumber()
       setProfileNumber(pNum)
 
-      let domain: string | null = null
-      if (endpointUrl) {
-        try { domain = new URL(endpointUrl).hostname } catch { /* ignore */ }
+      const directoryRow = isLegacyPath && legacyExtracted ? {
+        display_name: legacyExtracted.display_name, handle: legacyExtracted.handle,
+        location: legacyExtracted.location, age_cohort: legacyExtracted.age_cohort,
+        presence_score: legacyExtracted.presence_score, skills_count: legacyExtracted.skills_count,
+        interest_tags: legacyExtracted.interests_tags,
+        has_financial: legacyExtracted.has_financial, has_dating: legacyExtracted.has_dating,
+        has_advertising: legacyExtracted.has_advertising, has_content_feed: legacyExtracted.has_content_feed,
+        net_worth_percentile: legacyExtracted.net_worth_percentile,
+        income_percentile: legacyExtracted.income_percentile,
+        trust_score: 10, has_practice: false,
+        practice_depth_score: 0, commitment_count: 0, total_days_logged: 0,
+      } : {
+        display_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'User',
+        handle: null, location: null, age_cohort: null, presence_score: 0, skills_count: 0,
+        interest_tags: practiceData?.commitments.map(c => c.habit.split(' ').slice(0, 3).join(' ')).slice(0, 5) || [],
+        has_financial: false, has_dating: false, has_advertising: false, has_content_feed: false,
+        net_worth_percentile: null, income_percentile: null,
+        trust_score: practiceData?.practice_depth_score || 0,
+        has_practice: true,
+        practice_depth_score: practiceData?.practice_depth_score || 0,
+        commitment_count: (practiceData?.completed_count || 0) + (practiceData?.ongoing_count || 0) + (practiceData?.active_count || 0),
+        total_days_logged: practiceData?.total_days || 0,
       }
 
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
-          profile_number: pNum,
-          ...extracted,
+          profile_number: pNum, ...directoryRow,
           endpoint_url: endpointUrl || null,
-          domain,
-          trust_score: 50,
+          domain: endpointUrl ? (() => { try { return new URL(endpointUrl).hostname } catch { return null } })() : null,
           price_public: parseFloat(pricing.publicPrice),
           price_private: parseFloat(pricing.privatePrice),
           price_marketing: parseFloat(pricing.marketingPrice),
-          profile_json: profileJson,
-          onboarding_completed: true,
-          status: 'active',
+          profile_json: profileJson || null,
+          onboarding_completed: true, status: 'active',
         })
         .eq('user_id', user.id)
 
@@ -308,234 +280,173 @@ function ProfileBuilder() {
       setStep('success')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to register profile')
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
-  // ─── Step indicators ────────────────────────────────────
-  const steps = activateSource
-    ? [
-        { key: 'validate', label: 'Review' },
-        { key: 'pricing', label: 'Pricing' },
-        { key: 'confirm', label: 'Register' },
-      ]
-    : [
-        { key: 'url', label: 'Endpoint' },
-        { key: 'validate', label: 'Review' },
-        { key: 'pricing', label: 'Pricing' },
-        { key: 'confirm', label: 'Register' },
-      ]
+  const mainSteps = [{ key: 'practice', label: 'Practice' }, { key: 'pricing', label: 'Pricing' }, { key: 'confirm', label: 'Register' }]
+  const legacySteps = [{ key: 'legacy-url', label: 'Endpoint' }, { key: 'legacy-validate', label: 'Review' }, { key: 'pricing', label: 'Pricing' }, { key: 'confirm', label: 'Register' }]
+  const activeSteps = (step === 'legacy-url' || step === 'legacy-validate') ? legacySteps : mainSteps
+  const stepIndex = activeSteps.findIndex(s => s.key === step)
 
-  const stepIndex = steps.findIndex(s => s.key === step)
-
-  // ─── Render ─────────────────────────────────────────────
   return (
-    <div className="p-8 max-w-[720px] mx-auto">
-      {/* Header */}
+    <div className="p-8 max-w-[720px]">
       <div className="mb-8">
         <h1 className="font-heading text-[28px] font-bold mb-1">Register Your Profile</h1>
-        <p className="font-body text-sm text-[#767676]">
-          Connect your self-hosted profile to the Search Star directory.
-        </p>
+        <p className="font-body text-sm text-[#767676]">Join the Search Star directory. Platforms pay to query your profile — you keep 90%.</p>
       </div>
 
-      {/* Step indicator */}
       {step !== 'success' && (
-        <div className="flex items-center gap-2 mb-8">
-          {steps.map((s, i) => (
-            <div key={s.key} className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-medium ${
-                i < stepIndex ? 'bg-[#166534] text-white' :
-                i === stepIndex ? 'bg-[#1a3a6b] text-white' :
-                'bg-[#e8e8e8] text-[#767676]'
-              }`}>
-                {i < stepIndex ? '✓' : i + 1}
+        <div className="flex items-center gap-0 mb-8">
+          {activeSteps.map((s, i) => (
+            <div key={s.key} className="flex items-center">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-[3px] ${i === stepIndex ? 'bg-[#1a3a6b] text-white' : i < stepIndex ? 'text-[#166534]' : 'text-[#b8b8b8]'}`}>
+                <span className="font-body text-[11px] font-bold tracking-[0.08em] uppercase">{s.label}</span>
               </div>
-              <span className={`font-body text-xs font-medium ${i === stepIndex ? 'text-[#1a3a6b]' : 'text-[#767676]'}`}>
-                {s.label}
-              </span>
-              {i < steps.length - 1 && <div className="w-8 h-px bg-[#d4d4d4]" />}
+              {i < activeSteps.length - 1 && <div className={`w-6 h-[1px] ${i < stepIndex ? 'bg-[#166534]' : 'bg-[#d4d4d4]'}`} />}
             </div>
           ))}
         </div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="mb-6 p-3 bg-[#fef2f2] border-l-[3px] border-[#991b1b] rounded-[3px]">
-          <p className="font-body text-sm text-[#991b1b] m-0">{error}</p>
-        </div>
-      )}
-
-      {/* Validation errors */}
-      {validationErrors.length > 0 && (
-        <div className="mb-6 p-3 bg-[#fffbeb] border-l-[3px] border-[#92400e] rounded-[3px]">
-          {validationErrors.map((e, i) => (
-            <p key={i} className="font-body text-sm text-[#92400e] m-0">{e}</p>
-          ))}
-        </div>
-      )}
-
-      {/* ═══ STEP 1: Endpoint URL ═══ */}
-      {step === 'url' && (
+      {/* ═══ PRACTICE SUMMARY ═══ */}
+      {step === 'practice' && (
         <div className="card-grace p-8">
-          <h2 className="font-heading text-xl font-bold mb-2">Where is your profile hosted?</h2>
-          <p className="font-body text-sm text-[#5a5a5a] mb-6">
-            Enter the URL of your <code className="font-mono text-xs bg-[#eef2f8] px-1.5 py-0.5 rounded-[3px]">profile.json</code> file. This is the endpoint Search Star will index and platforms will query through our API.
-          </p>
+          <h2 className="font-heading text-xl font-bold mb-1">Your practice record</h2>
+          <p className="font-body text-sm text-[#5a5a5a] mb-6">This is what will be registered in the directory. Built from what you have actually done, not what you claim.</p>
 
-          <div className="mb-4">
-            <label className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#767676] block mb-1.5">
-              Profile Endpoint URL
-            </label>
-            <input
-              type="url"
-              value={endpointUrl}
-              onChange={(e) => setEndpointUrl(e.target.value)}
-              placeholder="https://yourname.com/profile.json"
-              className="w-full px-3 py-2.5 border border-[#d4d4d4] rounded-[3px] font-mono text-sm outline-none focus:border-[#1a3a6b] transition-colors"
-            />
-          </div>
-
-          <button
-            onClick={handleFetchUrl}
-            disabled={!endpointUrl || validating}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {validating ? 'Fetching...' : 'Fetch & Validate'}
-          </button>
-
-          {/* Manual paste fallback */}
-          {showManualPaste && (
-            <div className="mt-6 pt-6 border-t border-[#e8e8e8]">
-              <h3 className="font-heading text-lg font-bold mb-2">Paste your profile.json</h3>
-              <p className="font-body text-xs text-[#767676] mb-3">
-                Open <code className="font-mono text-xs bg-[#eef2f8] px-1 py-0.5 rounded-[2px]">{endpointUrl || 'your profile.json URL'}</code> in your browser, copy the entire contents, and paste below.
-              </p>
-              <textarea
-                value={manualJson}
-                onChange={(e) => setManualJson(e.target.value)}
-                rows={10}
-                placeholder='{"@context": "https://schema.searchstar.org/v1.3", ...}'
-                className="w-full px-3 py-2.5 border border-[#d4d4d4] rounded-[3px] font-mono text-xs outline-none focus:border-[#1a3a6b] resize-none mb-3"
-              />
-              <button
-                onClick={handleManualPaste}
-                disabled={!manualJson.trim()}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Validate JSON
-              </button>
-            </div>
-          )}
-
-          {!showManualPaste && (
-            <button
-              onClick={() => setShowManualPaste(true)}
-              className="block mt-4 font-body text-xs text-[#1a3a6b] hover:underline cursor-pointer bg-transparent border-none p-0"
-            >
-              Or paste your profile.json manually →
-            </button>
-          )}
-
-          {/* Help callout */}
-          <div className="mt-8 p-4 bg-[#eef2f8] border-l-[3px] border-[#1a3a6b] rounded-[3px]">
-            <p className="font-body text-sm text-[#5a5a5a] m-0">
-              <strong className="text-[#1a1a1a]">Don&apos;t have a profile yet?</strong> Copy the AI prompt from{' '}
-              <Link href="/create.html" className="text-[#1a3a6b] font-medium no-underline hover:underline">the Create &amp; Host page</Link>,
-              paste it into Claude, ChatGPT, or Grok, and follow the conversation. The AI builds your profile.json and a personal HTML page.
-              Then host both files on Cloudflare Pages (free, ~20 minutes) and come back here with your URL.
-            </p>
-          </div>
-
-          {/* Activate callout */}
-          <div className="mt-4 p-4 bg-[#f0fdf4] border-l-[3px] border-[#166534] rounded-[3px]">
-            <p className="font-body text-sm text-[#5a5a5a] m-0">
-              <strong className="text-[#166534]">Just activated?</strong> If you just completed the{' '}
-              <Link href="/activate" className="text-[#166534] font-medium no-underline hover:underline">Activate flow</Link>,
-              your data should transfer automatically. If it didn&apos;t,{' '}
-              <Link href="/activate" className="text-[#166534] font-medium no-underline hover:underline">go back to Activate</Link>{' '}
-              and click &ldquo;Download files &amp; register&rdquo; again.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ STEP 2: Review extracted data ═══ */}
-      {step === 'validate' && extracted && (
-        <div className="card-grace p-8">
-          {activateSource && (
-            <div className="mb-4 p-3 bg-[#f0fdf4] border border-[#166534] rounded-[3px]">
-              <div className="font-body text-[12px] text-[#166534]">
-                <strong>✓ Arrived from Activate</strong> — your profile data has been pre-populated from the activation flow.
+          {practiceLoading ? (
+            <p className="font-body text-sm text-[#767676] py-8 text-center">Loading your commitments…</p>
+          ) : practiceData && practiceData.commitments.length > 0 ? (
+            <div className="space-y-5">
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Habits completed', value: practiceData.completed_count + practiceData.ongoing_count },
+                  { label: 'Days logged', value: practiceData.total_days },
+                  { label: 'Supporters', value: practiceData.total_supporters },
+                ].map(({ label, value }) => (
+                  <div key={label} className="p-4 bg-[#f5f5f5] rounded-[3px] text-center">
+                    <div className="font-heading text-3xl font-bold text-[#1a3a6b]">{value}</div>
+                    <div className="font-body text-[10px] font-bold tracking-[0.08em] uppercase text-[#767676] mt-1">{label}</div>
+                  </div>
+                ))}
               </div>
-            </div>
-          )}
-          <h2 className="font-heading text-xl font-bold mb-2">Review your directory listing</h2>
-          <p className="font-body text-sm text-[#5a5a5a] mb-6">
-            {activateSource
-              ? 'This metadata was extracted from your activation. Confirm it looks correct, then set your pricing.'
-              : 'This is what Search Star extracted from your profile. This metadata is what platforms see when they search the directory.'}
-          </p>
-
-          <div className="space-y-4">
-            {/* Identity */}
-            <div className="p-4 bg-[#f5f5f5] rounded-[3px]">
-              <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-2">Identity</div>
-              <div className="font-heading text-lg font-bold">{extracted.display_name}</div>
-              {extracted.handle && <div className="font-mono text-sm text-[#767676]">{extracted.handle}</div>}
-              {extracted.tagline && <div className="font-body text-sm text-[#5a5a5a] mt-1">{extracted.tagline}</div>}
-              <div className="font-body text-xs text-[#767676] mt-1">
-                {[extracted.location, extracted.age_cohort].filter(Boolean).join(' · ') || 'No location or age set'}
-              </div>
-            </div>
-
-            {/* Scores */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-4 bg-[#f5f5f5] rounded-[3px]">
-                <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-1">Presence Score</div>
-                <div className="font-mono text-2xl font-medium text-[#1a3a6b]">{extracted.presence_score}</div>
-              </div>
-              <div className="p-4 bg-[#f5f5f5] rounded-[3px]">
-                <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-1">Skills</div>
-                <div className="font-mono text-2xl font-medium">{extracted.skills_count}</div>
-              </div>
-            </div>
-
-            {/* Financial */}
-            {extracted.has_financial && (
-              <div className="p-4 bg-[#f0fdf4] rounded-[3px]">
-                <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#166534] mb-1">Financial Data</div>
-                <div className="font-body text-sm text-[#166534]">
-                  {extracted.net_worth_percentile && `Net worth: ${extracted.net_worth_percentile}th percentile`}
-                  {extracted.net_worth_percentile && extracted.income_percentile && ' · '}
-                  {extracted.income_percentile && `Income: ${extracted.income_percentile}th percentile`}
+              <div className="p-4 bg-[#eef2f8] border-l-[3px] border-[#1a3a6b] rounded-[3px]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#1a3a6b] mb-0.5">Starting Trust Score</div>
+                    <div className="font-body text-xs text-[#767676]">Derived from completed habits, days logged, and supporters. Grows as you practice.</div>
+                  </div>
+                  <div className="font-heading text-4xl font-bold text-[#1a3a6b]">{practiceData.practice_depth_score}</div>
                 </div>
               </div>
-            )}
-
-            {/* Interests */}
-            {extracted.interests_tags.length > 0 && (
-              <div className="p-4 bg-[#f5f5f5] rounded-[3px]">
-                <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-2">Interests</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {extracted.interests_tags.map((tag, i) => (
-                    <span key={i} className="font-body text-xs px-2 py-0.5 bg-[#eef2f8] text-[#1a3a6b] rounded-[2px]">{tag}</span>
+              <div>
+                <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-2">Your commitments</div>
+                <div className="space-y-2">
+                  {practiceData.commitments.map(c => (
+                    <div key={c.id} className="p-3 bg-[#f5f5f5] rounded-[3px]">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className={`font-body text-[10px] font-bold px-1.5 py-0.5 rounded-full ${STATUS_COLORS[c.status]}`}>{STATUS_LABEL[c.status]}</span>
+                        <span className="font-body text-[11px] text-[#767676]">day {c.logged_days}{c.status === 'active' ? ' of 40' : ''}</span>
+                        {c.supporter_count > 0 && <span className="font-body text-[11px] text-[#767676]">· {c.supporter_count} supporter{c.supporter_count !== 1 ? 's' : ''}</span>}
+                      </div>
+                      <p className="font-heading text-base text-[#1a1a1a] leading-snug">{c.habit}</p>
+                      <div className="mt-2"><ArcMini filled={Math.min(c.logged_days, 40)} /></div>
+                    </div>
                   ))}
                 </div>
               </div>
-            )}
-
-            {/* Data sections */}
-            <div className="flex flex-wrap gap-2">
-              {extracted.has_financial && <span className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-2 py-1 bg-[#f0fdf4] text-[#166534] rounded-[2px]">Financial ✓</span>}
-              {extracted.has_dating && <span className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-2 py-1 bg-[#eef2f8] text-[#1a3a6b] rounded-[2px]">Dating ✓</span>}
-              {extracted.has_advertising && <span className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-2 py-1 bg-[#fffbeb] text-[#92400e] rounded-[2px]">Advertising ✓</span>}
-              {extracted.has_content_feed && <span className="font-body text-[10px] font-bold tracking-[0.08em] uppercase px-2 py-1 bg-[#f0fdfa] text-[#0d9488] rounded-[2px]">Content Feed ✓</span>}
+              <div className="flex gap-3 mt-2 items-center justify-between">
+                <button onClick={() => setStep('legacy-url')} className="font-body text-xs text-[#b8b8b8] hover:text-[#767676] transition-colors">
+                  I have an existing profile.json →
+                </button>
+                <button onClick={() => setStep('pricing')} className="btn-primary">Set Pricing →</button>
+              </div>
             </div>
+          ) : (
+            <div className="py-10 text-center">
+              <p className="font-heading text-lg text-[#1a1a1a] mb-2">No practice record yet.</p>
+              <p className="font-body text-sm text-[#767676] mb-6 max-w-[340px] mx-auto leading-relaxed">
+                Your profile is built from habits you have kept, not credentials you hold. Make at least one commitment before registering.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Link href="/commitment" className="btn-primary no-underline">Make a commitment →</Link>
+                <button onClick={() => setStep('legacy-url')} className="btn-secondary">Use profile.json instead</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-            {/* Endpoint */}
+      {/* ═══ LEGACY URL ═══ */}
+      {step === 'legacy-url' && (
+        <div className="card-grace p-8">
+          <h2 className="font-heading text-xl font-bold mb-2">Where is your profile hosted?</h2>
+          <p className="font-body text-sm text-[#5a5a5a] mb-6">Enter the URL of your <code className="font-mono text-xs bg-[#f5f5f5] px-1 py-0.5 rounded">profile.json</code> endpoint.</p>
+          <div className="space-y-4">
+            <div>
+              <label className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#767676] block mb-2">Profile endpoint URL</label>
+              <input type="url" value={endpointUrl} onChange={e => setEndpointUrl(e.target.value)}
+                placeholder="https://yourname.com/profile.json"
+                className="w-full px-4 py-3 border border-[#d4d4d4] rounded-[3px] font-mono text-sm outline-none focus:border-[#1a3a6b]" />
+            </div>
+            {legacyErrors.length > 0 && (
+              <div className="p-3 bg-[#fef2f2] border border-[#d4d4d4] rounded-[3px]">
+                {legacyErrors.map((e, i) => <p key={i} className="font-body text-sm text-[#991b1b]">{e}</p>)}
+              </div>
+            )}
+            <button onClick={handleLegacyFetch} disabled={legacyValidating || !endpointUrl} className="btn-primary disabled:opacity-50">
+              {legacyValidating ? 'Fetching…' : 'Fetch Profile →'}
+            </button>
+            <div className="border-t border-[#f0f0f0] pt-4">
+              <button onClick={() => setShowManualPaste(!showManualPaste)} className="font-body text-xs text-[#767676] underline">
+                {showManualPaste ? 'Hide manual paste' : 'Paste JSON manually instead'}
+              </button>
+              {showManualPaste && (
+                <div className="mt-3 space-y-3">
+                  <textarea value={manualJson} onChange={e => setManualJson(e.target.value)} rows={8}
+                    placeholder="Paste your profile.json contents here…"
+                    className="w-full px-3 py-2 border border-[#d4d4d4] rounded-[3px] font-mono text-xs outline-none focus:border-[#1a3a6b] resize-none" />
+                  <button onClick={handleLegacyManualPaste} className="btn-primary">Parse JSON →</button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-3 mt-6">
+            <button onClick={() => setStep('practice')} className="btn-secondary">← Back</button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ LEGACY VALIDATE ═══ */}
+      {step === 'legacy-validate' && legacyExtracted && (
+        <div className="card-grace p-8">
+          <h2 className="font-heading text-xl font-bold mb-2">Review your directory listing</h2>
+          <p className="font-body text-sm text-[#5a5a5a] mb-6">This metadata was extracted from your profile.json. This is what platforms see in the directory.</p>
+          <div className="space-y-4">
+            <div className="p-4 bg-[#f5f5f5] rounded-[3px]">
+              <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-2">Identity</div>
+              <div className="font-heading text-lg font-bold">{legacyExtracted.display_name}</div>
+              {legacyExtracted.handle && <div className="font-mono text-sm text-[#767676]">{legacyExtracted.handle}</div>}
+              <div className="font-body text-xs text-[#767676] mt-1">{[legacyExtracted.location, legacyExtracted.age_cohort].filter(Boolean).join(' · ') || 'No location set'}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 bg-[#f5f5f5] rounded-[3px]">
+                <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-1">Presence Score</div>
+                <div className="font-mono text-2xl font-medium text-[#1a3a6b]">{legacyExtracted.presence_score}</div>
+              </div>
+              <div className="p-4 bg-[#f5f5f5] rounded-[3px]">
+                <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-1">Skills</div>
+                <div className="font-mono text-2xl font-medium">{legacyExtracted.skills_count}</div>
+              </div>
+            </div>
+            {legacyExtracted.interests_tags.length > 0 && (
+              <div className="p-4 bg-[#f5f5f5] rounded-[3px]">
+                <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-2">Interests</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {legacyExtracted.interests_tags.map((tag, i) => <span key={i} className="font-body text-xs px-2 py-0.5 bg-[#eef2f8] text-[#1a3a6b] rounded-[2px]">{tag}</span>)}
+                </div>
+              </div>
+            )}
             {endpointUrl && (
               <div className="p-3 bg-[#1a1a1a] rounded-[3px]">
                 <div className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-white/40 mb-1">Endpoint</div>
@@ -543,155 +454,89 @@ function ProfileBuilder() {
               </div>
             )}
           </div>
-
           <div className="flex gap-3 mt-6">
-            {activateSource ? (
-              <Link href="/activate" className="btn-secondary no-underline text-center">
-                ← Back to Activate
-              </Link>
-            ) : (
-              <button onClick={() => { setStep('url'); setShowManualPaste(false) }} className="btn-secondary">
-                ← Back
-              </button>
-            )}
-            <button onClick={() => setStep('pricing')} className="btn-primary">
-              Looks Good →
-            </button>
+            <button onClick={() => setStep('legacy-url')} className="btn-secondary">← Back</button>
+            <button onClick={() => setStep('pricing')} className="btn-primary">Looks Good →</button>
           </div>
         </div>
       )}
 
-      {/* ═══ STEP 3: Pricing ═══ */}
+      {/* ═══ PRICING ═══ */}
       {step === 'pricing' && (
         <div className="card-grace p-8">
           <h2 className="font-heading text-xl font-bold mb-2">Set your access pricing</h2>
-          <p className="font-body text-sm text-[#5a5a5a] mb-6">
-            Choose what platforms pay to query your profile at each tier. You keep 90% of every query — Search Star takes a 10% marketplace fee.
-          </p>
-
+          <p className="font-body text-sm text-[#5a5a5a] mb-6">Choose what platforms pay to query your profile at each tier. You keep 90% of every query.</p>
           <div className="space-y-5">
-            {/* Public */}
-            <div className="p-4 bg-[#eef2f8] rounded-[3px]">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#1a3a6b]">Public Tier</div>
-                  <div className="font-body text-xs text-[#767676]">Identity, skills, interests, headline scores</div>
+            {[
+              { key: 'publicPrice' as const, label: 'Public Tier', desc: 'Practice record, habit history, trust score', range: '$0.01 – $0.10', color: 'bg-[#eef2f8]', labelColor: 'text-[#1a3a6b]' },
+              { key: 'privatePrice' as const, label: 'Private Tier', desc: 'Full profile including all commitment data', range: '$0.10 – $2.00', color: 'bg-[#f5f5f5]', labelColor: 'text-[#1a1a1a]' },
+              { key: 'marketingPrice' as const, label: 'Marketing Tier', desc: 'Pay to message you directly. No refunds.', range: '$1.00 – $50.00', color: 'bg-[#fffbeb]', labelColor: 'text-[#92400e]' },
+            ].map(({ key, label, desc, range, color, labelColor }) => (
+              <div key={key} className={`p-4 ${color} rounded-[3px]`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <div className={`font-body text-[11px] font-bold tracking-[0.1em] uppercase ${labelColor}`}>{label}</div>
+                    <div className="font-body text-xs text-[#767676]">{desc}</div>
+                  </div>
+                  <div className="font-body text-[10px] text-[#767676]">Suggested: {range}</div>
                 </div>
-                <div className="font-body text-[10px] text-[#767676]">Suggested: $0.01 – $0.10</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm text-[#767676]">$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={pricing.publicPrice}
-                  onChange={(e) => setPricing(p => ({ ...p, publicPrice: e.target.value }))}
-                  className="w-32 px-3 py-2 border border-[#d4d4d4] rounded-[3px] font-mono text-sm outline-none focus:border-[#1a3a6b]"
-                />
-                <span className="font-body text-xs text-[#767676]">per query</span>
-              </div>
-            </div>
-
-            {/* Private */}
-            <div className="p-4 bg-[#f5f5f5] rounded-[3px]">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#1a1a1a]">Private Tier</div>
-                  <div className="font-body text-xs text-[#767676]">Full profile — financials, Presence breakdown, all data</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm text-[#767676]">$</span>
+                  <input type="number" step="0.01" min="0.01" value={pricing[key]}
+                    onChange={e => setPricing(p => ({ ...p, [key]: e.target.value }))}
+                    className="w-32 px-3 py-2 border border-[#d4d4d4] rounded-[3px] font-mono text-sm outline-none focus:border-[#1a3a6b]" />
+                  <span className="font-body text-xs text-[#767676]">{key === 'marketingPrice' ? 'per message' : 'per query'}</span>
                 </div>
-                <div className="font-body text-[10px] text-[#767676]">Suggested: $0.10 – $2.00</div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm text-[#767676]">$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={pricing.privatePrice}
-                  onChange={(e) => setPricing(p => ({ ...p, privatePrice: e.target.value }))}
-                  className="w-32 px-3 py-2 border border-[#d4d4d4] rounded-[3px] font-mono text-sm outline-none focus:border-[#1a3a6b]"
-                />
-                <span className="font-body text-xs text-[#767676]">per query</span>
-              </div>
-            </div>
-
-            {/* Marketing */}
-            <div className="p-4 bg-[#fffbeb] rounded-[3px]">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#92400e]">Marketing Tier</div>
-                  <div className="font-body text-xs text-[#767676]">Pay to message you directly. No refunds.</div>
-                </div>
-                <div className="font-body text-[10px] text-[#767676]">Suggested: $1.00 – $50.00</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm text-[#767676]">$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={pricing.marketingPrice}
-                  onChange={(e) => setPricing(p => ({ ...p, marketingPrice: e.target.value }))}
-                  className="w-32 px-3 py-2 border border-[#d4d4d4] rounded-[3px] font-mono text-sm outline-none focus:border-[#1a3a6b]"
-                />
-                <span className="font-body text-xs text-[#767676]">per message</span>
-              </div>
-            </div>
+            ))}
           </div>
-
           <div className="mt-6 p-3 bg-[#f0fdf4] border-l-[3px] border-[#166534] rounded-[3px]">
-            <p className="font-body text-sm text-[#166534] m-0">
-              <strong>Revenue split:</strong> You keep 90% of every query and message. On a $0.50 Private tier query, you earn $0.45.
-            </p>
+            <p className="font-body text-sm text-[#166534] m-0"><strong>Revenue split:</strong> You keep 90% of every query and message. On a $0.50 Private tier query, you earn $0.45.</p>
           </div>
-
           <div className="flex gap-3 mt-6">
-            <button onClick={() => setStep('validate')} className="btn-secondary">← Back</button>
+            <button onClick={() => setStep(legacyExtracted ? 'legacy-validate' : 'practice')} className="btn-secondary">← Back</button>
             <button onClick={() => setStep('confirm')} className="btn-primary">Set Pricing →</button>
           </div>
         </div>
       )}
 
-      {/* ═══ STEP 4: Confirm & Register ═══ */}
-      {step === 'confirm' && extracted && (
+      {/* ═══ CONFIRM ═══ */}
+      {step === 'confirm' && (
         <div className="card-grace p-8">
           <h2 className="font-heading text-xl font-bold mb-2">Confirm &amp; register</h2>
-          <p className="font-body text-sm text-[#5a5a5a] mb-6">
-            Review your directory listing before going live.
-          </p>
-
+          <p className="font-body text-sm text-[#5a5a5a] mb-6">Review your directory listing before going live.</p>
           <div className="space-y-3">
-            <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
-              <span className="font-body text-sm text-[#767676]">Name</span>
-              <span className="font-body text-sm font-medium">{extracted.display_name}</span>
-            </div>
-            {extracted.handle && (
-              <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
-                <span className="font-body text-sm text-[#767676]">Handle</span>
-                <span className="font-mono text-sm">{extracted.handle}</span>
-              </div>
-            )}
-            {extracted.location && (
-              <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
-                <span className="font-body text-sm text-[#767676]">Location</span>
-                <span className="font-body text-sm">{extracted.location}</span>
-              </div>
-            )}
-            <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
-              <span className="font-body text-sm text-[#767676]">Presence Score</span>
-              <span className="font-mono text-sm font-medium text-[#1a3a6b]">{extracted.presence_score}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
-              <span className="font-body text-sm text-[#767676]">Skills</span>
-              <span className="font-mono text-sm">{extracted.skills_count}</span>
-            </div>
-            {endpointUrl && (
-              <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
-                <span className="font-body text-sm text-[#767676]">Endpoint</span>
-                <span className="font-mono text-xs text-[#1a3a6b] break-all max-w-[300px] text-right">{endpointUrl}</span>
-              </div>
-            )}
+            {!isLegacyPath && practiceData ? (
+              <>
+                <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
+                  <span className="font-body text-sm text-[#767676]">Profile type</span>
+                  <span className="font-body text-sm font-medium text-[#1a3a6b]">Practice-based</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
+                  <span className="font-body text-sm text-[#767676]">Commitments</span>
+                  <span className="font-mono text-sm">{practiceData.commitments.length}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
+                  <span className="font-body text-sm text-[#767676]">Days logged</span>
+                  <span className="font-mono text-sm">{practiceData.total_days}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
+                  <span className="font-body text-sm text-[#767676]">Starting Trust Score</span>
+                  <span className="font-mono text-sm font-medium text-[#1a3a6b]">{practiceData.practice_depth_score}</span>
+                </div>
+              </>
+            ) : legacyExtracted ? (
+              <>
+                <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
+                  <span className="font-body text-sm text-[#767676]">Name</span>
+                  <span className="font-body text-sm font-medium">{legacyExtracted.display_name}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
+                  <span className="font-body text-sm text-[#767676]">Presence Score</span>
+                  <span className="font-mono text-sm font-medium text-[#1a3a6b]">{legacyExtracted.presence_score}</span>
+                </div>
+              </>
+            ) : null}
             <div className="flex justify-between py-2 border-b border-[#f0f0f0]">
               <span className="font-body text-sm text-[#767676]">Public Price</span>
               <span className="font-mono text-sm text-[#166534]">${parseFloat(pricing.publicPrice).toFixed(2)}/query</span>
@@ -705,15 +550,11 @@ function ProfileBuilder() {
               <span className="font-mono text-sm text-[#92400e]">${parseFloat(pricing.marketingPrice).toFixed(2)}/message</span>
             </div>
           </div>
-
+          {error && <div className="mt-4 p-3 bg-[#fef2f2] border border-[#d4d4d4] rounded-[3px]"><p className="font-body text-sm text-[#991b1b]">{error}</p></div>}
           <div className="flex gap-3 mt-8">
             <button onClick={() => setStep('pricing')} className="btn-secondary">← Back</button>
-            <button
-              onClick={handleRegister}
-              disabled={saving}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex-1"
-            >
-              {saving ? 'Registering...' : 'Register in Directory'}
+            <button onClick={handleRegister} disabled={saving} className="btn-primary disabled:opacity-50 flex-1">
+              {saving ? 'Registering…' : 'Register in Directory'}
             </button>
           </div>
         </div>
@@ -722,25 +563,19 @@ function ProfileBuilder() {
       {/* ═══ SUCCESS ═══ */}
       {step === 'success' && (
         <div className="card-grace p-8 text-center">
-          <div className="text-4xl mb-4">🎉</div>
+          <div className="text-4xl mb-4">🌱</div>
           <h2 className="font-heading text-[28px] font-bold mb-2">You&apos;re in the directory</h2>
-          <div className="inline-block bg-[#1a3a6b] text-white font-mono text-xl font-medium px-6 py-3 rounded-[3px] mb-4">
-            {profileNumber}
-          </div>
-          <p className="font-body text-sm text-[#5a5a5a] mb-6">
-            Your profile is now discoverable by platforms. Queries will start generating earnings that settle weekly to your linked bank account.
+          <div className="inline-block bg-[#1a3a6b] text-white font-mono text-xl font-medium px-6 py-3 rounded-[3px] mb-4">{profileNumber}</div>
+          <p className="font-body text-sm text-[#5a5a5a] mb-3 max-w-[440px] mx-auto leading-relaxed">
+            Your profile is now discoverable by platforms. Your Trust Score grows as you keep your commitments and add supporters.
           </p>
-          {endpointUrl && (
-            <div className="p-3 bg-[#f0fdf4] border-l-[3px] border-[#166534] rounded-[3px] text-left mb-6">
-              <p className="font-body text-sm text-[#166534] m-0">
-                <strong>Your endpoint:</strong> <code className="font-mono text-xs">{endpointUrl}</code><br/>
-                Search Star will crawl this URL every 24 hours to keep your directory listing current.
-              </p>
-            </div>
-          )}
-          <button onClick={() => router.push('/dashboard')} className="btn-primary">
-            Go to Dashboard
-          </button>
+          <p className="font-body text-sm text-[#767676] mb-8 max-w-[440px] mx-auto leading-relaxed">
+            Keep posting to your active commitments — every day you log strengthens your profile and increases your query value.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Link href="/practice" className="btn-secondary no-underline text-center">Go to Practice</Link>
+            <button onClick={() => router.push('/dashboard')} className="btn-primary">Go to Dashboard</button>
+          </div>
         </div>
       )}
     </div>
