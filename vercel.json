@@ -1,8 +1,7 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/deep-mode",
-      "schedule": "* * * * *"
+  "functions": {
+    "src/app/api/**": {
+      "maxDuration": 60
     }
-  ]
+  }
 }
