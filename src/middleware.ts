@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
   const protectedPrefixes = [
     '/dashboard', '/account', '/admin', '/support',
     '/commit', '/practice', '/validating', '/mentors',
-    '/trust', '/earnings', '/onboarding',
+    '/trust', '/earnings',
   ]
 
   const isProtected = protectedPrefixes.some(p =>
