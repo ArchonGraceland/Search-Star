@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Enable static export for marketing pages while supporting dynamic routes
+  async redirects() {
+    return [
+      { source: '/spec', destination: '/spec.html', permanent: false },
+      { source: '/roadmap', destination: '/roadmap.html', permanent: false },
+    ]
+  },
 };
 
 export default nextConfig;
