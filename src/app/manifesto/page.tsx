@@ -1,400 +1,160 @@
+import PublicHeader from '@/components/public-header'
+import PublicFooter from '@/components/public-footer'
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Search Star — Manifesto & Philosophy',
-  description: 'Garbage culture vs. high-effort culture. Trust as Love: the core philosophy of Search Star. In a post-scarcity world, the scarce resource is authentic human relationship.',
+  title: 'Why Search Star Exists — Manifesto',
+  description: 'The philosophical case for Search Star: formation vs. performance, conscientiousness as signal, and trust as action.',
 }
 
 export default function ManifestoPage() {
   return (
-    <div className="min-h-screen" style={{ background: '#0A1220' }}>
+    <>
+      <PublicHeader />
+      <main>
 
-      {/* Header */}
-      <header className="border-b" style={{ borderColor: '#1E293B' }}>
-        <div className="max-w-[960px] mx-auto px-8 py-6 flex justify-between items-center">
-          <Link href="/" className="no-underline" style={{ color: '#C5A55A' }}>
-            <span className="font-heading text-xl font-bold tracking-wide">SEARCH STAR</span>
-          </Link>
-          <Link
-            href="/"
-            className="no-underline font-body text-xs font-medium tracking-[0.1em] uppercase"
-            style={{ color: '#94A3B8' }}
-          >
-            ← Back to Home
-          </Link>
-        </div>
-      </header>
-
-      {/* Gold accent line */}
-      <div className="h-[3px]" style={{ background: '#C5A55A' }} />
-
-      {/* ═══════════ PART I: THE MANIFESTO ═══════════ */}
-      <section className="max-w-[960px] mx-auto px-8 pt-16 pb-12">
-        <p
-          className="font-body text-xs font-bold tracking-[0.25em] uppercase mb-4"
-          style={{ color: '#8B0000' }}
-        >
-          Part I — The Search Star Movement
-        </p>
-        <h1
-          className="font-heading text-5xl font-bold leading-tight mb-3"
-          style={{ color: '#F5F0E8' }}
-        >
-          The Seven Feeds of Death
-        </h1>
-        <p
-          className="font-body text-lg mb-10"
-          style={{ color: '#94A3B8' }}
-        >
-          Garbage Culture vs. High-Effort Culture
-        </p>
-
-        {/* Video Player — Manifesto */}
-        <div className="rounded-[3px] overflow-hidden mb-16" style={{ border: '1px solid #1E293B' }}>
-          <video
-            controls
-            preload="metadata"
-            className="w-full block"
-            style={{ background: '#000' }}
-          >
-            <source src="/seven-feeds-of-death.mp4" type="video/mp4" />
-            Your browser does not support the video element.
-          </video>
-        </div>
-      </section>
-
-      {/* Manifesto Text */}
-      <section className="max-w-[720px] mx-auto px-8 pb-20">
-        <div className="h-[1px] mb-16" style={{ background: '#1E293B' }} />
-
-        <h2
-          className="font-heading text-3xl font-bold mb-8"
-          style={{ color: '#C5A55A' }}
-        >
-          The Manifesto
-        </h2>
-
-        <div className="space-y-6 font-body text-base leading-relaxed" style={{ color: '#CBD5E1' }}>
-          <p>
-            Social media is a false god. It demands your time, your attention, and your identity
-            as sacrifice — and gives you nothing in return but anxiety, envy, and rage. This is
-            not a side effect. It is the business model.
-          </p>
-
-          <p>
-            Every feed refresh is engineered to trigger at least one of the seven deadly sins.
-            Lust through dopamine hijacking. Gluttony through bottomless content. Greed through
-            data extraction. Sloth through algorithmic thinking. Wrath through outrage amplification.
-            Envy through curated highlight reels. Pride through follower counts and verification badges.
-            The platforms didn&apos;t break. They were built this way.
-          </p>
-
-          <p>
-            We call this <span style={{ color: '#F5F0E8', fontWeight: 600 }}>garbage culture</span>.
-            It makes you stupid, anxious, and angry — by design, at scale, for profit.
-          </p>
-
-          <p>
-            Search Star exists to replace it with something better:&nbsp;
-            <span style={{ color: '#0D9488', fontWeight: 600 }}>high-effort culture</span>.
-            A world where you own your data, set your own price, and get paid when platforms
-            access your profile. Where every interaction costs real money — which means every
-            interaction is intentional. Where there are no algorithms deciding what you see,
-            no feeds engineered to keep you scrolling, and no engagement metrics rewarding
-            the loudest voice in the room.
-          </p>
-
-          <p>
-            High-effort culture structurally enforces the seven virtues that garbage culture
-            destroys. Chastity of attention — nothing is pushed, you choose what you seek.
-            Temperance of consumption — real cost creates real intentionality. Charity of
-            value — earnings flow to the individual and the institution, not the platform.
-            Diligence of identity — your profile requires effort, and rewards self-cultivation.
-            Patience of discourse — monetary cost filters bad-faith actors. Kindness of
-            comparison — percentiles replace raw figures, eliminating toxic competition.
-            Humility of taste — brand-blind scoring means you cannot buy status.
-          </p>
-
-          <p>
-            This is not hustle culture. This is sovereignty. Own your data. Own your identity.
-            Own your future.
-          </p>
-
-          <p style={{ color: '#C5A55A', fontStyle: 'italic' }}>
-            Choose your altar.
-          </p>
-        </div>
-      </section>
-
-      {/* ═══════════ DIVIDER ═══════════ */}
-      <div className="max-w-[960px] mx-auto px-8">
-        <div className="flex items-center gap-6">
-          <div className="flex-1 h-[1px]" style={{ background: '#1E293B' }} />
-          <span className="font-heading text-2xl" style={{ color: '#C5A55A' }}>✦</span>
-          <div className="flex-1 h-[1px]" style={{ background: '#1E293B' }} />
-        </div>
-      </div>
-
-      {/* ═══════════ PART II: TRUST AS LOVE ═══════════ */}
-      <section id="philosophy" className="max-w-[960px] mx-auto px-8 pt-20 pb-12">
-        <p
-          className="font-body text-xs font-bold tracking-[0.25em] uppercase mb-4"
-          style={{ color: '#0D9488' }}
-        >
-          Part II — Core Philosophy
-        </p>
-        <h1
-          className="font-heading text-5xl font-bold leading-tight mb-3"
-          style={{ color: '#F5F0E8' }}
-        >
-          Trust as Love
-        </h1>
-        <p
-          className="font-body text-lg mb-10"
-          style={{ color: '#94A3B8' }}
-        >
-          The only scarce resource in a post-scarcity world
-        </p>
-
-        {/* Video Player — Trust as Love */}
-        <div className="rounded-[3px] overflow-hidden mb-16" style={{ border: '1px solid #1E293B' }}>
-          <video
-            controls
-            preload="metadata"
-            className="w-full block"
-            style={{ background: '#000' }}
-          >
-            <source src="/trust-as-love.mp4" type="video/mp4" />
-            Your browser does not support the video element.
-          </video>
-        </div>
-      </section>
-
-      {/* Philosophy Text */}
-      <section className="max-w-[720px] mx-auto px-8 pb-20">
-        <div className="h-[1px] mb-16" style={{ background: '#1E293B' }} />
-
-        <h2
-          className="font-heading text-3xl font-bold mb-8"
-          style={{ color: '#C5A55A' }}
-        >
-          The Philosophy
-        </h2>
-
-        <div className="space-y-6 font-body text-base leading-relaxed" style={{ color: '#CBD5E1' }}>
-
-          {/* The Trust Crisis */}
-          <h3
-            className="font-heading text-xl font-bold mt-10 mb-2"
-            style={{ color: '#F5F0E8' }}
-          >
-            The Trust Crisis
-          </h3>
-          <p>
-            Every form of garbage culture is an unverified claim with no one willing to vouch for it.
-            AI slop claims authorship it doesn&apos;t have. Influencers claim lifestyles never lived. Clickbait
-            claims value it can&apos;t deliver. In every case, no human is willing to stake their reputation
-            on the claim&apos;s accuracy.
-          </p>
-          <p>
-            Search Star&apos;s defense is architectural, not editorial. Every meaningful claim on a profile
-            can be validated by a real person willing to put their name on it. The cost of garbage
-            isn&apos;t just monetary — it&apos;s reputational, because someone real had to vouch for it.
-          </p>
-
-          {/* What Trust Measures */}
-          <h3
-            className="font-heading text-xl font-bold mt-10 mb-2"
-            style={{ color: '#F5F0E8' }}
-          >
-            What Trust Actually Measures
-          </h3>
-          <p>
-            Validation of factual claims is only the first layer. The deeper question is: what makes a
-            person&apos;s validation meaningful? The answer is relationship. You cannot vouch for someone you
-            don&apos;t know. You cannot know someone without spending sustained time with them — in shared
-            meals, shared labor, shared worship, shared play.
-          </p>
-          <p>
-            What the Trust Score actually measures, at bottom, is not the accuracy of data fields. It
-            measures the <span style={{ color: '#F5F0E8', fontWeight: 600 }}>depth, breadth, and
-            durability</span> of a person&apos;s real human relationships. A profile backed by six
-            validators who have known the owner for a decade, who vouch for each other as well as for
-            the owner, and who come from independent communities — that profile is not just
-            &ldquo;verified.&rdquo; It is a portrait of a person embedded in a web of reciprocal love.
-          </p>
-
-          {/* Love as Economic Primitive */}
-          <h3
-            className="font-heading text-xl font-bold mt-10 mb-2"
-            style={{ color: '#F5F0E8' }}
-          >
-            Love as the Scarce Resource
-          </h3>
-          <p>
-            We use the word <span style={{ color: '#0D9488', fontWeight: 600 }}>love</span> deliberately
-            and in the full Aristotelian-Thomistic sense: not merely erotic attraction, but the whole
-            spectrum of human affection — erotic, romantic, filial, and fraternal. Love in this tradition
-            is not a feeling. It is an act of the will directed toward the genuine good of another person.
-            It is inherently particular: you love <em>this</em> person, not persons in general.
-          </p>
-          <p>
-            And it is structurally rivalrous in a way that attention is not. You can watch a celebrity&apos;s
-            content alongside millions of others. You cannot be someone&apos;s friend alongside millions
-            of others. Friendship, family devotion, and genuine community require reciprocity, time,
-            presence, and exclusivity. They do not scale — and that is precisely what makes them
-            economically meaningful in a world where everything else scales infinitely.
-          </p>
-
-          {/* Callout */}
-          <div
-            className="rounded-[3px] px-6 py-5 my-8"
-            style={{ background: '#1E293B', borderLeft: '3px solid #0D9488' }}
-          >
-            <p className="font-body text-sm leading-relaxed m-0" style={{ color: '#CBD5E1' }}>
-              In a world where AI-driven automation makes material production nearly free, the scarce
-              resource is authentic human relationship. Search Star is infrastructure for an economy
-              organized around the cultivation of human bonds — not data licensing, not attention
-              brokerage, not celebrity worship.{' '}
-              <span style={{ color: '#C5A55A', fontWeight: 600 }}>
-                The Trust Score is the price signal for love.
-              </span>
+        {/* ── Hero ── */}
+        <section style={{ background: '#1a3a6b', borderBottom: '3px solid #112a4f' }} className="py-20 px-6">
+          <div className="max-w-2xl mx-auto text-center">
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
+              Manifesto
+            </p>
+            <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', color: '#ffffff', lineHeight: 1.1, fontSize: '52px', fontWeight: 700, marginBottom: '20px' }}>
+              Why Search Star Exists
+            </h1>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '18px', lineHeight: 1.65 }}>
+              The philosophical case. Garbage culture, formation, conscientiousness, and what trust actually is.
             </p>
           </div>
+        </section>
 
-          {/* Against Social Credit */}
-          <h3
-            className="font-heading text-xl font-bold mt-10 mb-2"
-            style={{ color: '#F5F0E8' }}
-          >
-            Against Social Credit
-          </h3>
-          <p>
-            Search Star&apos;s trust model is the structural inverse of top-down social credit systems.
-            In a social credit regime — whether governmental or corporate — a central authority defines
-            acceptable behavior, scores compliance, and punishes deviation. Celebrity and influencer
-            culture operate on the same logic at a cultural level: a small number of people accumulate
-            enormous visibility, and their followers&apos; identities are defined by parasocial attachment
-            to figures who cannot love them back. Both systems produce idolatry — the elevation of an
-            image over a person.
-          </p>
-          <p>
-            Search Star rejects this entirely. No central authority defines who is trustworthy. The people
-            who actually know you make that determination through their sustained, voluntary association
-            with you. Vouching is mutual: I vouch for you and you vouch for me, and both of us stake our
-            reputation on the claim. The system is bottom-up, peer-to-peer, and resistant to coercion in
-            a way that any top-down system cannot be.
-          </p>
-
-          {/* Enemy declaration */}
-          <div
-            className="rounded-[3px] px-6 py-5 my-8"
-            style={{ background: '#1E293B', borderLeft: '3px solid #8B0000' }}
-          >
-            <p className="font-body text-sm leading-relaxed m-0" style={{ color: '#CBD5E1' }}>
-              <span style={{ color: '#F5F0E8', fontWeight: 600 }}>Search Star&apos;s enemies are
-              explicit:</span> top-down social credit systems that score compliance, celebrity economies
-              that manufacture parasocial attachment, and platform architectures that harvest data without
-              consent or compensation. These systems treat people as inputs. Search Star treats people
-              as ends.
+        {/* ── Part I: The Garbage Culture Problem ── */}
+        <section className="py-20 px-6" style={{ background: '#ffffff' }}>
+          <div className="max-w-2xl mx-auto">
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#1a3a6b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
+              I.
+            </p>
+            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '40px', fontWeight: 700, color: '#1a1a1a', marginBottom: '28px', lineHeight: 1.15 }}>
+              The Garbage Culture Problem
+            </h2>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              We live in an era of unprecedented access to instruction. You can find a world-class tutorial on almost any skill within five minutes. The bottleneck is no longer information. It is formation — the long, private, unglamorous process of actually becoming someone who can do something well.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              The platforms we've built our social lives around are not neutral with respect to formation. They are actively hostile to it. Their core mechanic — post something, receive feedback, post again — is an engagement loop, not a growth loop. Engagement loops optimize for the things that generate reactions: novelty, controversy, spectacle, emotional extremity. Formation optimizes for the things that build skill and character: repetition, patience, private practice, willingness to be bad at something for a long time before you're good at it.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              These are not compatible architectures. When you build your practice on a platform that rewards performance over formation, you eventually learn to optimize for the platform. The metric corrupts the thing being measured. You become not a better practitioner but a better performer of practice.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8 }}>
+              This is what we mean by garbage culture: a culture where the dominant media environment systematically rewards the appearance of virtue over its substance, the aesthetic of discipline over its practice, the signal of growth over growth itself. The problem isn't that platforms are evil. The problem is that their incentive structures are pointed in the wrong direction, and over time, the people living inside those incentive structures learn to follow them.
             </p>
           </div>
+        </section>
 
-          {/* The Convergence Principle */}
-          <h3
-            className="font-heading text-xl font-bold mt-10 mb-2"
-            style={{ color: '#F5F0E8' }}
-          >
-            The Convergence Principle
-          </h3>
-          <p>
-            The deepest design insight of the trust architecture is that gaming the system produces the
-            behavior the system exists to reward. Most economic systems have a gap between what is
-            incentivized and what is good. Financial markets reward extraction alongside creation.
-            Social media rewards provocation alongside connection. Credential systems reward signaling
-            alongside learning. Search Star is designed so that gap closes.
-          </p>
-          <p>
-            The only way to increase your Trust Score is to maintain long, mutual, sustained relationships
-            with real people across independent communities — people who genuinely vouch for you because
-            they genuinely know you. Someone who sets out to &ldquo;game&rdquo; the system by strategically
-            investing in deep friendships, showing up to their communities year after year, and building a
-            reputation worth staking money on has simply… built a life of genuine human connection. The
-            manipulation and the virtue converge.
-          </p>
-          <p>
-            This is a direct application of the Aristotelian insight that habituation precedes and eventually
-            produces genuine character. The person who acts virtuously in order to gain an advantage will,
-            over enough time and repetition, become genuinely virtuous. You act your way into virtue before
-            you feel your way into it.
-          </p>
-
-          {/* The Game callout */}
-          <div
-            className="rounded-[3px] px-6 py-5 my-8"
-            style={{ background: '#1E293B', borderLeft: '3px solid #C5A55A' }}
-          >
-            <p className="font-body text-sm leading-relaxed m-0" style={{ color: '#CBD5E1' }}>
-              <span style={{ color: '#C5A55A', fontWeight: 600 }}>We want people to game this
-              system.</span> The game is the point. The only way to win is to pursue love in the full
-              Aristotelian-Thomistic sense — sustained, reciprocal, particular devotion to real people in
-              real communities. If everyone plays this game as hard as they can, the result is a society
-              of people embedded in deep, genuine, loving relationships. That is not a side effect. It is
-              the design objective.
+        {/* ── Part II: Formation vs. Performance ── */}
+        <section className="py-20 px-6" style={{ background: '#eef2f8' }}>
+          <div className="max-w-2xl mx-auto">
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#1a3a6b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
+              II.
             </p>
-          </div>
+            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '40px', fontWeight: 700, color: '#1a1a1a', marginBottom: '28px', lineHeight: 1.15 }}>
+              Formation vs. Performance
+            </h2>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              Instagram fitness culture is the clearest illustration of the failure mode. The metric is how your body looks in a photo. Not whether you can deadlift your bodyweight. Not whether you can run a 5K without stopping. Not whether your resting heart rate has come down, or your bone density has improved, or your flexibility has increased, or your sleep has gotten better. These things are invisible on the platform. What is visible is the photograph.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              So practitioners optimize for the photograph. They learn the lighting, the angles, the timing, the editing. They learn which poses show leanness most favorably. They time their carbohydrate intake to look best at a specific hour of the specific day they plan to shoot. This is not fitness. It is photography skill. But the platform can't tell the difference, and over time neither can the practitioner.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              This pattern replicates across every domain the platforms touch. The musician who optimizes for clips rather than technique. The writer who optimizes for threads rather than books. The artist who optimizes for the aesthetic of process rather than its depth. The investor who optimizes for public conviction rather than actual research.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8 }}>
+              Formation is different from performance in a specific and irreducible way: it happens whether or not anyone is watching. Practice that requires an audience is performance. Practice that happens alone, in private, because you have committed to it — that is formation. The architecture has to be built to support the thing that doesn't need an audience, because that thing is what is actually valuable.
+            </p>
 
-          {/* Closing */}
-          <p className="mt-10">
-            Own your data. Own your relationships. Own your future.
-          </p>
-          <p style={{ color: '#C5A55A', fontStyle: 'italic' }}>
-            The Trust Score is the price signal for love.
-          </p>
-        </div>
-
-        {/* CTA */}
-        <div className="mt-16 flex gap-4 justify-center flex-wrap">
-          <Link
-            href="/spec.html#trustphilosophy"
-            className="inline-block no-underline font-body text-sm font-bold tracking-[0.15em] uppercase px-8 py-3 rounded-[3px] transition-all"
-            style={{
-              background: 'transparent',
-              color: '#C5A55A',
-              border: '1px solid #C5A55A',
-            }}
-          >
-            Read the Spec
-          </Link>
-          <Link
-            href="/"
-            className="inline-block no-underline font-body text-sm font-bold tracking-[0.15em] uppercase px-8 py-3 rounded-[3px] transition-all"
-            style={{
-              background: '#0D9488',
-              color: '#F5F0E8',
-              border: '1px solid #0D9488',
-            }}
-          >
-            Explore Search Star
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-8" style={{ borderTop: '1px solid #1E293B' }}>
-        <div className="max-w-[960px] mx-auto px-8">
-          <div className="font-body text-xs flex justify-between" style={{ color: 'rgba(255,255,255,0.35)' }}>
-            <div>
-              <strong style={{ color: 'rgba(255,255,255,0.6)' }}>Search Star</strong> — The Sovereign Personal Data Standard
-            </div>
-            <div className="flex gap-6">
-              <Link href="/spec.html" className="no-underline font-medium tracking-[0.1em] uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>Spec</Link>
-              <Link href="/roadmap.html" className="no-underline font-medium tracking-[0.1em] uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>Roadmap</Link>
-              <a href="https://github.com/ArchonGraceland/Search-Star" className="no-underline font-medium tracking-[0.1em] uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>GitHub</a>
+            <div style={{ borderLeft: '3px solid #1a3a6b', paddingLeft: '28px', marginTop: '36px' }}>
+              <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '22px', fontStyle: 'italic', color: '#1a1a1a', lineHeight: 1.5 }}>
+                Practice that requires an audience is performance. Practice that happens alone, in private, because you have committed to it — that is formation.
+              </p>
             </div>
           </div>
-        </div>
-      </footer>
-    </div>
+        </section>
+
+        {/* ── Part III: Conscientiousness as Signal ── */}
+        <section className="py-20 px-6" style={{ background: '#ffffff' }}>
+          <div className="max-w-2xl mx-auto">
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#1a3a6b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
+              III.
+            </p>
+            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '40px', fontWeight: 700, color: '#1a1a1a', marginBottom: '28px', lineHeight: 1.15 }}>
+              Conscientiousness as Signal
+            </h2>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              The personality research is consistent across decades and cultures: conscientiousness is the strongest Big Five predictor of long-term life outcomes. More than openness, more than extraversion, more than agreeableness or emotional stability. The conscientious person — organized, persistent, reliable, self-disciplined — performs better across a wide range of domains: career outcomes, health outcomes, relationship stability, civic participation.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              The problem is that conscientiousness is nearly impossible to verify from the outside. You can tell someone you are disciplined. You can post about your morning routine. You can describe your systems, your habits, your track record. None of this is evidence. It is testimony — and testimony about your own virtues is the weakest possible form of evidence, because the people with the least of a virtue are often the most eager to claim it.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              What would it look like to actually verify conscientiousness? It would look like a record of repeated behavior, over time, confirmed by people with stakes in the accuracy of their confirmation, in a context where the behavior had real costs — time, effort, the risk of public failure.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8 }}>
+              That is a description of what Search Star is trying to build. Not a self-report. Not a credential from an institution that has an incentive to credential everyone who pays them. A record of action, confirmed by witnesses, over time. The Trust record is an attempt to make the most important and least visible human quality into something that can be seen.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Part IV: Trust as Action ── */}
+        <section className="py-20 px-6" style={{ background: '#eef2f8' }}>
+          <div className="max-w-2xl mx-auto">
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#1a3a6b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
+              IV.
+            </p>
+            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '40px', fontWeight: 700, color: '#1a1a1a', marginBottom: '28px', lineHeight: 1.15 }}>
+              Trust as Action
+            </h2>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              Trust, in the Search Star model, is not a feeling. It is not a vibe or an impression or a gut read. It is an act. When a validator confirms a session, they are performing an act of trust — staking their own credibility on the claim that the work was real. When a sponsor pledges money against a commitment, they are performing an act of trust — putting skin in the game on their belief in the practitioner. When a mentor takes on a mentee, their contribution income is tied to that mentee's success — which means their financial incentive is aligned with genuine formation, not with flattery or retention.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8, marginBottom: '22px' }}>
+              This is vouching with stakes. The validator who confirms a session has put their relationship and their reputation on the line. The sponsor who pledges has put money on the line. These are not costless gestures. They are commitments. And the accumulation of those commitments, over time, is what a Trust record actually is: a ledger of people who were willing to stake something on their belief in you.
+            </p>
+            <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.8 }}>
+              The convergence principle, which is the philosophical core of the whole system, is this: because the Trust record can only be built through actual behavior confirmed by people with stakes, the only reliable strategy for building a good Trust record is to actually be the kind of person it describes. You cannot optimize your way into a Mature Trust stage. You can only practice your way there. Which means that as the system grows, the people at the highest trust stages will, reliably, be the people who have done the most actual work over the most actual time, confirmed by the most actual witnesses.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Convergence Callout ── */}
+        <section className="py-20 px-6" style={{ background: '#1a3a6b' }}>
+          <div className="max-w-2xl mx-auto text-center">
+            <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '32px', fontStyle: 'italic', color: '#ffffff', lineHeight: 1.5, marginBottom: '32px' }}>
+              &ldquo;The only way to advance your Trust is to actually be the kind of person your Trust record describes. Gaming the metric produces the virtue.&rdquo;
+            </p>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: '40px' }}>
+              The Convergence Principle — Search Star Spec v3.0, §2.4
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link
+                href="/signup"
+                style={{ background: '#ffffff', color: '#1a3a6b', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', padding: '14px 32px', borderRadius: '3px', textDecoration: 'none', textTransform: 'uppercase' }}
+              >
+                Start Practicing
+              </Link>
+              <Link
+                href="/spec"
+                style={{ border: '1px solid rgba(255,255,255,0.35)', color: 'rgba(255,255,255,0.85)', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', padding: '14px 32px', borderRadius: '3px', textDecoration: 'none', textTransform: 'uppercase' }}
+              >
+                Read the Spec
+              </Link>
+            </div>
+          </div>
+        </section>
+
+      </main>
+      <PublicFooter />
+    </>
   )
 }

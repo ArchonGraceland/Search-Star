@@ -19,6 +19,21 @@ export default function PublicHeader() {
         </Link>
         <nav style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <Link
+            href="/onboarding"
+            style={{
+              fontFamily: 'Roboto, sans-serif',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              padding: '7px 16px',
+              color: 'rgba(255,255,255,0.7)',
+              textDecoration: 'none',
+            }}
+          >
+            How It Works
+          </Link>
+          <Link
             href="/login"
             style={{
               fontFamily: 'Roboto, sans-serif',

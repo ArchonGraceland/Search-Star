@@ -22,6 +22,18 @@ export default function PublicFooter() {
         </span>
         <div style={{ display: 'flex', gap: '24px' }}>
           <Link
+            href="/onboarding"
+            style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' }}
+          >
+            How It Works
+          </Link>
+          <Link
+            href="/manifesto"
+            style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' }}
+          >
+            Manifesto
+          </Link>
+          <Link
             href="/spec"
             style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' }}
           >
