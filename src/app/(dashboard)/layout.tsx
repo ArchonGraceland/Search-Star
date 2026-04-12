@@ -1,101 +1,94 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { SignOutButton } from '@/components/sign-out-button'
+import SignOutButton from '@/components/sign-out-button'
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  if (!user) {
-    redirect('/login')
-  }
-
-  // Fetch profile for role check + display name
+  // Check admin
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, display_name')
+    .select('display_name, mentor_role')
     .eq('user_id', user.id)
     .single()
 
-  const displayName = profile?.display_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
-  const isAdmin = profile?.role === 'admin'
-  const isPlatform = profile?.role === 'platform'
+  // Admin check via metadata
+  const isAdmin = user.user_metadata?.role === 'admin'
+
+  const navLinks = [
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/account', label: 'Account' },
+    { href: '/support', label: 'Support' },
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
+  ]
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] flex">
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f5f5' }}>
       {/* Sidebar */}
-      <aside className="w-[240px] bg-[#1a3a6b] text-white flex flex-col min-h-screen fixed">
-        {/* Logo */}
-        <div className="px-6 py-5 border-b border-white/10">
-          <div className="flex items-center gap-2.5">
-            <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
-              <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8"/>
-              <polygon points="32,6 36,24 32,20 28,24" fill="#fff"/>
-              <polygon points="32,6 36,24 32,28 28,24" fill="rgba(255,255,255,0.6)"/>
-              <polygon points="58,32 40,28 44,32 40,36" fill="#fff" opacity="0.6"/>
-              <polygon points="32,58 28,40 32,44 36,40" fill="#fff" opacity="0.6"/>
-              <polygon points="6,32 24,36 20,32 24,28" fill="#fff" opacity="0.6"/>
-              <circle cx="32" cy="32" r="3" fill="#fff"/>
-            </svg>
-            <span className="font-body text-[11px] font-bold tracking-[0.15em] uppercase text-white/70">
-              Search Star
-            </span>
-          </div>
+      <aside
+        style={{
+          width: '220px',
+          background: '#1a3a6b',
+          borderRight: '3px solid #112a4f',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '24px 0',
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <Link
+            href="/"
+            style={{
+              fontFamily: '"Crimson Text", Georgia, serif',
+              fontSize: '20px',
+              fontWeight: 700,
+              color: '#ffffff',
+              textDecoration: 'none',
+            }}
+          >
+            Search Star
+          </Link>
+          {profile?.display_name && (
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)', marginTop: '4px', fontFamily: 'Roboto, sans-serif' }}>
+              {profile.display_name}
+            </p>
+          )}
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-4">
-          <NavLink href="/dashboard" label="Dashboard" icon="📊" />
-          <NavLink href="/practice" label="Practice" icon="🌱" />
-          <NavLink href="/profile-builder" label="Register Profile" icon="⚡" />
-          <NavLink href="/feed" label="Feed" icon="💬" />
-          <NavLink href="/account" label="Account" icon="👤" />
-          <NavLink href="/support" label="Support" icon="🎫" />
-
-          {isAdmin && (
-            <>
-              <div className="my-3 mx-3 border-t border-white/10" />
-              <NavLink href="/admin" label="Admin" icon="🛡️" />
-            </>
-          )}
-
-          {(isPlatform || isAdmin) && (
-            <>
-              <div className="my-3 mx-3 border-t border-white/10" />
-              <NavLink href="/platform" label="Platform Portal" icon="🏢" />
-            </>
-          )}
+        <nav style={{ flex: 1, padding: '16px 0' }}>
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              style={{
+                display: 'block',
+                padding: '10px 20px',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.75)',
+                textDecoration: 'none',
+                letterSpacing: '0.02em',
+              }}
+            >
+              {link.label}
+            </Link>
+          ))}
         </nav>
 
-        {/* User */}
-        <div className="px-6 py-4 border-t border-white/10">
-          <div className="font-body text-xs text-white/50 mb-1">Signed in as</div>
-          <div className="font-body text-sm font-medium text-white/90 truncate mb-3">{displayName}</div>
+        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <SignOutButton />
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 ml-[240px]">
+      <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
         {children}
       </main>
     </div>
-  )
-}
-
-function NavLink({ href, label, icon }: { href: string; label: string; icon: string }) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-3 py-2.5 rounded-[3px] text-white/70 no-underline font-body text-sm transition-all hover:bg-white/10 hover:text-white mb-0.5"
-    >
-      <span className="text-base">{icon}</span>
-      {label}
-    </Link>
   )
 }

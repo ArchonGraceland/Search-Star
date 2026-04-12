@@ -2,25 +2,17 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+  let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
+        getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({
-            request,
-          })
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -29,28 +21,27 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  // Handle auth callback codes landing on root — redirect to /auth/callback
+  // Handle auth callback codes landing on root
   if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/callback'
     return NextResponse.redirect(url)
   }
 
-  // Protect dashboard routes — redirect to login if not authenticated
-  if (
-    !user &&
-    (request.nextUrl.pathname.startsWith('/dashboard') ||
-      request.nextUrl.pathname.startsWith('/profile-builder') ||
-      request.nextUrl.pathname.startsWith('/feed') ||
-      request.nextUrl.pathname.startsWith('/account') ||
-      request.nextUrl.pathname.startsWith('/admin') ||
-      request.nextUrl.pathname.startsWith('/support') ||
-      (request.nextUrl.pathname.startsWith('/platform') && !request.nextUrl.pathname.startsWith('/platform-signup')))
-  ) {
+  // Protected routes — redirect to login if not authenticated
+  const protectedPrefixes = [
+    '/dashboard', '/account', '/admin', '/support',
+    '/commit', '/practice', '/validating', '/mentors',
+    '/trust', '/earnings', '/onboarding',
+  ]
+
+  const isProtected = protectedPrefixes.some(p =>
+    request.nextUrl.pathname.startsWith(p)
+  )
+
+  if (!user && isProtected) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

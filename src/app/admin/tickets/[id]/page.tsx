@@ -59,7 +59,7 @@ export default async function AdminTicketDetail({
   // Fetch user profile
   const { data: userProfile } = await supabase
     .from('profiles')
-    .select('id, display_name, profile_number, handle')
+    .select('id, display_name')
     .eq('user_id', ticket.user_id)
     .single()
 
@@ -94,7 +94,7 @@ export default async function AdminTicketDetail({
             <h1 className="font-heading text-[28px] font-bold mb-1">{ticket.subject}</h1>
             <p className="font-body text-sm text-[#767676]">
               Submitted by {userProfile?.display_name || 'Unknown'}
-              {userProfile?.profile_number ? ` (${userProfile.profile_number})` : ''} · {formatDateTime(ticket.created_at)}
+              {formatDateTime(ticket.created_at)}
             </p>
           </div>
           <div className="flex items-center gap-2">

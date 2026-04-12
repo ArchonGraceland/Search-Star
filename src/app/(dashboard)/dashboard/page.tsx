@@ -1,47 +1,49 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 
-export default async function Dashboard() {
+export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const displayName = user?.user_metadata?.display_name || 'User'
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name, trust_stage')
+    .eq('user_id', user.id)
+    .single()
+
+  const name = profile?.display_name || 'Practitioner'
 
   return (
-    <div className="p-8">
-      <div className="max-w-[960px]">
-        {/* Page header */}
-        <div className="mb-8">
-          <h1 className="font-heading text-[32px] font-bold mb-1">Welcome, {displayName}</h1>
-          <p className="font-body text-sm text-[#767676]">Your Search Star dashboard — earnings, activity, and profile status.</p>
-        </div>
+    <div style={{ maxWidth: '720px' }}>
+      <p
+        style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#767676', textTransform: 'uppercase', fontWeight: 700, marginBottom: '12px' }}
+      >
+        Dashboard
+      </p>
+      <h1
+        style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '32px', fontWeight: 700, marginBottom: '8px' }}
+      >
+        Welcome, {name}.
+      </h1>
+      <p style={{ color: '#5a5a5a', fontSize: '17px', marginBottom: '40px' }}>
+        Your practices will appear here as you build them.
+      </p>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <StatCard label="Total Earnings" value="$0.00" sublabel="Lifetime" />
-          <StatCard label="This Week" value="$0.00" sublabel="Next settlement: Monday" />
-          <StatCard label="Profile Queries" value="0" sublabel="Last 30 days" />
-        </div>
-
-        {/* Activity placeholder */}
-        <div className="bg-white border border-[#d4d4d4] rounded-[3px] shadow-sm p-8">
-          <h2 className="font-heading text-xl font-bold mb-4">Recent Activity</h2>
-          <div className="text-center py-12">
-            <p className="font-body text-sm text-[#b8b8b8] mb-4">No activity yet.</p>
-            <p className="font-body text-sm text-[#767676]">
-              Once platforms start querying your profile, you&apos;ll see earnings and activity here.
-            </p>
-          </div>
-        </div>
+      <div
+        style={{
+          background: '#eef2f8',
+          border: '1px solid #d4d4d4',
+          borderLeft: '3px solid #1a3a6b',
+          borderRadius: '3px',
+          padding: '20px 24px',
+          fontSize: '16px',
+          color: '#1a1a1a',
+        }}
+      >
+        <strong>Search Star v3.0 — Phase 0 complete.</strong> The database foundation is live.
+        Onboarding, commitment mechanics, and the validator feed are coming in the next phases.
       </div>
-    </div>
-  )
-}
-
-function StatCard({ label, value, sublabel }: { label: string; value: string; sublabel: string }) {
-  return (
-    <div className="bg-white border border-[#d4d4d4] rounded-[3px] shadow-sm p-6">
-      <div className="font-body text-[11px] font-bold tracking-[0.1em] uppercase text-[#767676] mb-2">{label}</div>
-      <div className="font-heading text-[28px] font-bold text-[#1a3a6b]">{value}</div>
-      <div className="font-mono text-[11px] text-[#b8b8b8] mt-1">{sublabel}</div>
     </div>
   )
 }

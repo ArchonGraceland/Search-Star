@@ -21,86 +21,64 @@ async function getAdminClient() {
 async function checkAdmin(supabase: ReturnType<typeof createServerClient>) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'admin') return null
+  // Admin role lives in user_metadata in v3
+  if (user.user_metadata?.role !== 'admin') return null
   return user
 }
 
-// PATCH — Update trust score
+const VALID_STAGES = ['seedling', 'rooting', 'growing', 'established', 'mature']
+const VALID_ROLES = ['mentor', 'coach', 'community_builder', 'practice_leader', null]
+
+// PATCH — update trust_stage and/or mentor_role
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await getAdminClient()
     const admin = await checkAdmin(supabase)
-    if (!admin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
+    if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
     const body = await request.json()
-    const { profile_id, trust_score, reason } = body
+    const { user_id, trust_stage, mentor_role } = body
 
-    if (!profile_id || trust_score === undefined || !reason) {
-      return NextResponse.json({ error: 'Missing required fields: profile_id, trust_score, reason' }, { status: 400 })
+    if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
+
+    const updates: Record<string, unknown> = {}
+
+    if (trust_stage !== undefined) {
+      if (!VALID_STAGES.includes(trust_stage)) {
+        return NextResponse.json({ error: 'Invalid trust_stage' }, { status: 400 })
+      }
+      updates.trust_stage = trust_stage
     }
 
-    const score = parseInt(trust_score, 10)
-    if (isNaN(score) || score < 0 || score > 100) {
-      return NextResponse.json({ error: 'Trust score must be between 0 and 100' }, { status: 400 })
+    if (mentor_role !== undefined) {
+      if (mentor_role !== null && !VALID_ROLES.includes(mentor_role)) {
+        return NextResponse.json({ error: 'Invalid mentor_role' }, { status: 400 })
+      }
+      updates.mentor_role = mentor_role
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
 
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ trust_score: score, updated_at: new Date().toISOString() })
-      .eq('id', profile_id)
+      .update(updates)
+      .eq('user_id', user_id)
 
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+    // Mirror trust_stage to trust_records if updated
+    if (updates.trust_stage) {
+      await supabase
+        .from('trust_records')
+        .update({ stage: updates.trust_stage, updated_at: new Date().toISOString() })
+        .eq('user_id', user_id)
     }
 
-    return NextResponse.json({ success: true, trust_score: score })
+    return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Admin trust update error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-// PUT — Update account status (suspend/unsuspend)
-export async function PUT(request: NextRequest) {
-  try {
-    const supabase = await getAdminClient()
-    const admin = await checkAdmin(supabase)
-    if (!admin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    const body = await request.json()
-    const { profile_id, status } = body
-
-    if (!profile_id || !status) {
-      return NextResponse.json({ error: 'Missing required fields: profile_id, status' }, { status: 400 })
-    }
-
-    if (!['active', 'suspended'].includes(status)) {
-      return NextResponse.json({ error: 'Status must be "active" or "suspended"' }, { status: 400 })
-    }
-
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', profile_id)
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, status })
-  } catch (err) {
-    console.error('Admin status update error:', err)
+    console.error('Admin user update error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

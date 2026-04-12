@@ -1,14 +1,38 @@
 import Link from 'next/link'
 
-export function PublicFooter() {
+export default function PublicFooter() {
   return (
-    <footer className="bg-[#1a1a1a] text-white/55 py-8">
-      <div className="max-w-[1120px] mx-auto px-8">
-        <div className="font-body text-xs flex justify-between">
-          <div><strong className="text-white/80">Search Star</strong> — Specification v1.4.0-draft · MIT License</div>
-          <div className="flex gap-6">
-            <a href="https://github.com/ArchonGraceland/Search-Star" className="text-white/50 no-underline font-medium tracking-[0.1em] uppercase hover:text-white/80">GitHub</a>
-          </div>
+    <footer style={{ background: '#1a1a1a', padding: '28px 24px' }}>
+      <div
+        style={{
+          maxWidth: '1120px',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontFamily: 'Roboto, sans-serif',
+          fontSize: '12px',
+          color: 'rgba(255,255,255,0.5)',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
+        <span>
+          <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Search Star</strong> — v3.0
+        </span>
+        <div style={{ display: 'flex', gap: '24px' }}>
+          <Link
+            href="/spec"
+            style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' }}
+          >
+            Spec
+          </Link>
+          <Link
+            href="/roadmap"
+            style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' }}
+          >
+            Roadmap
+          </Link>
         </div>
       </div>
     </footer>
