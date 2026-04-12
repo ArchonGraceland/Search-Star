@@ -33,7 +33,7 @@ export default function Signup() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      router.push(`/signup/confirm?email=${encodeURIComponent(email)}`)
       router.refresh()
     }
   }
@@ -63,7 +63,7 @@ export default function Signup() {
         <div className="bg-white border border-[#d4d4d4] rounded-[3px] shadow-sm p-12 w-full max-w-[440px]">
           <h1 className="font-heading text-[28px] font-bold mb-1">Create your profile</h1>
           <p className="font-body text-sm text-[#767676] mb-8">
-            Join Search Star and start earning from your data.
+            Name your practice. Invite your first validator. Build your Trust record.
           </p>
 
           <form onSubmit={handleSignup}>

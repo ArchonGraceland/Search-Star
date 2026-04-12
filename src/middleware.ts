@@ -35,6 +35,7 @@ export async function middleware(request: NextRequest) {
     '/dashboard', '/account', '/admin', '/support',
     '/commit', '/practice', '/validating', '/mentors',
     '/trust', '/earnings',
+    '/onboarding/practice', '/onboarding/validator', '/onboarding/profile', '/onboarding/visibility',
   ]
 
   const isProtected = protectedPrefixes.some(p =>
