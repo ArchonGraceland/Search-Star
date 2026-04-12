@@ -2,6 +2,18 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+function dayOfCommitment(launchStartsAt: string): number {
+  const start = new Date(launchStartsAt)
+  const now = new Date()
+  const diff = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+  return Math.max(1, Math.min(90, diff + 1))
+}
+
+const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
+  launch: { bg: '#eef2f8', color: '#1a3a6b', label: 'Launch' },
+  active:  { bg: '#edf7ed', color: '#2d6a2d', label: 'Active' },
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -23,7 +35,18 @@ export default async function DashboardPage() {
   const name = profile?.display_name || 'Practitioner'
   const practice = practices?.[0] ?? null
 
-  // Edge case: no practice defined (shouldn't happen after Phase 2 onboarding, but handle gracefully)
+  // Fetch active/launch commitment
+  const { data: commitments } = await supabase
+    .from('commitments')
+    .select('id, title, status, sessions_logged, launch_starts_at')
+    .eq('user_id', user.id)
+    .in('status', ['launch', 'active'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const commitment = commitments?.[0] ?? null
+
+  // Edge case: no practice defined
   if (!practice) {
     return (
       <div style={{ maxWidth: '720px' }}>
@@ -34,7 +57,7 @@ export default async function DashboardPage() {
           Welcome, {name}.
         </h1>
         <p style={{ color: '#5a5a5a', fontSize: '17px', marginBottom: '32px' }}>
-          You haven't named a practice yet.
+          You haven&apos;t named a practice yet.
         </p>
         <Link
           href="/onboarding/practice"
@@ -115,35 +138,92 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Commitments — placeholder */}
+      {/* Commitments */}
       <div style={{
         background: '#fff',
         border: '1px solid #d4d4d4',
         borderRadius: '3px',
         padding: '24px 28px',
       }}>
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '8px' }}>
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '16px' }}>
           Your Commitments
         </p>
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', marginBottom: '12px' }}>
-          No commitments yet.
-        </p>
-        <span style={{
-          display: 'inline-block',
-          fontFamily: 'Roboto, sans-serif',
-          fontSize: '13px',
-          fontWeight: 600,
-          color: '#b8b8b8',
-          padding: '8px 16px',
-          border: '1px solid #d4d4d4',
-          borderRadius: '3px',
-          cursor: 'not-allowed',
-        }}>
-          Declare your first 90-day commitment
-        </span>
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8', marginTop: '8px' }}>
-          Coming in Phase 3
-        </p>
+
+        {commitment ? (
+          (() => {
+            const badge = STATUS_BADGE[commitment.status] ?? STATUS_BADGE.launch
+            const day = dayOfCommitment(commitment.launch_starts_at)
+            return (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '20px', fontWeight: 700, color: '#1a1a1a', margin: 0 }}>
+                    {commitment.title}
+                  </p>
+                  <span style={{
+                    fontFamily: 'Roboto, sans-serif',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    background: badge.bg,
+                    color: badge.color,
+                    borderRadius: '2px',
+                    padding: '3px 10px',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {badge.label}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '20px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a' }}>
+                    {commitment.sessions_logged} session{commitment.sessions_logged !== 1 ? 's' : ''} logged
+                  </span>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a' }}>
+                    Day {day} of 90
+                  </span>
+                </div>
+                <Link
+                  href={`/commit/${commitment.id}`}
+                  style={{
+                    display: 'inline-block',
+                    fontFamily: 'Roboto, sans-serif',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#1a3a6b',
+                    textDecoration: 'none',
+                    borderBottom: '1px solid #1a3a6b',
+                    paddingBottom: '1px',
+                  }}
+                >
+                  View commitment →
+                </Link>
+              </div>
+            )
+          })()
+        ) : (
+          <div>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', marginBottom: '16px' }}>
+              No active commitments yet.
+            </p>
+            <Link
+              href="/commit"
+              style={{
+                display: 'inline-block',
+                background: '#1a3a6b',
+                color: '#fff',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '13px',
+                fontWeight: 600,
+                padding: '10px 20px',
+                borderRadius: '3px',
+                textDecoration: 'none',
+                letterSpacing: '0.02em',
+              }}
+            >
+              Declare your first 90-day commitment →
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   )
