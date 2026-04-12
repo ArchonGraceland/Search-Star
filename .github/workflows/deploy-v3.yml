@@ -4,35 +4,12 @@ on:
   push:
     branches:
       - v3
-  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy v3 to Vercel production
+      - name: Trigger Vercel production deploy
         run: |
-          RESPONSE=$(curl -s -X POST "https://api.vercel.com/v13/deployments?teamId=team_3QGOH2gaQBtEyFzCX7wtsP7X" \
-            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"name\": \"search-star\",
-              \"project\": \"prj_4naGexGhfiklNAPntvurIkFWH5Nh\",
-              \"gitSource\": {
-                \"type\": \"github\",
-                \"repoId\": \"1195319136\",
-                \"ref\": \"v3\",
-                \"sha\": \"${{ github.sha }}\"
-              },
-              \"target\": \"production\",
-              \"forceNew\": true
-            }")
-          echo "$RESPONSE" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print('url:', d.get('url'))
-print('state:', d.get('readyState'))
-if 'error' in d:
-    print('error:', d['error'])
-    exit(1)
-"
+          curl -s "https://api.vercel.com/v1/integrations/deploy/prj_4naGexGhfiklNAPntvurIkFWH5Nh/18KXg8wIGM" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print('state:', d.get('job',{}).get('state','?'))"
