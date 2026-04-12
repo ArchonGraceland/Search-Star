@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import SignOutButton from '@/components/sign-out-button'
+import { SignOutButton } from '@/components/sign-out-button'
 
 export default async function AccountPage() {
   const supabase = await createClient()
