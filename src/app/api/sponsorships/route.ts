@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getResend } from '@/lib/resend'
 
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'commitment_id is required' }, { status: 400 })
   }
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const { data: commitment, error } = await supabase
     .from('commitments')
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'A valid email address is required.' }, { status: 400 })
   }
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   // Fetch commitment and verify launch status
   const { data: commitment, error: commError } = await supabase
