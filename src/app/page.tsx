@@ -211,40 +211,40 @@ export default function HomePage() {
                   title: 'What Is a 90-Day Commitment?',
                   duration: '3:00',
                   description: 'The commitment mechanic, the 14-day launch period, the start ritual, how validators work, and why 90 days.',
-                  script: '/scripts/video-01-90-day-commitment.md',
                 },
                 {
                   slug: 'video-02-sponsorship-model',
                   title: 'How the Sponsorship Model Works',
                   duration: '3:12',
                   description: 'Sponsors pledge during the launch window. You keep 100% of what you earn. Voluntary contributions fund the mentor economy.',
-                  script: '/scripts/video-02-sponsorship-model.md',
                 },
                 {
                   slug: 'video-03-why-search-star',
                   title: 'Why Search Star Exists',
                   duration: '4:28',
                   description: 'The garbage culture problem, formation versus performance, conscientiousness as the most important unverifiable trait, and trust as an action.',
-                  script: '/scripts/video-03-why-search-star.md',
                 },
               ].map((item) => (
-                <div key={item.slug} style={{ background: '#ffffff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '28px 32px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
-                    <h3 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '22px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.2 }}>
-                      {item.title}
-                    </h3>
-                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#767676', flexShrink: 0, paddingTop: '4px' }}>
-                      {item.duration}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '15px', color: '#5a5a5a', lineHeight: 1.65, marginBottom: '20px' }}>
-                    {item.description}
-                  </p>
-                  <audio
+                <div key={item.slug} style={{ background: '#ffffff', border: '1px solid #d4d4d4', borderRadius: '3px', overflow: 'hidden' }}>
+                  <video
                     controls
-                    style={{ width: '100%', height: '36px', accentColor: '#1a3a6b' }}
-                    src={`/audio/${item.slug}.mp3`}
+                    preload="metadata"
+                    style={{ width: '100%', display: 'block', background: '#1a3a6b', maxHeight: '480px' }}
+                    src={`/video/${item.slug}.mp4`}
                   />
+                  <div style={{ padding: '24px 28px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
+                      <h3 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '21px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.2 }}>
+                        {item.title}
+                      </h3>
+                      <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#767676', flexShrink: 0, paddingTop: '3px' }}>
+                        {item.duration}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '15px', color: '#5a5a5a', lineHeight: 1.65, margin: 0 }}>
+                      {item.description}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
