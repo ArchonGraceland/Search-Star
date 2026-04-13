@@ -14,15 +14,26 @@ export default function OnboardingPage() {
       <main>
 
         {/* ── Hero ── */}
-        <section style={{ background: '#1a3a6b', borderBottom: '3px solid #112a4f' }} className="py-20 px-6">
-          <div className="max-w-2xl mx-auto text-center">
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
+        <section style={{
+          position: 'relative',
+          borderBottom: '3px solid #112a4f',
+          backgroundImage: 'url(/images/hero/table-v2-wider.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 60%',
+          backgroundRepeat: 'no-repeat',
+        }} className="py-32 px-6">
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to bottom, rgba(17,42,79,0.78) 0%, rgba(26,58,107,0.85) 100%)',
+          }} />
+          <div className="max-w-2xl mx-auto text-center" style={{ position: 'relative', zIndex: 1 }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
               How It Works
             </p>
-            <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', color: '#ffffff', lineHeight: 1.15, fontSize: '48px', fontWeight: 700, marginBottom: '20px' }}>
+            <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', color: '#ffffff', lineHeight: 1.15, fontSize: 'clamp(34px, 5vw, 52px)', fontWeight: 700, marginBottom: '20px' }}>
               Practice before profile.
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '18px', lineHeight: 1.65 }}>
+            <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: '18px', lineHeight: 1.65 }}>
               You arrive as a practitioner. Identity emerges from what you do.
               This page explains the system in full — what a commitment is, how validators work,
               why sponsors pay out, and what a Trust record means.

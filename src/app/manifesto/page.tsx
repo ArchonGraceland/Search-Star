@@ -14,15 +14,26 @@ export default function ManifestoPage() {
       <main>
 
         {/* ── Hero ── */}
-        <section style={{ background: '#1a3a6b', borderBottom: '3px solid #112a4f' }} className="py-20 px-6">
-          <div className="max-w-2xl mx-auto text-center">
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
+        <section style={{
+          position: 'relative',
+          borderBottom: '3px solid #112a4f',
+          backgroundImage: 'url(/images/hero/manifesto-01-rowers.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 40%',
+          backgroundRepeat: 'no-repeat',
+        }} className="py-36 px-6">
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to bottom, rgba(10,25,50,0.82) 0%, rgba(17,42,79,0.88) 100%)',
+          }} />
+          <div className="max-w-2xl mx-auto text-center" style={{ position: 'relative', zIndex: 1 }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
               Manifesto
             </p>
-            <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', color: '#ffffff', lineHeight: 1.1, fontSize: '52px', fontWeight: 700, marginBottom: '20px' }}>
+            <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', color: '#ffffff', lineHeight: 1.1, fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 700, marginBottom: '20px' }}>
               Why Search Star Exists
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '18px', lineHeight: 1.65 }}>
+            <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '18px', lineHeight: 1.65 }}>
               The philosophical case. Garbage culture, formation, conscientiousness, and what trust actually is.
             </p>
           </div>
