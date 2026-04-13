@@ -79,6 +79,14 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Onboarding gate — redirect to practice step if not yet completed
+  const { data: practiceCheck } = await supabase
+    .from('practices')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+  if (!practiceCheck || practiceCheck.length === 0) redirect('/onboarding/practice')
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('display_name, trust_stage')

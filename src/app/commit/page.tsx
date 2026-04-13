@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function CommitPage() {
   const [title, setTitle] = useState('')
@@ -12,7 +13,29 @@ export default function CommitPage() {
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(true)
   const router = useRouter()
+
+  // Gate: redirect to onboarding if no practice exists
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.replace('/login'); return }
+      supabase.from('practices').select('id').eq('user_id', user.id).limit(1).then(({ data }) => {
+        if (!data || data.length === 0) {
+          router.replace('/onboarding/practice')
+        } else {
+          setChecking(false)
+        }
+      })
+    })
+  }, [router])
+
+  if (checking) return (
+    <div style={{ minHeight: '100vh', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#767676' }}>Loading...</p>
+    </div>
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
