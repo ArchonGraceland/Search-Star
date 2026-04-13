@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const { data: commitment, error } = await supabase
     .from('commitments')
     .select(`
-      id, title, status, launch_ends_at,
+      id, title, status, launch_ends_at, streak_ends_at,
       practices (name)
     `)
     .eq('id', commitment_id)
@@ -53,6 +53,7 @@ export async function GET(request: Request) {
     title: commitment.title,
     status: commitment.status,
     launch_ends_at: commitment.launch_ends_at,
+    streak_ends_at: commitment.streak_ends_at,
     practitioner_name: profile?.display_name ?? 'the practitioner',
     practice_name,
     total_pledged,
@@ -90,8 +91,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
   }
 
-  if (commitment.status !== 'launch') {
-    return NextResponse.json({ error: 'The sponsorship window for this commitment is closed.' }, { status: 409 })
+  if (!['launch', 'active'].includes(commitment.status)) {
+    return NextResponse.json({ error: 'This commitment is no longer accepting pledges.' }, { status: 409 })
   }
 
   // Get practitioner profile

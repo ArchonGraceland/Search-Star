@@ -10,6 +10,7 @@ interface SponsorPageData {
   practitioner_name: string
   practice_name: string | null
   launch_ends_at: string
+  streak_ends_at: string
   total_pledged: number
   pledge_count: number
   status: string
@@ -45,7 +46,7 @@ export default function SponsorPage() {
       const res = await fetch(`/api/sponsorships?commitment_id=${id}`)
       if (res.ok) {
         const json = await res.json()
-        if (json.status !== 'launch') {
+        if (json.status === 'completed' || json.status === 'abandoned') {
           setClosed(true)
         } else {
           setData(json)
@@ -111,10 +112,10 @@ export default function SponsorPage() {
           <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '40px 48px', maxWidth: '480px', textAlign: 'center' }}>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '28px', marginBottom: '16px' }}>🔒</p>
             <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '26px', fontWeight: 700, margin: '0 0 12px' }}>
-              Sponsorship window closed
+              Commitment closed
             </h2>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', lineHeight: '1.6', margin: 0 }}>
-              This sponsorship window has closed. New pledges are only accepted during the 14-day launch period.
+              This commitment has already completed or been abandoned. Pledges are no longer being accepted.
             </p>
           </div>
         </div>
@@ -187,10 +188,10 @@ export default function SponsorPage() {
           </div>
           <div>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 2px' }}>
-              Window closes
+              Streak ends
             </p>
-            <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '24px', fontWeight: 700, color: days <= 2 ? '#c8922a' : '#1a3a6b', margin: 0 }}>
-              {days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'}`}
+            <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '24px', fontWeight: 700, color: '#1a3a6b', margin: 0 }}>
+              {new Date(data.streak_ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </p>
           </div>
         </div>
