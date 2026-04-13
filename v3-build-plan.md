@@ -341,10 +341,11 @@ Each phase is designed to fit in one chat session (~2–4 hours of work). Each p
 5. Clean up all remaining v2 references in dashboard pages
 6. Update public-footer version to v3.0
 7. Build community pool distribution logic — create a `pool_ledger` table to accumulate Coach/CB/PL shares from contributions; build a Supabase scheduled function (or cron route) that calculates weekly pro-rata distributions to users with the relevant mentor_role; build an admin view showing current pool balances and last distribution date.
+8. Build leadership role progression — track mentee count and commitment completion rates per mentor; surface role advancement suggestions in the admin panel when a user meets threshold criteria (e.g. 3+ active mentees with completed commitments suggests Coach; sustained Coach record suggests Community Builder or Practice Leader); role assignment remains manual/admin but the data and suggestions are visible.
 
-**Deliverable:** The logged-in experience is clean, correct, and navigable. No orphaned pages or dead links. Community pool distributions run on a weekly schedule and are visible to admins.
+**Deliverable:** The logged-in experience is clean, correct, and navigable. No orphaned pages or dead links. Community pool distributions run on a weekly schedule and are visible to admins. Leadership role progression is tracked and surfaced to admins.
 
-**Session prompt keywords:** "Phase 8 — dashboard rewrite, account page, nav cleanup, pool distribution"
+**Session prompt keywords:** "Phase 8 — dashboard rewrite, account page, nav cleanup, pool distribution, role progression"
 
 ---
 
