@@ -213,9 +213,9 @@ export default async function DashboardPage() {
               {validatorCount} validator{validatorCount !== 1 ? 's' : ''} confirmed
             </span>
           </div>
-          <Link href={`/commit/${launchCommitment.id}`} style={softLink}>
-            View launch page →
-          </Link>
+          <Link href={`/commit/${launchCommitment.id}`} style={ctaLink}>
+              Log a session →
+            </Link>
         </div>
       )}
 
