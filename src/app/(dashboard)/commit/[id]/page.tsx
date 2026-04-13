@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 
 interface Practice {
   id: string
@@ -41,6 +42,11 @@ interface Validator {
   invited_at: string
 }
 
+interface SponsorStats {
+  total_pledged: number
+  pledge_count: number
+}
+
 const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
   launch: { bg: '#eef2f8', color: '#1a3a6b', label: 'Launch' },
   active: { bg: '#edf7ed', color: '#2d6a2d', label: 'Active' },
@@ -66,8 +72,6 @@ function TimelineBar({ commitment }: { commitment: Commitment }) {
   const now = new Date()
   const elapsedMs = Math.max(0, Math.min(now.getTime() - launchStart.getTime(), totalMs))
   const todayPct = (elapsedMs / totalMs) * 100
-
-  // Launch segment = 7/90 of total, streak = 83/90
   const launchPct = (7 / 90) * 100
   const day = dayOfCommitment(commitment.launch_starts_at)
 
@@ -84,19 +88,8 @@ function TimelineBar({ commitment }: { commitment: Commitment }) {
         </span>
       </div>
       <div style={{ position: 'relative', height: '10px', display: 'flex', borderRadius: '3px', overflow: 'visible' }}>
-        {/* Launch segment */}
-        <div style={{
-          width: `${launchPct}%`,
-          background: '#1a3a6b',
-          borderRadius: '3px 0 0 3px',
-        }} />
-        {/* Streak segment */}
-        <div style={{
-          flex: 1,
-          background: '#4a6fa5',
-          borderRadius: '0 3px 3px 0',
-        }} />
-        {/* Today tick */}
+        <div style={{ width: `${launchPct}%`, background: '#1a3a6b', borderRadius: '3px 0 0 3px' }} />
+        <div style={{ flex: 1, background: '#4a6fa5', borderRadius: '0 3px 3px 0' }} />
         <div style={{
           position: 'absolute',
           left: `${Math.min(todayPct, 98)}%`,
@@ -109,12 +102,190 @@ function TimelineBar({ commitment }: { commitment: Commitment }) {
         }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: '#b8b8b8' }}>
-          Launch (7 days)
-        </span>
-        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: '#b8b8b8' }}>
-          Streak (83 days)
-        </span>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: '#b8b8b8' }}>Launch (7 days)</span>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: '#b8b8b8' }}>Streak (83 days)</span>
+      </div>
+    </div>
+  )
+}
+
+function ContributionModal({
+  commitment,
+  totalPledged,
+  onContribute,
+  onDismiss,
+}: {
+  commitment: Commitment
+  totalPledged: number
+  onContribute: (amount: number) => Promise<void>
+  onDismiss: () => void
+}) {
+  const suggested = Math.round(totalPledged * 0.5 * 100) / 100
+  const [amount, setAmount] = useState(suggested > 0 ? String(suggested) : '')
+  const [contributing, setContributing] = useState(false)
+  const [contributed, setContributed] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const amountNum = parseFloat(amount)
+  const validAmount = !isNaN(amountNum) && amountNum > 0
+
+  const splits = validAmount
+    ? {
+        ss: amountNum * 0.05,
+        mentor: amountNum * 0.2375,
+        coach: amountNum * 0.2375,
+        cb: amountNum * 0.2375,
+        pl: amountNum * 0.2375,
+      }
+    : null
+
+  async function handleContribute() {
+    if (!validAmount) return
+    setContributing(true)
+    setError(null)
+    try {
+      await onContribute(amountNum)
+      setContributed(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to record contribution.')
+    }
+    setContributing(false)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 1000, padding: '24px',
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: '3px', border: '1px solid #d4d4d4',
+        maxWidth: '540px', width: '100%', maxHeight: '90vh', overflowY: 'auto',
+        padding: '36px 40px',
+      }}>
+        {contributed ? (
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: '40px', marginBottom: '16px' }}>🙏</p>
+            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '26px', fontWeight: 700, margin: '0 0 12px' }}>
+              Thank you
+            </h2>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#5a5a5a', lineHeight: '1.6', margin: '0 0 24px' }}>
+              Your contribution has been recorded. The mentor community that supports practitioners like you receives 95% of it.
+            </p>
+            <button
+              onClick={onDismiss}
+              style={{ background: '#1a3a6b', color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em', padding: '10px 24px', borderRadius: '3px', border: 'none', cursor: 'pointer' }}
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            <p style={{ fontSize: '36px', textAlign: 'center', marginBottom: '12px' }}>🎉</p>
+            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '26px', fontWeight: 700, margin: '0 0 8px', textAlign: 'center' }}>
+              You completed {commitment.title}!
+            </h2>
+
+            <div style={{ background: '#eef2f8', borderRadius: '3px', padding: '12px 16px', margin: '16px 0 20px', textAlign: 'center' }}>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 2px' }}>
+                Total pledged by sponsors
+              </p>
+              <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '32px', fontWeight: 700, color: '#1a3a6b', margin: 0 }}>
+                ${totalPledged.toFixed(2)}
+              </p>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676', margin: '4px 0 0' }}>
+                This is yours — 100%, regardless of what you choose below.
+              </p>
+            </div>
+
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#3a3a3a', lineHeight: '1.6', margin: '0 0 20px' }}>
+              Would you like to contribute a portion of your earnings to the mentor community that supports practitioners like you? This is entirely voluntary.
+            </p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
+                Contribution amount{' '}
+                {totalPledged > 0 && (
+                  <span style={{ color: '#b8b8b8', fontWeight: 400 }}>
+                    (suggested: ${suggested.toFixed(2)} = 50% of pledges)
+                  </span>
+                )}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#5a5a5a' }}>$</span>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  min="0.01"
+                  step="0.01"
+                  placeholder="0.00"
+                  style={{ width: '100%', padding: '9px 12px 9px 24px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
+                  onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
+                />
+              </div>
+            </div>
+
+            {splits && (
+              <div style={{ background: '#f5f5f5', borderRadius: '3px', padding: '14px 16px', marginBottom: '20px' }}>
+                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 10px' }}>
+                  How it&apos;s distributed
+                </p>
+                {[
+                  { label: 'Search Star', pct: '5%', amount: splits.ss, color: '#1a3a6b' },
+                  { label: 'Your mentor', pct: '23.75%', amount: splits.mentor, color: '#2d6a6a' },
+                  { label: 'Coach pool', pct: '23.75%', amount: splits.coach, color: '#c8922a' },
+                  { label: 'Community builders', pct: '23.75%', amount: splits.cb, color: '#4a6fa5' },
+                  { label: 'Practice leaders', pct: '23.75%', amount: splits.pl, color: '#5a4a8a' },
+                ].map((row) => (
+                  <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: row.color, flexShrink: 0 }} />
+                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#3a3a3a', flex: 1 }}>{row.label}</span>
+                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#767676' }}>{row.pct}</span>
+                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, color: row.color, minWidth: '52px', textAlign: 'right' }}>
+                      ${row.amount.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {error && (
+              <div style={{ marginBottom: '14px', padding: '10px 14px', background: '#fef2f2', borderLeft: '3px solid #991b1b', borderRadius: '3px' }}>
+                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', margin: 0 }}>{error}</p>
+              </div>
+            )}
+
+            <button
+              onClick={handleContribute}
+              disabled={contributing || !validAmount}
+              style={{
+                width: '100%',
+                background: contributing || !validAmount ? '#8a9fc0' : '#1a3a6b',
+                color: '#fff',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '14px',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                padding: '12px 20px',
+                borderRadius: '3px',
+                border: 'none',
+                cursor: contributing || !validAmount ? 'not-allowed' : 'pointer',
+                marginBottom: '12px',
+              }}
+            >
+              {contributing ? 'Recording...' : `Contribute $${validAmount ? amountNum.toFixed(2) : '0.00'} \u2192`}
+            </button>
+
+            <button
+              onClick={onDismiss}
+              style={{ width: '100%', background: 'transparent', color: '#767676', fontFamily: 'Roboto, sans-serif', fontSize: '13px', padding: '8px', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              No thanks, keep 100% of my pledges
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
@@ -137,14 +308,21 @@ export default function CommitDetailPage() {
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
 
+  const [sponsorStats, setSponsorStats] = useState<SponsorStats>({ total_pledged: 0, pledge_count: 0 })
+  const [copied, setCopied] = useState(false)
+
+  const [showConfirmComplete, setShowConfirmComplete] = useState(false)
+  const [completing, setCompleting] = useState(false)
+  const [showContributionModal, setShowContributionModal] = useState(false)
+  const [totalPledgedAtCompletion, setTotalPledgedAtCompletion] = useState(0)
+  const [contributionDone, setContributionDone] = useState(false)
+
   const load = useCallback(async () => {
     const res = await fetch(`/api/commitments/${id}`)
     if (res.ok) {
       const data = await res.json()
       setCommitment(data.commitment)
       setPosts(data.posts)
-
-      // Check if a post exists for today (UTC)
       const todayStr = new Date().toISOString().slice(0, 10)
       const todayPost = data.posts.find((p: Post) => p.posted_at.slice(0, 10) === todayStr)
       setLoggedToday(!!todayPost)
@@ -156,21 +334,42 @@ export default function CommitDetailPage() {
       setValidators(vData.validators ?? [])
     }
 
+    const sRes = await fetch(`/api/sponsorships/${id}`)
+    if (sRes.ok) {
+      const sData = await sRes.json()
+      setSponsorStats({
+        total_pledged: sData.total_pledged ?? 0,
+        pledge_count: sData.sponsorships?.length ?? 0,
+      })
+    }
+
     setLoading(false)
   }, [id])
+
+  useEffect(() => { load() }, [load])
+
+  // After load: if completed and not dismissed and no contribution yet, show modal
+  useEffect(() => {
+    if (!commitment) return
+    if (commitment.status !== 'completed') return
+    const declined = typeof window !== 'undefined'
+      ? localStorage.getItem(`contribution_declined_${id}`)
+      : null
+    if (declined || contributionDone) return
+    setTotalPledgedAtCompletion(sponsorStats.total_pledged)
+    setShowContributionModal(true)
+  }, [commitment, contributionDone, id, sponsorStats.total_pledged])
 
   const handleInviteValidator = async (e: React.FormEvent) => {
     e.preventDefault()
     setInviting(true)
     setInviteError(null)
     setInviteSuccess(null)
-
     const res = await fetch(`/api/commitments/${id}/validators`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: inviteEmail }),
     })
-
     const data = await res.json()
     if (res.ok) {
       setInviteSuccess(`Invite sent to ${inviteEmail}`)
@@ -182,30 +381,68 @@ export default function CommitDetailPage() {
     setInviting(false)
   }
 
-  useEffect(() => { load() }, [load])
-
   const handleLogSession = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     setSubmitError(null)
-
     const res = await fetch(`/api/commitments/${id}/posts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: sessionBody }),
     })
-
     if (res.ok) {
       setSessionBody('')
       await load()
     } else if (res.status === 409) {
       setLoggedToday(true)
-      setSubmitError(null)
     } else {
       const data = await res.json()
       setSubmitError(data.error || 'Failed to log session.')
     }
     setSubmitting(false)
+  }
+
+  const handleComplete = async () => {
+    setCompleting(true)
+    const res = await fetch(`/api/commitments/${id}/complete`, { method: 'POST' })
+    const data = await res.json()
+    setCompleting(false)
+    setShowConfirmComplete(false)
+    if (res.ok) {
+      setTotalPledgedAtCompletion(data.total_pledged ?? 0)
+      await load()
+      setShowContributionModal(true)
+    }
+  }
+
+  const handleContribute = async (amount: number) => {
+    const res = await fetch('/api/contributions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commitment_id: id, gross_amount: amount }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed to record contribution.')
+    setContributionDone(true)
+  }
+
+  const handleDismissContribution = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`contribution_declined_${id}`, '1')
+    }
+    setShowContributionModal(false)
+  }
+
+  const sponsorUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/sponsor/${id}`
+    : `https://searchstar.com/sponsor/${id}`
+
+  const handleCopySponsorUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(sponsorUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* ignore */ }
   }
 
   if (loading) {
@@ -237,6 +474,50 @@ export default function CommitDetailPage() {
 
   return (
     <div style={{ maxWidth: '720px' }}>
+      {/* Contribution modal */}
+      {showContributionModal && commitment.status === 'completed' && !contributionDone && (
+        <ContributionModal
+          commitment={commitment}
+          totalPledged={totalPledgedAtCompletion}
+          onContribute={handleContribute}
+          onDismiss={handleDismissContribution}
+        />
+      )}
+
+      {/* Confirm complete dialog */}
+      {showConfirmComplete && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 999, padding: '24px',
+        }}>
+          <div style={{ background: '#fff', borderRadius: '3px', border: '1px solid #d4d4d4', maxWidth: '440px', width: '100%', padding: '32px 36px' }}>
+            <h3 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '22px', fontWeight: 700, margin: '0 0 12px' }}>
+              Mark as complete?
+            </h3>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#5a5a5a', lineHeight: '1.6', margin: '0 0 24px' }}>
+              This will mark your commitment as completed and trigger the voluntary contribution prompt. This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleComplete}
+                disabled={completing}
+                style={{ flex: 1, background: completing ? '#8a9fc0' : '#2d6a2d', color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em', padding: '10px 20px', borderRadius: '3px', border: 'none', cursor: completing ? 'not-allowed' : 'pointer' }}
+              >
+                {completing ? 'Completing...' : 'Yes, mark complete'}
+              </button>
+              <button
+                onClick={() => setShowConfirmComplete(false)}
+                disabled={completing}
+                style={{ flex: 1, background: '#fff', color: '#5a5a5a', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 600, padding: '10px 20px', borderRadius: '3px', border: '1px solid #d4d4d4', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Eyebrow */}
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#767676', textTransform: 'uppercase', fontWeight: 700, marginBottom: '12px' }}>
         Commitment
@@ -248,17 +529,9 @@ export default function CommitDetailPage() {
           {commitment.title}
         </h1>
         <span style={{
-          fontFamily: 'Roboto, sans-serif',
-          fontSize: '11px',
-          fontWeight: 700,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          background: badge.bg,
-          color: badge.color,
-          borderRadius: '2px',
-          padding: '4px 10px',
-          whiteSpace: 'nowrap',
-          alignSelf: 'center',
+          fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+          textTransform: 'uppercase', background: badge.bg, color: badge.color, borderRadius: '2px',
+          padding: '4px 10px', whiteSpace: 'nowrap', alignSelf: 'center',
         }}>
           {badge.label}
         </span>
@@ -312,81 +585,99 @@ export default function CommitDetailPage() {
         </div>
       </div>
 
-      {/* Log a session */}
-      <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #1a3a6b', borderRadius: '3px', padding: '24px 28px', marginBottom: '24px' }}>
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '16px' }}>
-          Log today's session
-        </p>
-
-        {loggedToday ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>✓</span>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#2d6a2d', fontWeight: 600, margin: 0 }}>
-              Session logged today
+      {/* Sponsor link section — launch status only */}
+      {commitment.status === 'launch' && (
+        <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #c8922a', borderRadius: '3px', padding: '20px 24px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', margin: 0 }}>
+              Invite sponsors
             </p>
+            <Link
+              href={`/commit/${id}/sponsors`}
+              style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#1a3a6b', textDecoration: 'none', fontWeight: 600 }}
+            >
+              View all sponsors →
+            </Link>
           </div>
-        ) : (
-          <form onSubmit={handleLogSession}>
-            <textarea
-              value={sessionBody}
-              onChange={(e) => setSessionBody(e.target.value)}
-              maxLength={1000}
-              rows={4}
-              placeholder="What did you work on today? (optional)"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #d4d4d4',
-                borderRadius: '3px',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '14px',
-                outline: 'none',
-                resize: 'vertical',
-                boxSizing: 'border-box',
-                lineHeight: '1.5',
-                marginBottom: '12px',
-              }}
-              onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
-              onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#3a3a3a', marginBottom: '12px', lineHeight: '1.5', margin: '0 0 12px' }}>
+            Share your commitment to invite sponsors.
+            {sponsorStats.pledge_count > 0
+              ? ` ${sponsorStats.pledge_count} ${sponsorStats.pledge_count === 1 ? 'person has' : 'people have'} pledged a total of $${sponsorStats.total_pledged.toFixed(2)}.`
+              : ' No sponsors yet.'}
+          </p>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              readOnly
+              value={sponsorUrl}
+              style={{ flex: 1, minWidth: '200px', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a', background: '#fafafa', outline: 'none' }}
             />
-            {sessionBody.length > 0 && (
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8', marginBottom: '12px', textAlign: 'right' }}>
-                {sessionBody.length}/1000
-              </p>
-            )}
-            {submitError && (
-              <div style={{ marginBottom: '12px', padding: '10px 14px', background: '#fef2f2', borderLeft: '3px solid #991b1b', borderRadius: '3px' }}>
-                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', margin: 0 }}>{submitError}</p>
-              </div>
-            )}
             <button
-              type="submit"
-              disabled={submitting}
+              onClick={handleCopySponsorUrl}
               style={{
-                background: submitting ? '#8a9fc0' : '#1a3a6b',
-                color: '#fff',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '13px',
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                padding: '10px 20px',
-                borderRadius: '3px',
-                border: 'none',
-                cursor: submitting ? 'not-allowed' : 'pointer',
+                background: copied ? '#2d6a2d' : '#1a3a6b',
+                color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700,
+                letterSpacing: '0.04em', padding: '9px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
               }}
             >
-              {submitting ? 'Logging...' : 'Log session →'}
+              {copied ? '\u2713 Copied' : 'Copy link'}
             </button>
-          </form>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
+
+      {/* Log a session */}
+      {(commitment.status === 'launch' || commitment.status === 'active') && (
+        <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #1a3a6b', borderRadius: '3px', padding: '24px 28px', marginBottom: '24px' }}>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '16px' }}>
+            Log today&apos;s session
+          </p>
+          {loggedToday ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '18px' }}>✓</span>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#2d6a2d', fontWeight: 600, margin: 0 }}>
+                Session logged today
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleLogSession}>
+              <textarea
+                value={sessionBody}
+                onChange={(e) => setSessionBody(e.target.value)}
+                maxLength={1000}
+                rows={4}
+                placeholder="What did you work on today? (optional)"
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: '1.5', marginBottom: '12px' }}
+                onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
+                onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
+              />
+              {sessionBody.length > 0 && (
+                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8', marginBottom: '12px', textAlign: 'right' }}>
+                  {sessionBody.length}/1000
+                </p>
+              )}
+              {submitError && (
+                <div style={{ marginBottom: '12px', padding: '10px 14px', background: '#fef2f2', borderLeft: '3px solid #991b1b', borderRadius: '3px' }}>
+                  <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', margin: 0 }}>{submitError}</p>
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{ background: submitting ? '#8a9fc0' : '#1a3a6b', color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em', padding: '10px 20px', borderRadius: '3px', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer' }}
+              >
+                {submitting ? 'Logging...' : 'Log session \u2192'}
+              </button>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* Session feed */}
       <div style={{ marginBottom: '40px' }}>
         <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '16px' }}>
           Session history
         </p>
-
         {posts.length === 0 ? (
           <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '32px 28px', textAlign: 'center' }}>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#b8b8b8', margin: 0 }}>
@@ -396,13 +687,7 @@ export default function CommitDetailPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {posts.map((post) => (
-              <div key={post.id} style={{
-                background: '#fff',
-                border: '1px solid #d4d4d4',
-                borderLeft: '2px solid #d4d4d4',
-                borderRadius: '3px',
-                padding: '16px 20px',
-              }}>
+              <div key={post.id} style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '2px solid #d4d4d4', borderRadius: '3px', padding: '16px 20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: post.body ? '10px' : 0 }}>
                   <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, color: '#1a3a6b', letterSpacing: '0.04em' }}>
                     Session {post.session_number}
@@ -422,46 +707,40 @@ export default function CommitDetailPage() {
         )}
       </div>
 
+      {/* Mark as complete — active status only */}
+      {commitment.status === 'active' && (
+        <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #2d6a2d', borderRadius: '3px', padding: '20px 24px', marginBottom: '40px' }}>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '10px', marginTop: 0 }}>
+            Finished your commitment?
+          </p>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#3a3a3a', marginBottom: '14px', lineHeight: '1.5' }}>
+            If you&apos;ve completed your 90-day commitment, mark it as complete to unlock your sponsor pledges.
+          </p>
+          <button
+            onClick={() => setShowConfirmComplete(true)}
+            style={{ background: '#2d6a2d', color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em', padding: '10px 20px', borderRadius: '3px', border: 'none', cursor: 'pointer' }}
+          >
+            Mark as complete ✓
+          </button>
+        </div>
+      )}
+
       {/* Validators section */}
       <div>
         <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '16px' }}>
           Validators
         </p>
-
-        {/* Validator list */}
         {validators.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
             {validators.map((v) => {
               const vBadge =
-                v.status === 'active'
-                  ? { bg: '#edf7ed', color: '#2d6a2d', label: 'Active' }
-                  : v.status === 'declined'
-                  ? { bg: '#fef2f2', color: '#991b1b', label: 'Declined' }
-                  : { bg: '#f5f5f5', color: '#767676', label: 'Invited' }
+                v.status === 'active' ? { bg: '#edf7ed', color: '#2d6a2d', label: 'Active' }
+                : v.status === 'declined' ? { bg: '#fef2f2', color: '#991b1b', label: 'Declined' }
+                : { bg: '#f5f5f5', color: '#767676', label: 'Invited' }
               return (
-                <div key={v.id} style={{
-                  background: '#fff',
-                  border: '1px solid #d4d4d4',
-                  borderRadius: '3px',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
-                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#3a3a3a' }}>
-                    {v.validator_email}
-                  </span>
-                  <span style={{
-                    fontFamily: 'Roboto, sans-serif',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    background: vBadge.bg,
-                    color: vBadge.color,
-                    borderRadius: '2px',
-                    padding: '3px 8px',
-                  }}>
+                <div key={v.id} style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#3a3a3a' }}>{v.validator_email}</span>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: vBadge.bg, color: vBadge.color, borderRadius: '2px', padding: '3px 8px' }}>
                     {vBadge.label}
                   </span>
                 </div>
@@ -469,13 +748,9 @@ export default function CommitDetailPage() {
             })}
           </div>
         )}
-
-        {/* Invite form */}
         {validators.length >= 3 ? (
           <div style={{ padding: '14px 16px', background: '#f5f5f5', border: '1px solid #d4d4d4', borderRadius: '3px' }}>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#767676', margin: 0 }}>
-              Validator limit reached (3/3)
-            </p>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#767676', margin: 0 }}>Validator limit reached (3/3)</p>
           </div>
         ) : (
           <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #4a6fa5', borderRadius: '3px', padding: '20px 24px' }}>
@@ -490,37 +765,16 @@ export default function CommitDetailPage() {
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="validator@example.com"
                 required
-                style={{
-                  flex: 1,
-                  minWidth: '200px',
-                  padding: '9px 12px',
-                  border: '1px solid #d4d4d4',
-                  borderRadius: '3px',
-                  fontFamily: 'Roboto, sans-serif',
-                  fontSize: '14px',
-                  outline: 'none',
-                }}
+                style={{ flex: 1, minWidth: '200px', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none' }}
                 onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
                 onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
               />
               <button
                 type="submit"
                 disabled={inviting}
-                style={{
-                  background: inviting ? '#8a9fc0' : '#1a3a6b',
-                  color: '#fff',
-                  fontFamily: 'Roboto, sans-serif',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  letterSpacing: '0.04em',
-                  padding: '9px 18px',
-                  borderRadius: '3px',
-                  border: 'none',
-                  cursor: inviting ? 'not-allowed' : 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
+                style={{ background: inviting ? '#8a9fc0' : '#1a3a6b', color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em', padding: '9px 18px', borderRadius: '3px', border: 'none', cursor: inviting ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
               >
-                {inviting ? 'Sending...' : 'Send invite →'}
+                {inviting ? 'Sending...' : 'Send invite \u2192'}
               </button>
             </form>
             {inviteSuccess && (
