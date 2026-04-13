@@ -14,17 +14,29 @@ export default function HomePage() {
       <main>
 
         {/* ── Hero ── */}
-        <section style={{ background: '#1a3a6b', borderBottom: '3px solid #112a4f' }} className="py-24 px-6">
-          <div className="max-w-3xl mx-auto text-center">
+        <section style={{
+          position: 'relative',
+          borderBottom: '3px solid #112a4f',
+          backgroundImage: 'url(/images/hero/table-v2-wider.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 40%',
+          backgroundRepeat: 'no-repeat',
+        }} className="py-32 px-6">
+          {/* Navy overlay */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to bottom, rgba(17,42,79,0.72) 0%, rgba(26,58,107,0.78) 100%)',
+          }} />
+          <div className="max-w-3xl mx-auto text-center" style={{ position: 'relative', zIndex: 1 }}>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '20px' }}>
               Search Star — v3.0
             </p>
             <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', color: '#ffffff', lineHeight: 1.1, fontSize: 'clamp(40px, 6vw, 64px)', fontWeight: 700, marginBottom: '24px' }}>
               What do you want to practice?
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '20px', maxWidth: '600px', lineHeight: 1.65, margin: '0 auto 36px' }}>
+            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '20px', maxWidth: '600px', lineHeight: 1.65, margin: '0 auto 36px' }}>
               Declare a 90-day commitment. Invite people who know you to witness it.
-              Earn support from friends, family, and sponsors who believe in what you're building.
+              Earn support from friends, family, and sponsors who believe in what you&apos;re building.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link
@@ -35,7 +47,7 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/onboarding"
-                style={{ border: '1px solid rgba(255,255,255,0.35)', color: 'rgba(255,255,255,0.85)', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', padding: '14px 32px', borderRadius: '3px', textDecoration: 'none', textTransform: 'uppercase' }}
+                style={{ border: '1px solid rgba(255,255,255,0.45)', color: 'rgba(255,255,255,0.9)', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', padding: '14px 32px', borderRadius: '3px', textDecoration: 'none', textTransform: 'uppercase' }}
               >
                 How It Works
               </Link>
