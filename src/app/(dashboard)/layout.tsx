@@ -10,7 +10,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name')
+    .select('display_name, institution_id')
     .eq('user_id', user.id)
     .single()
 
@@ -25,6 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: '/earnings', label: 'Earnings' },
     { href: '/account', label: 'Account' },
     { href: '/support', label: 'Support' },
+    ...(profile?.institution_id ? [{ href: `/institution/${profile.institution_id}/dashboard`, label: 'My Institution' }] : []),
     ...(isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
 
