@@ -192,6 +192,65 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* ── Narration ── */}
+        <section className="py-20 px-6" style={{ background: '#f5f5f5', borderTop: '1px solid #d4d4d4' }}>
+          <div className="max-w-3xl mx-auto">
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#1a3a6b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px', textAlign: 'center' }}>
+              Hear It Explained
+            </p>
+            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '36px', fontWeight: 700, color: '#1a1a1a', marginBottom: '12px', lineHeight: 1.2, textAlign: 'center' }}>
+              Three narrations.
+            </h2>
+            <p style={{ fontSize: '16px', color: '#5a5a5a', lineHeight: 1.7, textAlign: 'center', marginBottom: '48px', maxWidth: '560px', margin: '0 auto 48px' }}>
+              Written and recorded explanations of how Search Star works, why it exists, and how the economics are designed.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {[
+                {
+                  slug: 'video-01-90-day-commitment',
+                  title: 'What Is a 90-Day Commitment?',
+                  duration: '3:00',
+                  description: 'The commitment mechanic, the 14-day launch period, the start ritual, how validators work, and why 90 days.',
+                  script: '/scripts/video-01-90-day-commitment.md',
+                },
+                {
+                  slug: 'video-02-sponsorship-model',
+                  title: 'How the Sponsorship Model Works',
+                  duration: '3:12',
+                  description: 'Sponsors pledge during the launch window. You keep 100% of what you earn. Voluntary contributions fund the mentor economy.',
+                  script: '/scripts/video-02-sponsorship-model.md',
+                },
+                {
+                  slug: 'video-03-why-search-star',
+                  title: 'Why Search Star Exists',
+                  duration: '4:28',
+                  description: 'The garbage culture problem, formation versus performance, conscientiousness as the most important unverifiable trait, and trust as an action.',
+                  script: '/scripts/video-03-why-search-star.md',
+                },
+              ].map((item) => (
+                <div key={item.slug} style={{ background: '#ffffff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '28px 32px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '22px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.2 }}>
+                      {item.title}
+                    </h3>
+                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#767676', flexShrink: 0, paddingTop: '4px' }}>
+                      {item.duration}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '15px', color: '#5a5a5a', lineHeight: 1.65, marginBottom: '20px' }}>
+                    {item.description}
+                  </p>
+                  <audio
+                    controls
+                    style={{ width: '100%', height: '36px', accentColor: '#1a3a6b' }}
+                    src={`/audio/${item.slug}.mp3`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── CTA ── */}
         <section className="py-24 px-6" style={{ background: '#1a3a6b' }}>
           <div className="max-w-2xl mx-auto text-center">
