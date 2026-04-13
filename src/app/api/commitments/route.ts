@@ -69,8 +69,8 @@ export async function POST(request: Request) {
     .single()
 
   if (error) {
-    console.error('Error creating commitment:', error)
-    return NextResponse.json({ error: 'Failed to create commitment.', detail: error.message, code: error.code }, { status: 500 })
+    console.error('Error creating commitment:', JSON.stringify({ message: error.message, code: error.code, details: error.details, hint: error.hint }))
+    return NextResponse.json({ error: 'Failed to create commitment.', detail: error.message, code: error.code, hint: error.hint }, { status: 500 })
   }
 
   return NextResponse.json({ id: data.id })
