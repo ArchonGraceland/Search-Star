@@ -34,19 +34,6 @@ interface Post {
   posted_at: string
 }
 
-interface Validator {
-  id: string
-  validator_email: string
-  status: 'invited' | 'active' | 'declined'
-  invited_at: string
-}
-
-const VALIDATOR_BADGE: Record<string, { bg: string; color: string; label: string }> = {
-  invited:  { bg: '#f5f5f5',  color: '#767676', label: 'Invited' },
-  active:   { bg: '#edf7ed',  color: '#2d6a2d', label: 'Active' },
-  declined: { bg: '#fef2f2',  color: '#991b1b', label: 'Declined' },
-}
-
 const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
   launch: { bg: '#eef2f8', color: '#1a3a6b', label: 'Launch' },
   active: { bg: '#edf7ed', color: '#2d6a2d', label: 'Active' },
@@ -138,13 +125,6 @@ export default function CommitDetailPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [loggedToday, setLoggedToday] = useState(false)
 
-  // Validators state
-  const [validators, setValidators] = useState<Validator[]>([])
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviting, setInviting] = useState(false)
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
-  const [inviteError, setInviteError] = useState<string | null>(null)
-
   const load = useCallback(async () => {
     const res = await fetch(`/api/commitments/${id}`)
     if (res.ok) {
@@ -160,41 +140,7 @@ export default function CommitDetailPage() {
     setLoading(false)
   }, [id])
 
-  const loadValidators = useCallback(async () => {
-    const res = await fetch(`/api/commitments/${id}/validators`)
-    if (res.ok) {
-      const data = await res.json()
-      setValidators(data.validators ?? [])
-    }
-  }, [id])
-
-  useEffect(() => {
-    load()
-    loadValidators()
-  }, [load, loadValidators])
-
-  const handleInviteValidator = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setInviting(true)
-    setInviteError(null)
-    setInviteSuccess(null)
-
-    const res = await fetch(`/api/commitments/${id}/validators`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: inviteEmail }),
-    })
-
-    if (res.ok) {
-      setInviteSuccess(`Invite sent to ${inviteEmail}`)
-      setInviteEmail('')
-      await loadValidators()
-    } else {
-      const data = await res.json()
-      setInviteError(data.error || 'Failed to send invitation.')
-    }
-    setInviting(false)
-  }
+  useEffect(() => { load() }, [load])
 
   const handleLogSession = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -432,113 +378,6 @@ export default function CommitDetailPage() {
             ))}
           </div>
         )}
-      </div>
-
-      {/* Validators section */}
-      <div style={{ marginTop: '40px' }}>
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '16px' }}>
-          Validators
-        </p>
-
-        {validators.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-            {validators.map((v) => {
-              const vBadge = VALIDATOR_BADGE[v.status] ?? VALIDATOR_BADGE.invited
-              return (
-                <div key={v.id} style={{
-                  background: '#fff',
-                  border: '1px solid #d4d4d4',
-                  borderRadius: '3px',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
-                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#1a1a1a' }}>
-                    {v.validator_email}
-                  </span>
-                  <span style={{
-                    fontFamily: 'Roboto, sans-serif',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    background: vBadge.bg,
-                    color: vBadge.color,
-                    borderRadius: '2px',
-                    padding: '3px 9px',
-                  }}>
-                    {vBadge.label}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #4a6fa5', borderRadius: '3px', padding: '20px 24px' }}>
-          {validators.length >= 3 ? (
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#767676', margin: 0 }}>
-              Validator limit reached (3/3). Remove an existing validator to invite someone new.
-            </p>
-          ) : (
-            <>
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', marginBottom: '14px' }}>
-                Invite a validator ({validators.length}/3)
-              </p>
-              <form onSubmit={handleInviteValidator} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => { setInviteEmail(e.target.value); setInviteSuccess(null); setInviteError(null) }}
-                  placeholder="email@example.com"
-                  required
-                  style={{
-                    flex: 1,
-                    minWidth: '200px',
-                    padding: '9px 12px',
-                    border: '1px solid #d4d4d4',
-                    borderRadius: '3px',
-                    fontFamily: 'Roboto, sans-serif',
-                    fontSize: '14px',
-                    outline: 'none',
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
-                  onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
-                />
-                <button
-                  type="submit"
-                  disabled={inviting}
-                  style={{
-                    background: inviting ? '#8a9fc0' : '#1a3a6b',
-                    color: '#fff',
-                    fontFamily: 'Roboto, sans-serif',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    letterSpacing: '0.04em',
-                    padding: '9px 20px',
-                    borderRadius: '3px',
-                    border: 'none',
-                    cursor: inviting ? 'not-allowed' : 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {inviting ? 'Sending…' : 'Send invite →'}
-                </button>
-              </form>
-              {inviteSuccess && (
-                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#2d6a2d', marginTop: '10px', marginBottom: 0 }}>
-                  ✓ {inviteSuccess}
-                </p>
-              )}
-              {inviteError && (
-                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', marginTop: '10px', marginBottom: 0 }}>
-                  {inviteError}
-                </p>
-              )}
-            </>
-          )}
-        </div>
       </div>
     </div>
   )
