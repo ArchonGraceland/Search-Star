@@ -15,6 +15,15 @@ export default async function EarningsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Fetch profile for mentor_role
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name, mentor_role')
+    .eq('user_id', user.id)
+    .single()
+
+  const isMentor = !!profile?.mentor_role
+
   // Fetch all completed commitments for this user
   const { data: commitments } = await supabase
     .from('commitments')
@@ -60,6 +69,56 @@ export default async function EarningsPage() {
     grandTotalPledged += total_pledged
     if (contribution_amount) grandTotalContributed += contribution_amount
     grandTotalKept += net_kept
+  }
+
+  // Mentor income — only if user has mentor_role
+  interface MentorIncomeRow {
+    id: string
+    mentee_name: string
+    commitment_title: string
+    gross_amount: number
+    mentor_share: number
+    created_at: string
+  }
+
+  const mentorIncomeRows: MentorIncomeRow[] = []
+  let mentorIncomeTotal = 0
+
+  if (isMentor) {
+    const { data: mentorContributions } = await supabase
+      .from('contributions')
+      .select('id, gross_amount, mentor_share, created_at, commitment_id')
+      .eq('mentor_user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    for (const mc of mentorContributions ?? []) {
+      const { data: commitment } = await supabase
+        .from('commitments')
+        .select('title, user_id')
+        .eq('id', mc.commitment_id)
+        .single()
+
+      let menteeName = 'Unknown'
+      if (commitment?.user_id) {
+        const { data: menteeProfile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', commitment.user_id)
+          .single()
+        menteeName = menteeProfile?.display_name ?? 'Unknown'
+      }
+
+      mentorIncomeRows.push({
+        id: mc.id,
+        mentee_name: menteeName,
+        commitment_title: commitment?.title ?? '—',
+        gross_amount: mc.gross_amount,
+        mentor_share: mc.mentor_share,
+        created_at: mc.created_at ?? '',
+      })
+
+      mentorIncomeTotal += mc.mentor_share ?? 0
+    }
   }
 
   function formatDate(iso: string) {
@@ -180,6 +239,94 @@ export default async function EarningsPage() {
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#b8b8b8', marginTop: '20px', lineHeight: '1.5' }}>
         Payment collection coming soon. All amounts are recorded pledges. Contributions are voluntary amounts given back to the mentor community.
       </p>
+
+      {/* Mentor income — only visible when user has a mentor_role */}
+      {isMentor && (
+        <div style={{ marginTop: '48px' }}>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#767676', textTransform: 'uppercase', fontWeight: 700, marginBottom: '8px' }}>
+            Mentor income
+          </p>
+          <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '26px', fontWeight: 700, margin: '0 0 6px' }}>
+            Income from mentees
+          </h2>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', margin: '0 0 24px', lineHeight: '1.5' }}>
+            23.75% of each contribution made by a practitioner you mentor at the time of completion.
+          </p>
+
+          {/* Mentor income summary card */}
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '28px' }}>
+            <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '16px 20px', minWidth: '180px' }}>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 4px' }}>
+                Total mentor income
+              </p>
+              <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '28px', fontWeight: 700, color: '#2d6a6a', margin: 0 }}>
+                {mentorIncomeTotal > 0 ? `$${mentorIncomeTotal.toFixed(2)}` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {mentorIncomeRows.length === 0 ? (
+            <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '36px 28px', textAlign: 'center' }}>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#b8b8b8', margin: 0 }}>
+                No mentor income yet. Income appears here when a practitioner you mentor completes a commitment and contributes.
+              </p>
+            </div>
+          ) : (
+            <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr auto auto', background: '#f5f5f5', borderBottom: '1px solid #d4d4d4', padding: '10px 20px' }}>
+                {['Practitioner', 'Commitment', 'Contribution', 'Your share'].map((h) => (
+                  <span key={h} style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676' }}>
+                    {h}
+                  </span>
+                ))}
+              </div>
+
+              {mentorIncomeRows.map((row, i) => (
+                <div
+                  key={row.id}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 2fr auto auto',
+                    padding: '14px 20px',
+                    borderBottom: i < mentorIncomeRows.length - 1 ? '1px solid #f0f0f0' : 'none',
+                    alignItems: 'center',
+                  }}
+                >
+                  <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', fontWeight: 600, color: '#1a1a1a', margin: 0 }}>
+                    {row.mentee_name}
+                  </p>
+                  <div>
+                    <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#1a1a1a', margin: '0 0 2px' }}>
+                      {row.commitment_title}
+                    </p>
+                    <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8', margin: 0 }}>
+                      {formatDate(row.created_at)}
+                    </p>
+                  </div>
+                  <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#767676', margin: 0, paddingRight: '24px', whiteSpace: 'nowrap' }}>
+                    ${row.gross_amount.toFixed(2)}
+                  </p>
+                  <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#2d6a6a', margin: 0, whiteSpace: 'nowrap' }}>
+                    ${row.mentor_share.toFixed(2)}
+                  </p>
+                </div>
+              ))}
+
+              {/* Total row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr auto auto', padding: '12px 20px', background: '#f5f5f5', borderTop: '2px solid #d4d4d4', alignItems: 'center' }}>
+                <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, color: '#5a5a5a', gridColumn: '1 / 3' }}>
+                  Total
+                </span>
+                <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#767676', paddingRight: '24px' }} />
+                <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#2d6a6a' }}>
+                  ${mentorIncomeTotal.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

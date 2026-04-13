@@ -51,6 +51,16 @@ export async function POST(request: Request) {
   const cb_share = gross_amount * 0.2375
   const pl_share = gross_amount * 0.2375
 
+  // Look up active mentor for this practitioner
+  const { data: mentorRel } = await supabase
+    .from('mentor_relationships')
+    .select('mentor_user_id')
+    .eq('mentee_user_id', user.id)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  const mentor_user_id = mentorRel?.mentor_user_id ?? null
+
   // Insert contribution
   const { data: contribution, error: insertError } = await supabase
     .from('contributions')
@@ -64,6 +74,7 @@ export async function POST(request: Request) {
       cb_share,
       pl_share,
       contribution_rate: 0.95,
+      mentor_user_id,
       created_at: new Date().toISOString(),
     })
     .select('id')
