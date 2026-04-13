@@ -8,14 +8,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Check admin
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, mentor_role')
+    .select('display_name')
     .eq('user_id', user.id)
     .single()
 
-  // Admin check via metadata
   const isAdmin = user.user_metadata?.role === 'admin'
 
   const navLinks = [
@@ -23,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: '/commit', label: 'Commit' },
     { href: '/trust', label: 'Trust' },
     { href: '/mentors', label: 'Mentors' },
+    { href: '/mentoring', label: 'Mentoring' },
     { href: '/earnings', label: 'Earnings' },
     { href: '/account', label: 'Account' },
     { href: '/support', label: 'Support' },
@@ -31,7 +30,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f5f5' }}>
-      {/* Sidebar */}
       <aside
         style={{
           width: '220px',
@@ -89,7 +87,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </aside>
 
-      {/* Main content */}
       <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
         {children}
       </main>
