@@ -60,7 +60,7 @@ export default function CommitPage() {
       router.push(`/commit/${data.id}`)
     } else {
       const data = await res.json()
-      setError(data.error || 'Something went wrong. Please try again.')
+      setError((data.error || 'Something went wrong.') + (data.detail ? ` (${data.detail})` : ''))
       setLoading(false)
     }
   }
