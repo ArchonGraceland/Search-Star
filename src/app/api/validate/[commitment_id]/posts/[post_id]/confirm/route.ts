@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(
@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: Promise<{ commitment_id: string; post_id: string }> }
 ) {
   const { commitment_id, post_id } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const body = await request.json()
   const { validator_token, quality_note } = body

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/validate/invalid', request.url))
   }
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const { data: validator, error } = await supabase
     .from('validators')
