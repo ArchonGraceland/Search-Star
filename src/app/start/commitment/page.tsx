@@ -32,12 +32,11 @@ export default function StageCommitment() {
       }),
     })
 
-    if (res.ok) {
-      const data = await res.json()
+    const data = await res.json()
+    if (res.ok && data.id) {
       router.push(`/start/validator/${data.id}`)
     } else {
-      const data = await res.json()
-      setError(data.error || 'Something went wrong.')
+      setError(data.error || data.detail || 'Something went wrong. Please try again.')
       setLoading(false)
     }
   }
