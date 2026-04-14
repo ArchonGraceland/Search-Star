@@ -18,7 +18,6 @@ interface Props {
   daysRemaining: number
   sessionsLogged: number
   recentPosts: Post[]
-  loggedToday: boolean
 }
 
 function formatDate(iso: string) {
@@ -27,12 +26,12 @@ function formatDate(iso: string) {
 
 export default function ActiveStreakClient({
   commitmentId, title, dayNumber, daysRemaining,
-  sessionsLogged, recentPosts, loggedToday: initialLoggedToday,
+  sessionsLogged, recentPosts,
 }: Props) {
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [loggedToday, setLoggedToday] = useState(initialLoggedToday)
+  const [lastLoggedAt, setLastLoggedAt] = useState<string | null>(null)
   const [posts, setPosts] = useState<Post[]>(recentPosts)
   const [sessionCount, setSessionCount] = useState(sessionsLogged)
 
@@ -56,7 +55,7 @@ export default function ActiveStreakClient({
       }
       setPosts(prev => [newPost, ...prev])
       setSessionCount(c => c + 1)
-      setLoggedToday(true)
+      setLastLoggedAt(new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
       setBody('')
     } else {
       const data = await res.json()
@@ -104,24 +103,18 @@ export default function ActiveStreakClient({
       </div>
 
       {/* Log today's session */}
-      <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: `3px solid ${loggedToday ? '#2d6a2d' : '#1a3a6b'}`, borderRadius: '3px', padding: '24px', marginBottom: '24px' }}>
+      <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #1a3a6b', borderRadius: '3px', padding: '24px', marginBottom: '24px' }}>
         <p style={{ ...labelStyle, marginBottom: '14px' }}>
-          {loggedToday ? 'Session logged today ✓' : "Log today's session"}
+          "Log today's session"
         </p>
 
-        {loggedToday ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#edf7ed', border: '2px solid #2d6a2d', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
-                <path d="M1 5l4 4 8-8" stroke="#2d6a2d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#2d6a2d', margin: 0, fontWeight: 600 }}>
-              You've shown up today. Your validators can see it.
-            </p>
+        {lastLoggedAt && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', padding: '10px 14px', background: '#edf7ed', border: '1px solid #c3e6cb', borderRadius: '3px' }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#2d6a2d"/><path d="M4 7l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#2d6a2d' }}>Session logged at {lastLoggedAt}. Log another if you practice again today.</span>
           </div>
-        ) : (
-          <form onSubmit={handleLog}>
+        )}
+        <form onSubmit={handleLog}>
             <textarea
               value={body}
               onChange={e => setBody(e.target.value)}
@@ -149,8 +142,7 @@ export default function ActiveStreakClient({
             }}>
               {submitting ? 'Logging...' : 'Log session →'}
             </button>
-          </form>
-        )}
+        </form>
       </div>
 
       {/* Recent sessions */}

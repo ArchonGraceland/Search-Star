@@ -26,21 +26,6 @@ export async function POST(
     return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
   }
 
-  // Check if a session has already been logged today (UTC date)
-  const { data: existingPost } = await supabase
-    .from('commitment_posts')
-    .select('id')
-    .eq('commitment_id', id)
-    .gte('posted_at', new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').toISOString())
-    .lt('posted_at', new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() + 86400000 > 0
-      ? new Date(new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() + 86400000).toISOString()
-      : new Date().toISOString())
-    .limit(1)
-
-  if (existingPost && existingPost.length > 0) {
-    return NextResponse.json({ error: 'A session has already been logged today.' }, { status: 409 })
-  }
-
   const body = await request.json()
   const { body: postBody } = body
 

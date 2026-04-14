@@ -29,9 +29,6 @@ export default async function StageActive({ params }: { params: Promise<{ id: st
   const dayNumber = Math.min(90, Math.max(1, Math.floor((now.getTime() - streakStart.getTime()) / 86400000) + 1))
   const daysRemaining = Math.max(0, Math.ceil((streakEnd.getTime() - now.getTime()) / 86400000))
 
-  const todayStr = now.toISOString().slice(0, 10)
-  const loggedToday = (posts ?? []).some(p => p.posted_at.slice(0, 10) === todayStr && p.session_number > 0)
-
   return (
     <ActiveStreakClient
       commitmentId={id}
@@ -40,7 +37,6 @@ export default async function StageActive({ params }: { params: Promise<{ id: st
       daysRemaining={daysRemaining}
       sessionsLogged={commitment.sessions_logged}
       recentPosts={posts ?? []}
-      loggedToday={loggedToday}
     />
   )
 }
