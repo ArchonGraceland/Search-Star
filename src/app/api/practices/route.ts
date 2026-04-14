@@ -4,7 +4,6 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const db = createServiceClient()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -26,8 +25,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Category is required.' }, { status: 400 })
   }
 
-  // Verify category exists
-  const { data: category } = await supabase
+  // Use service client for all DB operations — bypasses RLS for authenticated users
+  const db = createServiceClient()
+
+  const { data: category } = await db
     .from('skill_categories')
     .select('id')
     .eq('id', category_id)
@@ -37,14 +38,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid category.' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('practices')
-    .insert({
-      user_id: user.id,
-      name: name.trim(),
-      label,
-      category_id,
-    })
+    .insert({ user_id: user.id, name: name.trim(), label, category_id })
     .select('id')
     .single()
 

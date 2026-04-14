@@ -28,8 +28,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Start date is required.' }, { status: 400 })
   }
 
-  // Look up the user's practice server-side
-  const { data: practice } = await supabase
+  // Use service client for all DB operations to bypass RLS
+  const db = createServiceClient()
+
+  // Look up the user's practice
+  const { data: practice } = await db
     .from('practices')
     .select('id')
     .eq('user_id', user.id)
@@ -50,8 +53,7 @@ export async function POST(request: Request) {
   const streakEndsAt = new Date(streakStartsAt)
   streakEndsAt.setUTCDate(streakEndsAt.getUTCDate() + 83)
 
-  const serviceSupabase = createServiceClient()
-  const { data, error } = await serviceSupabase
+  const { data, error } = await db
     .from('commitments')
     .insert({
       user_id: user.id,
