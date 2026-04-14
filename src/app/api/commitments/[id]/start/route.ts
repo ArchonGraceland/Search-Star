@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(
@@ -8,6 +8,7 @@ export async function POST(
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const db = createServiceClient()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { statement } = await request.json()
@@ -38,7 +39,7 @@ export async function POST(
 
   // Log the ritual statement as the first session post
   if (statement?.trim()) {
-    await supabase.from('commitment_posts').insert({
+    await db.from('commitment_posts').insert({
       commitment_id: id,
       user_id: user.id,
       body: statement.trim(),

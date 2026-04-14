@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 // POST — mark a commitment as complete
@@ -9,6 +9,7 @@ export async function POST(
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const db = createServiceClient()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

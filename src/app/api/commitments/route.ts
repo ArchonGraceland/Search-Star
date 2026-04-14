@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -50,7 +50,8 @@ export async function POST(request: Request) {
   const streakEndsAt = new Date(streakStartsAt)
   streakEndsAt.setUTCDate(streakEndsAt.getUTCDate() + 83)
 
-  const { data, error } = await supabase
+  const serviceSupabase = createServiceClient()
+  const { data, error } = await serviceSupabase
     .from('commitments')
     .insert({
       user_id: user.id,
