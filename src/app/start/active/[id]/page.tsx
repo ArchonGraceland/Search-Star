@@ -30,7 +30,7 @@ export default async function StageActive({ params }: { params: Promise<{ id: st
   const daysRemaining = Math.max(0, Math.ceil((streakEnd.getTime() - now.getTime()) / 86400000))
 
   const todayStr = now.toISOString().slice(0, 10)
-  const loggedToday = (posts ?? []).some(p => p.posted_at.slice(0, 10) === todayStr)
+  const loggedToday = (posts ?? []).some(p => p.posted_at.slice(0, 10) === todayStr && p.session_number > 0)
 
   return (
     <ActiveStreakClient

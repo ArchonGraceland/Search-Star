@@ -179,13 +179,36 @@ export default function ActiveStreakClient({
         </div>
       )}
 
+      {/* What now */}
+      <div style={{ background: '#eef2f8', border: '1px solid #c8d4e8', borderRadius: '3px', padding: '24px', marginBottom: '24px' }}>
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#1a3a6b', marginBottom: '16px' }}>
+          Your three jobs
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {[
+            { n: '01', text: 'Come back tomorrow and log your session. Every day for 90 days.' },
+            { n: '02', text: "Share your sponsor link with people who believe in what you're building.", link: `/sponsor/${commitmentId}`, linkText: 'Copy sponsor link →' },
+            { n: '03', text: 'Invite more validators — people who will witness the work is real.', link: `/start/validator/${commitmentId}`, linkText: 'Invite a validator →' },
+          ].map(item => (
+            <div key={item.n} style={{ display: 'flex', gap: '14px' }}>
+              <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, color: '#1a3a6b', opacity: 0.5, flexShrink: 0, paddingTop: '2px', minWidth: '20px' }}>{item.n}</span>
+              <div>
+                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#3a3a3a', margin: '0 0 4px', lineHeight: 1.55 }}>{item.text}</p>
+                {item.link && (
+                  <Link href={item.link} style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, color: '#1a3a6b', textDecoration: 'none', borderBottom: '1px solid #1a3a6b' }}>
+                    {item.linkText}
+                  </Link>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Footer links */}
       <div style={{ borderTop: '1px solid #e8e8e8', paddingTop: '20px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
         <Link href="/dashboard" style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#767676', textDecoration: 'none' }}>
           Dashboard →
-        </Link>
-        <Link href={`/sponsor/${commitmentId}`} style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#767676', textDecoration: 'none' }}>
-          Sponsor page →
         </Link>
         <Link href={`/start/launch/${commitmentId}`} style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#767676', textDecoration: 'none' }}>
           View sponsors & validators →
