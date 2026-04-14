@@ -11,9 +11,9 @@ export default async function StartPage() {
 
   if (stage.step === 1) redirect('/start/practice')
   if (stage.step === 2) redirect('/start/commitment')
-  if (stage.step === 3) redirect('/start/validator')
-  if (stage.step === 4) redirect(`/start/launch/${stage.commitmentId}`)
-  if (stage.step === 5) redirect(`/start/ritual/${stage.commitmentId}`)
+  if (stage.step === 3) redirect(`/start/validator/${stage.commitmentId}`)
+  if (stage.step === 4) redirect(`/start/mentor/${stage.commitmentId}`)
+  if (stage.step === 5) redirect(`/start/launch/${stage.commitmentId}`)
   if (stage.step === 6) redirect(`/start/active/${stage.commitmentId}`)
 
   redirect('/dashboard')

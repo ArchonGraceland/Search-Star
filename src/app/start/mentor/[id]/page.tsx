@@ -20,7 +20,7 @@ export default function StageMentor() {
   return (
     <StageShell stage={4}>
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#767676', marginBottom: '12px' }}>
-        Stage 4 of 7
+        Stage 4 of 6
       </p>
       <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '38px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.1, marginBottom: '10px' }}>
         Find a mentor.

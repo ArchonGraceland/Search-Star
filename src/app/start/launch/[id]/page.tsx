@@ -47,7 +47,7 @@ export default async function StageLaunch({ params }: { params: Promise<{ id: st
   return (
     <StageShell stage={5}>
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#767676', marginBottom: '12px' }}>
-        Stage 5 of 7
+        Stage 5 of 6
       </p>
       <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '38px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.1, marginBottom: '10px' }}>
         Your launch window is open.

@@ -74,7 +74,7 @@ export default function ActiveStreakClient({
   }
 
   return (
-    <StageShell stage={7}>
+    <StageShell stage={6}>
       {/* Title */}
       <div style={{ marginBottom: '28px' }}>
         <p style={{ ...labelStyle, marginBottom: '6px' }}>Active streak</p>
