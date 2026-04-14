@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/commit', label: 'Commit' },
+    { href: '/start', label: 'Practice' },
     { href: '/trust', label: 'Trust' },
     { href: '/mentors', label: 'Mentors' },
     { href: '/mentoring', label: 'Mentoring' },

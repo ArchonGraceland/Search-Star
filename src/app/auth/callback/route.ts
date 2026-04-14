@@ -12,17 +12,8 @@ export async function GET(request: Request) {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         // Route new users through onboarding; returning users go to dashboard
-        const { data: practices } = await supabase
-          .from('practices')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1)
-
-        if (practices && practices.length > 0) {
-          return NextResponse.redirect(`${origin}/dashboard`)
-        } else {
-          return NextResponse.redirect(`${origin}/onboarding/practice`)
-        }
+        // Always go through /start — it resolves to the correct stage
+        return NextResponse.redirect(`${origin}/start`)
       }
     }
   }

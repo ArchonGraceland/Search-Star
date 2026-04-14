@@ -85,7 +85,7 @@ export default async function DashboardPage() {
     .select('id')
     .eq('user_id', user.id)
     .limit(1)
-  if (!practiceCheck || practiceCheck.length === 0) redirect('/onboarding/practice')
+  if (!practiceCheck || practiceCheck.length === 0) redirect('/start')
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -159,9 +159,27 @@ export default async function DashboardPage() {
   return (
     <div style={{ maxWidth: '740px' }}>
       <p style={labelStyle}>Dashboard</p>
-      <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '32px', fontWeight: 700, marginBottom: '32px' }}>
+      <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '32px', fontWeight: 700, marginBottom: '24px' }}>
         Welcome, {name}.
       </h1>
+
+      {/* Continue journey CTA */}
+      <Link
+        href="/start"
+        style={{
+          display: 'flex',
+          background: '#1a3a6b',
+          borderRadius: '3px',
+          padding: '16px 24px',
+          marginBottom: '24px',
+          textDecoration: 'none',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>Your practice</span>
+        <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#ffffff' }}>Continue your journey →</span>
+      </Link>
 
       {/* Active commitment */}
       <div style={{ ...cardStyle, borderLeft: '3px solid #1a3a6b' }}>

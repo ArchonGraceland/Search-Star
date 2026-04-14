@@ -23,7 +23,7 @@ export default function CommitPage() {
       if (!user) { router.replace('/login'); return }
       supabase.from('practices').select('id').eq('user_id', user.id).limit(1).then(({ data }) => {
         if (!data || data.length === 0) {
-          router.replace('/onboarding/practice')
+          router.replace('/start')
         } else {
           setChecking(false)
         }
