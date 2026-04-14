@@ -23,8 +23,11 @@ export default async function ValidatorPage({
 
   if (!validator) redirect('/validate/invalid')
 
-  // If invited, mark as active immediately (they clicked the link = acceptance)
-  if (validator.status === 'invited') {
+  // Track first visit before marking active
+  const isFirstVisit = validator.status === 'invited'
+
+  // Mark as active immediately (clicking the link = acceptance)
+  if (isFirstVisit) {
     await db
       .from('validators')
       .update({ status: 'active', accepted_at: new Date().toISOString() })
@@ -62,6 +65,7 @@ export default async function ValidatorPage({
 
   return (
     <ValidatorClient
+      isFirstVisit={isFirstVisit}
       validatorId={validator.id}
       token={token}
       commitmentId={commitment_id}
