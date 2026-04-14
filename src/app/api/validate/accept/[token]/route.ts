@@ -30,7 +30,7 @@ export async function GET(
 
   if (validator.status === 'active') {
     return NextResponse.redirect(
-      new URL(`/validate/${validator.commitment_id}?token=${token}`, request.url)
+      new URL(`/validate/${validator.commitment_id}/${token}`, request.url)
     )
   }
 
@@ -44,6 +44,6 @@ export async function GET(
   }
 
   return NextResponse.redirect(
-    new URL(`/validate/${validator.commitment_id}?token=${token}`, request.url)
+    new URL(`/validate/${validator.commitment_id}/${token}`, request.url)
   )
 }
