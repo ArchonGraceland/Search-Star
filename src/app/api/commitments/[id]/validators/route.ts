@@ -119,7 +119,7 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to create invitation.' }, { status: 500 })
   }
 
-  const acceptUrl = `https://searchstar.com/api/validate/accept?token=${validator.invite_token}`
+  const acceptUrl = `https://searchstar.com/api/validate/accept/${validator.invite_token}`
 
   // Send invite email
   try {
