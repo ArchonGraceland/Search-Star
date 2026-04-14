@@ -88,8 +88,8 @@
   <div class="wrap">
 
     <div class="spec-meta">
-      <span>Version 3.0</span>
-      <span>April 2026</span>
+      <span>Version 3.1</span>
+      <span>April 2026 — updated</span>
       <span>Status: Active</span>
     </div>
 
@@ -156,6 +156,11 @@
       <a class="toc-indent" href="#technical-stack">12.1 Stack</a>
       <a class="toc-indent" href="#technical-api">12.2 API</a>
       <a href="#roadmap">13. Roadmap</a>
+      <a href="#product-as-built">14. Product as Built</a>
+      <a class="toc-indent" href="#built-spine">14.1 The Six-Stage Spine</a>
+      <a class="toc-indent" href="#built-validator">14.2 The Validator Experience</a>
+      <a class="toc-indent" href="#built-sessions">14.3 Session Logging</a>
+      <a class="toc-indent" href="#built-decisions">14.4 Key Product Decisions Made in Build</a>
     </div>
 
     <!-- 1. OVERVIEW -->
@@ -216,20 +221,28 @@
     <div class="doc" id="onboarding">
       <h2>3. Onboarding &amp; Identity</h2>
 
-      <h3 id="onboarding-sequence">3.1 Sequence: Practice First</h3>
-      <p>Onboarding begins with a single question: what do you want to practice? The user defines their first skill before completing a profile, before uploading a photo, before providing any personal information. Identity on Search Star emerges from practice — who you are is revealed by what you commit to doing, not by what you say about yourself.</p>
+      <h3 id="onboarding-sequence">3.1 Sequence: Practice First — The Six-Stage Spine</h3>
+      <p>Onboarding begins with a single question: what do you want to practice? The user defines their first skill before completing a profile, before providing any personal information. Identity on Search Star emerges from practice.</p>
 
-      <p>The onboarding sequence is:</p>
-      <ol>
-        <li><strong>Define a practice.</strong> Choose a skill category and name your practice. What are you building?</li>
-        <li><strong>Invite your first validator.</strong> Who in your life knows you well enough to vouch for your effort? The validator relationship is the foundation on which everything else is built.</li>
-        <li><strong>Set your visibility.</strong> Who can see your profile and Trust record? Default is private — visible only to your validator circle until you choose otherwise.</li>
-        <li><strong>Complete your profile.</strong> Name, location, and a brief description in your own words. Simple, manual, and entirely on your terms.</li>
-      </ol>
+      <p>The implemented onboarding spine is a six-stage linear flow at <code>/start</code>. A stage resolver reads the user's current state and routes them to the correct stage automatically — returning users always land exactly where they are, not at the beginning.</p>
+
+      <table>
+        <thead><tr><th>Stage</th><th>URL</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td>1 — Practice</td><td><code>/start/practice</code></td><td>Name your practice, choose a label (skill / craft / pursuit) and skill category</td></tr>
+          <tr><td>2 — Commitment</td><td><code>/start/commitment</code></td><td>Declare a 90-day commitment: title, description, frequency (daily or weekly)</td></tr>
+          <tr><td>3 — Validator</td><td><code>/start/validator/[id]</code></td><td>Invite your first validator by email. Up to 3 per commitment. Skippable.</td></tr>
+          <tr><td>4 — Mentor</td><td><code>/start/mentor/[id]</code></td><td>Mentor matching placeholder. Shown once (tracked via <code>mentor_step_seen</code> flag), then never shown again.</td></tr>
+          <tr><td>5 — Launch</td><td><code>/start/launch/[id]</code></td><td>Launch window: sponsor link, validator status, sponsors pledged. Contains the start ritual button.</td></tr>
+          <tr><td>6 — Active</td><td><code>/start/active/[id]</code></td><td>Daily session logging. Progress bar, session form, recent sessions, "three jobs" guidance.</td></tr>
+        </tbody>
+      </table>
 
       <div class="callout callout-info">
-        A user with one defined practice, one validator, and a minimal profile is fully onboarded. Profile completeness is driven by practice depth over time, not by a setup checklist.
+        The stage resolver is implemented in <code>src/lib/stage.ts</code>. It checks: practice exists → commitment exists → validator exists → mentor step seen → launch vs active status. The auth callback and dashboard both redirect to <code>/start</code>, which resolves to the correct stage. A stage bar with six dots runs across the top of every stage page.
       </div>
+
+      <p>A user with one defined practice, one validator, and an active commitment is fully onboarded. The start ritual — a written statement of intent — marks the transition from the launch window to the active streak. It is timestamped and sent to validators as the first session post (session_number: 0).</p>
 
       <h3 id="onboarding-profile">3.2 Profile Completion</h3>
       <p>After defining a first practice and inviting a validator, the user completes a minimal profile manually: name, location, and a brief description in their own words. Nothing is inferred, discovered, or imported without explicit user action. The profile is what the user chooses to say about themselves — no more, no less.</p>
@@ -267,16 +280,16 @@
       <p>The 90-day streak is also the structural foundation of the Trust record. A completed streak is the minimum unit of genuine formation — the smallest period that meaningfully distinguishes sustained practice from a burst of motivated activity. Each completed streak adds to the Durability dimension of the Trust record in a way that shorter commitments cannot.</p>
 
       <h3 id="commitment-launch">4.2 The 14-Day Launch Period</h3>
-      <p>Every 90-day commitment begins with a 14-day launch period. The launch period is the time between a practitioner declaring their commitment and the day they begin. It exists for a specific purpose: to give the practitioner time to share their commitment with the people who matter, recruit sponsors and validators, and prepare mentally for the transition from announcing to doing.</p>
+      <p>Every 90-day commitment begins with a 7-day launch period. The launch period is the time between a practitioner declaring their commitment and the day they begin. It exists for a specific purpose: to give the practitioner time to share their commitment with the people who matter, recruit sponsors and validators, and prepare mentally for the transition from announcing to doing.</p>
 
-      <p>14 days is the right length for several reasons. It is long enough for news of the commitment to travel — a practitioner tells their friends, their friends tell others who might want to sponsor, family members have time to discuss and commit. It mirrors other socially legible notice periods: a wedding RSVP window, a crowdfunding campaign launch, a job start date. And it keeps the practitioner's motivation high — the gap between intention and action is short enough that momentum is preserved.</p>
+      <p>7 days is the right length for several reasons. It is long enough for news of the commitment to travel — a practitioner tells their friends, their friends tell others who might want to sponsor, family members have time to discuss and commit. It mirrors other socially legible notice periods: a wedding RSVP window, a crowdfunding campaign launch, a job start date. And it keeps the practitioner's motivation high — the gap between intention and action is short enough that momentum is preserved.</p>
 
       <p>The 14-day launch period has a defined structure:</p>
       <ul>
-        <li><strong>Day 1 — Declaration.</strong> The practitioner defines their practice commitment in writing: what they will do, how often, for 90 days. They invite their validators — the people who will witness and confirm their practice. The commitment is shared with their validator circle.</li>
-        <li><strong>Days 1–14 — Sponsorship window.</strong> The practitioner shares their commitment with potential sponsors. Friends, family, employers, and institutions can pledge support during this window. The platform shows the practitioner who has pledged and how much is behind them.</li>
-        <li><strong>Day 14 — Sponsor commitment closes.</strong> No new sponsors can join after the launch period ends. This creates a clean boundary — the commitment belongs to the people who were present at the beginning.</li>
-        <li><strong>Day 15 — The 90-day streak begins.</strong> The start ritual marks the transition from announcing to doing.</li>
+        <li><strong>Day 1 — Declaration.</strong> The practitioner declares their commitment: title, description, and frequency (daily or weekly). They invite validators — the people who will witness and confirm their practice.</li>
+        <li><strong>Days 1–7 — Sponsorship window.</strong> The practitioner shares their commitment with potential sponsors. Friends, family, employers, and institutions can pledge support during this window. The platform shows the practitioner who has pledged and how much is behind them.</li>
+        <li><strong>Day 7 — Sponsor commitment closes.</strong> No new sponsors can join after the launch period ends. This creates a clean boundary — the commitment belongs to the people who were present at the beginning.</li>
+        <li><strong>Day 8 — The 90-day streak begins.</strong> The start ritual marks the transition from announcing to doing.</li>
       </ul>
 
       <div class="callout callout-green">
@@ -338,16 +351,20 @@
 
       <p>The validator feed has three deliberate constraints that distinguish it from a conventional social feed:</p>
       <ul>
-        <li><strong>Fixed audience.</strong> The feed is visible only to validators the user has explicitly invited. It cannot be discovered, followed, or accessed by anyone outside that circle. The practitioner knows exactly who is reading before they post.</li>
-        <li><strong>No engagement metrics.</strong> Posts have no like count, no view count, no comment count. The only action available to a validator on a post is confirmation and qualitative attestation. There is no number attached to a post that creates social pressure or rewards performance.</li>
-        <li><strong>No algorithmic curation.</strong> Posts appear in chronological order. Nothing is surfaced or suppressed based on engagement. The feed reflects what the practitioner actually did, not what performed well.</li>
+        <li><strong>Fixed audience.</strong> The feed is visible only to validators the user has explicitly invited. Validators access it via a permanent personal URL: <code>/validate/[commitment_id]/[token]</code>. The token is unique per validator per commitment and does not expire once accepted.</li>
+        <li><strong>No engagement metrics.</strong> Posts have no like count, no view count, no comment count. The only action available to a validator on a post is confirmation. There is no number attached to a post that creates social pressure or rewards performance.</li>
+        <li><strong>No algorithmic curation.</strong> Posts appear in reverse chronological order. Nothing is surfaced or suppressed based on engagement.</li>
       </ul>
 
-      <div class="callout callout-info">
-        <strong>Why no likes or view counts:</strong> Any engagement metric visible to the practitioner creates an incentive to post for the metric rather than for the practice. A session that generated strong validator response starts to feel more valuable than one that didn't — regardless of whether the practice itself was equally genuine. Removing engagement metrics keeps documentation in service of validation rather than the other way around.
-      </div>
+      <h4>Session logging</h4>
+      <p>Practitioners log sessions from the active streak page (<code>/start/active/[id]</code>). Each session post has a body (optional) and a session number. Multiple sessions per day are permitted — there is no one-session-per-day limit. The start ritual (session_number: 0) is recorded separately from practice sessions (session_number: 1+) and does not count toward the session total.</p>
 
-      <p>Validators can leave qualitative notes on a post — observations about progress, questions about technique, encouragement grounded in knowledge of the person. These notes are private to the validator circle and contribute to the qualitative dimension of the validator's confirmation. They are not public comments and they do not accumulate into a visible score or rating on the post itself.</p>
+      <h4>Validator notifications</h4>
+      <p>Every time a practitioner logs a session, all active validators receive an email notification from <code>noreply@searchstar.com</code>. The email includes the session number, the practitioner's name and commitment title, the session note if one was written, and a direct "Confirm this session →" button linking to the validator's personal feed URL. Email delivery is best-effort — a failed notification does not fail the session log.</p>
+
+      <div class="callout callout-info">
+        <strong>Why no likes or view counts:</strong> Any engagement metric visible to the practitioner creates an incentive to post for the metric rather than for the practice. Removing engagement metrics keeps documentation in service of validation rather than the other way around.
+      </div>
 
       <h3 id="practice-categories">5.5 Skill Categories</h3>
       <p>Skill categories organize practices for sponsorship matching and Trust record computation. Categories are broad by design — sponsors attach to categories, allowing users flexibility in how they pursue development within a domain.</p>
@@ -428,7 +445,16 @@
 
       <p>The strength of a validator's contribution reflects relationship tenure, validation consistency, the validator's own growth stage, and the range of skill categories they have witnessed. A validator who has known you for three years and confirmed practices across multiple domains contributes substantially more than someone who has known you for a month.</p>
 
-      <p>Validators stake their own trust when they confirm. False validation — attesting to effort that was not genuine — degrades the validator's own record. This makes confirmation a meaningful act with real consequences, not a formality. The validator's reputation is on the line alongside the practitioner's.</p>
+      <p>Validators stake their own trust when they confirm. False validation — attesting to effort that was not genuine — degrades the validator's own record. This makes confirmation a meaningful act with real consequences, not a formality.</p>
+
+      <h4>How validators are invited and access the feed</h4>
+      <p>Validators are invited by email during the onboarding spine (Stage 3) or at any point from the launch window. Each validator receives a unique personal URL: <code>/validate/[commitment_id]/[invite_token]</code>. Clicking this link marks the invitation as accepted. No Search Star account is required — a validator can confirm sessions, view the full session history, and receive email notifications entirely without signing up.</p>
+
+      <h4>Validator arrival experience</h4>
+      <p>A validator's first visit shows a personal greeting screen: who invited them, what the commitment is, and what being a validator means — in plain language, without jargon. Three numbered explanations cover: you'll see their sessions, you confirm the work is real, your word carries weight. A soft Search Star introduction appears below, with a link to start their own commitment. Returning visits skip the arrival screen and go directly to the session feed.</p>
+
+      <h4>Up to 3 validators per commitment</h4>
+      <p>Each commitment supports up to 3 validators. Validators can be added at any stage. Future functionality will allow both the practitioner to remove a validator and the validator to remove themselves, with confirmations preserved.</p>
 
       <h3 id="trust-quality">6.5 Quality Dimension: Beauty, Grace, Truth</h3>
       <p>Beyond confirming that a session occurred, validators attest to a qualitative dimension: is this person genuinely developing? Is the practice producing real formation — greater capability, deeper understanding, more honest engagement with the difficulty of the work?</p>
@@ -797,24 +823,40 @@
       <h3 id="technical-stack">12.1 Stack</h3>
       <ul>
         <li><strong>Frontend:</strong> Next.js 16 (App Router), TypeScript, Tailwind v4</li>
-        <li><strong>Backend:</strong> Supabase (PostgreSQL, RLS, Realtime)</li>
-        <li><strong>Deployment:</strong> Vercel (auto-deploy on push to main)</li>
-        <li><strong>AI synthesis:</strong> Anthropic Claude Sonnet (profile synthesis, confidence merging), Claude Haiku (identity disambiguation)</li>
-        <li><strong>Media:</strong> Google Photos Picker API, ElevenLabs TTS</li>
+        <li><strong>Backend:</strong> Supabase (PostgreSQL, RLS) — project ID <code>qgjyfcqgnuamgymonblj</code></li>
+        <li><strong>Deployment:</strong> Vercel — push to <code>v3</code> branch triggers GitHub Actions deploy hook, auto-promotes to <code>searchstar.com</code></li>
+        <li><strong>Email:</strong> Resend, from <code>noreply@searchstar.com</code></li>
+        <li><strong>Design system:</strong> Project Graceland — Crimson Text headings, Roboto body, navy <code>#1a3a6b</code>, 3px border-radius, no emojis in UI chrome</li>
+        <li><strong>Repo:</strong> <code>ArchonGraceland/Search-Star</code>, branch <code>v3</code></li>
       </ul>
 
-      <h3 id="technical-api">12.2 API</h3>
-      <p>The Search Star API exposes the following primary resources for institutional and sponsor integrations:</p>
+      <h4>Key implementation patterns</h4>
       <ul>
-        <li><code>GET /api/profile/:id</code> — retrieve public profile (respects visibility settings)</li>
-        <li><code>GET /api/trust/:id</code> — retrieve Trust record with growth stage and dimension breakdown (requires user authorization)</li>
-        <li><code>POST /api/sponsorship</code> — create a practice sponsorship pledge</li>
-        <li><code>POST /api/validation</code> — submit a validator confirmation</li>
-        <li><code>GET /api/practices/:id</code> — retrieve practice record for a user (respects visibility settings)</li>
-        <li><code>POST /api/institution/members</code> — bulk-enroll institution members</li>
-        <li><code>GET /api/institution/analytics</code> — retrieve engagement and Trust stage analytics for institution</li>
-        <li><code>GET /api/export/:id</code> — export full user data in portable format (requires user authentication)</li>
+        <li><strong>Service client for DB operations:</strong> All API routes use <code>createServiceClient()</code> for database reads/writes, and <code>createClient()</code> only for <code>auth.getUser()</code>. This bypasses RLS for authenticated operations and avoids recursion bugs in complex policies.</li>
+        <li><strong>Server components for token-gated pages:</strong> The validator feed (<code>/validate/[commitment_id]/[token]</code>) is a server component — token lookup happens server-side before the browser receives anything, eliminating client-side auth failures.</li>
+        <li><strong>Stage resolver:</strong> <code>src/lib/stage.ts</code> reads user state and returns which of 6 stages they are on. All post-login redirects go to <code>/start</code>, which delegates to the resolver.</li>
+        <li><strong>Dynamic params:</strong> All Next.js App Router dynamic params use <code>{ params }: { params: Promise&lt;{ id: string }&gt; }</code> with <code>await params</code> — synchronous destructuring causes build failures.</li>
+        <li><strong>Resend lazy init:</strong> <code>getResend()</code> factory pattern — module-level instantiation causes build failures when <code>RESEND_API_KEY</code> is absent at build time.</li>
       </ul>
+
+      <h3 id="technical-api">12.2 Implemented API Routes</h3>
+      <table>
+        <thead><tr><th>Route</th><th>Method</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/practices</code></td><td>POST</td><td>Create a practice (name, label, category)</td></tr>
+          <tr><td><code>/api/commitments</code></td><td>POST</td><td>Create a 90-day commitment</td></tr>
+          <tr><td><code>/api/commitments/[id]</code></td><td>GET</td><td>Fetch commitment + posts</td></tr>
+          <tr><td><code>/api/commitments/[id]/posts</code></td><td>POST</td><td>Log a session; notifies all active validators by email</td></tr>
+          <tr><td><code>/api/commitments/[id]/start</code></td><td>POST</td><td>Perform start ritual — transitions commitment to active</td></tr>
+          <tr><td><code>/api/commitments/[id]/complete</code></td><td>POST</td><td>Mark commitment as completed</td></tr>
+          <tr><td><code>/api/commitments/[id]/validators</code></td><td>GET / POST</td><td>List validators; invite a new validator by email</td></tr>
+          <tr><td><code>/api/validate/accept/[token]</code></td><td>GET</td><td>Accept a validator invitation; redirects to feed</td></tr>
+          <tr><td><code>/api/validate/[id]/posts/[postId]/confirm</code></td><td>POST</td><td>Validator confirms a session post (token-authenticated)</td></tr>
+          <tr><td><code>/api/profiles/visibility</code></td><td>PATCH</td><td>Update profile visibility setting</td></tr>
+          <tr><td><code>/api/profiles/mentor-step-seen</code></td><td>POST</td><td>Mark mentor onboarding step as seen</td></tr>
+          <tr><td><code>/api/sponsorships/pledge</code></td><td>POST</td><td>Create a sponsorship pledge</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- 11. ROADMAP -->
@@ -825,14 +867,16 @@
         <thead><tr><th>Milestone</th><th>Description</th><th>Status</th></tr></thead>
         <tbody>
           <tr><td>v1.4 — Activate Pipeline</td><td>Public identity discovery pipeline. Retired — inconsistent with the product's private-relational philosophy and practice-first onboarding.</td><td>Retired</td></tr>
-          <tr><td>v2.0 — Practice &amp; Formation</td><td>Practice-first onboarding, 90-day commitment declaration, 14-day launch period, start ritual, session documentation (private by default), skill categories, validator invitation as onboarding step</td><td>Next</td></tr>
-          <tr><td>v2.1 — Relational Validation</td><td>Validator confirmation flow, quality attestation dimension, stake mechanics, validator Trust contribution, relationship tenure tracking</td><td>Planned</td></tr>
-          <tr><td>v2.2 — Trust as Character</td><td>Depth/Breadth/Durability computation, quality weighting, anti-gaming detection, private score display, visibility controls</td><td>Planned</td></tr>
-          <tr><td>v2.3 — Practice Sponsorship</td><td>90-day streak as primary sponsorable unit, 14-day launch sponsorship window, $2,500 target payout, voluntary contribution at completion (90% rate, 50% suggested tip), equal 23.75% split across four mentor roles, 5% Search Star share, 72-hour dispute window</td><td>Planned</td></tr>
-          <tr><td>v3.0 — Institutional Deployment</td><td>Institutional accounts, benefit model, budget management, goal templates, analytics dashboard, Trust stage reporting</td><td>Planned</td></tr>
-          <tr><td>v3.1 — Formation &amp; Leadership</td><td>Mentorship tracks, leadership role system (Mentor/Coach/Community Builder/Practice Leader), recognition through mentee outcomes</td><td>Planned</td></tr>
-          <tr><td>v3.2 — Sponsor Marketplace</td><td>Brand and foundation sponsor accounts, category-level sponsorship, audience targeting by Trust stage and skill category</td><td>Planned</td></tr>
-          <tr><td>v3.3 — Portable Trust</td><td>Trust record sharing API, employer and university integration, portable attestation document export, institutional credential recognition</td><td>Planned</td></tr>
+          <tr><td>v3.0 — Foundation</td><td>Auth, design system (Project Graceland), admin pages, new v3 schema, public narrative pages (homepage, manifesto, spec, onboarding explainer)</td><td>Complete</td></tr>
+          <tr><td>v3.1 — Core Practice Spine</td><td>Six-stage onboarding spine at <code>/start</code>, 90-day commitment declaration, 7-day launch period, start ritual, session logging (multiple per day), stage resolver, stage bar, dashboard with "Continue your journey" CTA</td><td>Complete</td></tr>
+          <tr><td>v3.2 — Validator System</td><td>Validator invitation by email, token-based access at <code>/validate/[id]/[token]</code>, server-component validator feed, session confirmation, validator arrival experience (personal greeting, commitment card, what-it-means, soft Search Star intro), email notification to all active validators on every session log</td><td>Complete</td></tr>
+          <tr><td>v3.3 — Sponsorship Flow</td><td>Public sponsor pledge page, voluntary contribution prompt at completion, contribution split (5% Search Star / 23.75% × 4 mentor roles), 72-hour dispute window</td><td>In progress</td></tr>
+          <tr><td>v3.4 — Validator Management</td><td>Practitioner removes validator, validator removes themselves, validator notification preferences (add / edit / delete), validator management UI on launch and active pages</td><td>Next</td></tr>
+          <tr><td>v3.5 — Trust Record</td><td>Depth/Breadth/Durability computation, growth stage assignment (Seedling→Mature), private score display, visibility controls, shareable attestation link</td><td>Planned</td></tr>
+          <tr><td>v3.6 — Mentor System</td><td>Mentor relationships, mentor invitation flow, contribution routing to mentor, community pool distribution (Coach/CB/PL), leadership role progression, earnings dashboard</td><td>Planned</td></tr>
+          <tr><td>v3.7 — Institutional Portal</td><td>Institution accounts, benefit model, budget management, cohort sponsorship, analytics dashboard, Trust stage reporting</td><td>Planned</td></tr>
+          <tr><td>v3.8 — Sponsor Marketplace</td><td>Brand and foundation sponsor accounts, category-level sponsorship, audience targeting by Trust stage and skill category</td><td>Planned</td></tr>
+          <tr><td>v3.9 — Portable Trust</td><td>Trust record sharing API, employer and university integration, portable attestation document export, institutional credential recognition</td><td>Planned</td></tr>
         </tbody>
       </table>
 
@@ -846,12 +890,111 @@
     </div>
 
   </div>
+    <!-- 14. PRODUCT AS BUILT -->
+    <div class="doc" id="product-as-built">
+      <h2>14. Product as Built</h2>
+      <p>This section documents decisions made during the v3 build that are not captured elsewhere in the spec. Where the spec describes the intended product, this section describes what was actually built, why, and what was learned.</p>
+
+      <h3 id="built-spine">14.1 The Six-Stage Spine</h3>
+      <p>The original spec described onboarding as a four-step sequence (define practice → invite validator → set visibility → complete profile). In implementation this was redesigned as a six-stage linear spine at <code>/start</code>, with a server-side stage resolver that automatically routes users to the correct stage every time they arrive.</p>
+
+      <p>The key insight driving this change: users returning to the platform after days away should land exactly where they are — not at a dashboard that requires them to figure out what to do next, and not at the beginning of onboarding. The stage resolver reads database state and routes deterministically. There is no session state, no cookie, no user preference to manage. The resolver is the single source of truth for where a user is in their practice journey.</p>
+
+      <div class="callout callout-info">
+        <strong>Resolver logic:</strong> No practice → Stage 1. Practice, no commitment → Stage 2. Commitment, no validator → Stage 3. Has validator, mentor step unseen → Stage 4. Mentor seen, commitment in launch → Stage 5. Commitment active → Stage 6.
+      </div>
+
+      <p>The mentor step (Stage 4) is a placeholder — mentor matching is not yet available. It shows once per user (tracked via a <code>mentor_step_seen</code> boolean on the profiles table) and is never shown again. This is a deliberate decision: the stage should exist in the flow even before the feature is built, so the product feels complete and the mentor concept is introduced early.</p>
+
+      <p>The stage bar across the top of every stage page shows all six stages with checkmarks for completed ones. This gives users a sense of where they are and how far they've come — without creating pressure to rush through.</p>
+
+      <h3 id="built-validator">14.2 The Validator Experience</h3>
+
+      <h4>Token-based access without accounts</h4>
+      <p>Validators do not need a Search Star account. Each validator invitation generates a unique token stored on the <code>validators</code> table. The validator's permanent personal URL is <code>/validate/[commitment_id]/[token]</code> — both IDs are path segments, not query parameters. Query parameters were tried first but proved unreliable: email clients (particularly Gmail on mobile) would mangle the token when it appeared after a <code>?</code>. Path segments are not mangled.</p>
+
+      <h4>Server component for token lookup</h4>
+      <p>The validator feed page is a Next.js server component. The token lookup — verifying the token is valid, fetching the commitment and posts, checking which posts have been confirmed — all happens server-side using the service client before the browser receives anything. Client-side Supabase queries against the validators table were tried first and failed intermittently due to RLS context issues for unauthenticated visitors. The server component approach eliminates this class of failure entirely.</p>
+
+      <h4>Arrival experience</h4>
+      <p>A validator's first visit (detected server-side by checking <code>status === 'invited'</code> before marking accepted) shows a personal arrival screen rather than the session feed directly. The screen names the practitioner who invited them, shows the commitment in a navy card, and explains in plain language what being a validator means across three numbered items. A soft Search Star introduction appears below the fold with a link to start their own commitment. Returning visits skip the arrival screen.</p>
+      <p>The validator is marked <code>active</code> on the server as soon as the page loads — clicking the link is the acceptance. No separate "accept" button is required. This is intentional: the act of opening the link is sufficient signal of willingness to witness.</p>
+
+      <h4>Email notifications</h4>
+      <p>Every session log triggers an email to all active validators for that commitment. The email includes the session number, practitioner name, commitment title, the session note (if written) in a blockquote, and a "Confirm this session →" button linking directly to the validator's personal feed URL. Email is sent via Resend from <code>noreply@searchstar.com</code> as a fire-and-forget operation — a failed email does not fail the session log.</p>
+
+      <h3 id="built-sessions">14.3 Session Logging</h3>
+
+      <h4>No one-session-per-day limit</h4>
+      <p>The original implementation enforced one session per day. This was removed. If a practitioner practices twice in a day, both sessions should be logged. The platform rewards showing up — not limiting how much showing up is recorded.</p>
+
+      <h4>Start ritual is session 0</h4>
+      <p>The start ritual is stored as a session post with <code>session_number: 0</code>. It does not count toward the session total displayed on the active streak page or the validator feed. It appears in the session history labelled "Start ritual." This distinction matters because the start ritual is a declaration of intent, not a practice session — conflating the two would misrepresent the practitioner's actual practice record.</p>
+
+      <h4>The three jobs</h4>
+      <p>The active streak page shows a "Your three jobs" section below the session logging form. The three jobs are: come back tomorrow and log your session (every day for 90 days); share your sponsor link with people who believe in what you're building; invite more validators. This section exists because early testing showed that users who completed the start ritual had no clear sense of what to do next. The three jobs make the ongoing commitment legible.</p>
+
+      <h3 id="built-decisions">14.4 Key Product Decisions Made in Build</h3>
+
+      <table>
+        <thead><tr><th>Decision</th><th>What was tried first</th><th>What was built</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Launch period length</td>
+            <td>14 days (as specced)</td>
+            <td>7 days</td>
+            <td>14 days felt too long for the first version. The urgency of a 7-day window keeps practitioner momentum higher. Can be extended later.</td>
+          </tr>
+          <tr>
+            <td>Validator URL format</td>
+            <td><code>/validate/[id]?token=X</code></td>
+            <td><code>/validate/[id]/[token]</code></td>
+            <td>Query parameters are mangled by Gmail and other mobile email clients. Path segments are not.</td>
+          </tr>
+          <tr>
+            <td>Validator page architecture</td>
+            <td>Client component with client-side Supabase query</td>
+            <td>Server component with service client</td>
+            <td>Client-side queries against the validators table failed intermittently for unauthenticated visitors. Server component eliminates the failure mode.</td>
+          </tr>
+          <tr>
+            <td>API route database client</td>
+            <td>Auth client (<code>createClient()</code>) for all DB operations</td>
+            <td>Service client (<code>createServiceClient()</code>) for DB operations; auth client only for <code>getUser()</code></td>
+            <td>RLS policies on commitments and practices caused intermittent failures for newly created users. Service client bypasses RLS entirely while still verifying the user's identity via auth.</td>
+          </tr>
+          <tr>
+            <td>One-session-per-day limit</td>
+            <td>Enforced — one session per day maximum</td>
+            <td>Removed — unlimited sessions per day</td>
+            <td>Practitioners who practice twice in a day should be able to log both sessions. The limit was arbitrary and punished genuine effort.</td>
+          </tr>
+          <tr>
+            <td>Validator acceptance</td>
+            <td>Separate "Accept" button on arrival screen</td>
+            <td>Accepted automatically on page load</td>
+            <td>Opening the link is sufficient signal of willingness. Requiring a button press adds friction without adding information.</td>
+          </tr>
+          <tr>
+            <td>Onboarding structure</td>
+            <td>4-step linear sequence, then dashboard</td>
+            <td>6-stage spine with persistent stage resolver</td>
+            <td>Users returning after days away need to land exactly where they are, not navigate from a dashboard. The resolver handles this automatically.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-green">
+        <strong>Pending product decisions:</strong> Validator removal (practitioner-initiated and validator-initiated). Validator notification preferences. Mentor matching (currently a placeholder). Trust record computation thresholds. Contribution split UI at payout moment.
+      </div>
+    </div>
+
 </main>
 
 <footer class="site-footer">
   <div class="wrap">
     <div class="footer-inner">
-      <span><strong>Search Star</strong> — Specification v3.0 — April 2026</span>
+      <span><strong>Search Star</strong> — Specification v3.1 — April 2026</span>
       <div class="footer-links">
         <a href="/spec">Spec</a>
         <a href="/roadmap">Roadmap</a>
