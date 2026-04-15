@@ -37,8 +37,12 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
   const [error, setError] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const [videoPreview, setVideoPreview] = useState<string | null>(null)
+  const [videoError, setVideoError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -75,6 +79,59 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setVideoError(null)
+
+    // 15-second limit enforced by file size: 15s @ 1080p ≈ 8MB max to be safe
+    const MAX_BYTES = 8 * 1024 * 1024 // 8MB
+    if (file.size > MAX_BYTES) {
+      setVideoError('Video too long — keep it under 15 seconds.')
+      if (videoInputRef.current) videoInputRef.current.value = ''
+      return
+    }
+
+    const objectUrl = URL.createObjectURL(file)
+    setVideoPreview(objectUrl)
+    setVideoUrl(null)
+    setUploading(true)
+    setError(null)
+
+    try {
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('upload_preset', uploadPreset)
+      formData.append('folder', 'searchstar/sessions')
+      formData.append('resource_type', 'video')
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) throw new Error('Video upload failed')
+      const data = await res.json()
+      setVideoUrl(data.secure_url as string)
+    } catch {
+      setError('Video upload failed. Try again.')
+      setVideoPreview(null)
+    } finally {
+      setUploading(false)
+      setTimeout(() => textareaRef.current?.focus(), 100)
+    }
+  }
+
+  const removeVideo = () => {
+    setVideoUrl(null)
+    setVideoPreview(null)
+    setVideoError(null)
+    if (videoInputRef.current) videoInputRef.current.value = ''
+  }
+
   const handleLog = async () => {
     if (submitting || uploading) return
     setSubmitting(true)
@@ -86,7 +143,9 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           body: body.trim() || undefined,
-          media_urls: photoUrl ? [photoUrl] : undefined,
+          media_urls: [photoUrl, videoUrl].filter(Boolean).length > 0
+            ? [photoUrl, videoUrl].filter(Boolean) as string[]
+            : undefined,
         }),
       })
 
@@ -96,7 +155,11 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
         setBody('')
         setPhotoUrl(null)
         setPhotoPreview(null)
+        setVideoUrl(null)
+        setVideoPreview(null)
+        setVideoError(null)
         if (fileInputRef.current) fileInputRef.current.value = ''
+        if (videoInputRef.current) videoInputRef.current.value = ''
 
         setTimeout(() => {
           setLogged(false)
@@ -258,6 +321,94 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
           </div>
         )}
 
+        {/* Video preview */}
+        {videoPreview && (
+          <div style={{ marginTop: '12px', position: 'relative', alignSelf: 'flex-start' }}>
+            <video
+              src={videoPreview}
+              style={{
+                width: '160px',
+                height: '120px',
+                objectFit: 'cover',
+                borderRadius: '3px',
+                opacity: uploading ? 0.5 : 1,
+                transition: 'opacity 0.2s',
+                display: 'block',
+              }}
+              muted
+              playsInline
+            />
+            {uploading && (
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(26,58,107,0.4)',
+                borderRadius: '3px',
+              }}>
+                <div className="upload-spinner" />
+              </div>
+            )}
+            {!uploading && (
+              <>
+                {/* Play indicator */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '6px',
+                  left: '6px',
+                  background: 'rgba(0,0,0,0.6)',
+                  borderRadius: '2px',
+                  padding: '2px 5px',
+                  fontFamily: 'Roboto, sans-serif',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: '#fff',
+                  letterSpacing: '0.05em',
+                }}>
+                  VIDEO
+                </div>
+                <button
+                  onClick={removeVideo}
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    background: 'rgba(0,0,0,0.7)',
+                    border: '1.5px solid rgba(255,255,255,0.4)',
+                    color: '#fff',
+                    fontSize: '14px',
+                    lineHeight: '1',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                  }}
+                >
+                  ×
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {videoError && (
+          <p style={{
+            fontFamily: 'Roboto, sans-serif',
+            fontSize: '13px',
+            color: 'rgba(255,120,120,0.9)',
+            marginTop: '8px',
+            marginBottom: 0,
+          }}>
+            {videoError}
+          </p>
+        )}
+
         {error && (
           <p style={{
             fontFamily: 'Roboto, sans-serif',
@@ -358,6 +509,89 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
           </div>
         )}
 
+        {/* Video buttons — only show when no video attached */}
+        {!videoPreview && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/*"
+              capture="environment"
+              onChange={handleVideoChange}
+              style={{ display: 'none' }}
+              id="video-camera-input"
+            />
+            <input
+              type="file"
+              accept="video/*"
+              onChange={handleVideoChange}
+              style={{ display: 'none' }}
+              id="video-gallery-input"
+            />
+
+            {/* Record video */}
+            <label
+              htmlFor="video-camera-input"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 12px',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.7)',
+                background: 'rgba(255,255,255,0.07)',
+                userSelect: 'none',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="23 7 16 12 23 17 23 7"/>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+              </svg>
+              Record
+            </label>
+
+            {/* Video from gallery */}
+            <label
+              htmlFor="video-gallery-input"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 12px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.5)',
+                background: 'transparent',
+                userSelect: 'none',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              Gallery
+            </label>
+          </div>
+        )}
+
         {/* After photo is attached — show replace option */}
         {photoPreview && !uploading && (
           <div style={{ marginBottom: '12px' }}>
@@ -390,6 +624,40 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
               style={{ display: 'none' }}
               id="photo-gallery-input"
             />
+          </div>
+        )}
+
+        {/* After video is attached — show replace option */}
+        {videoPreview && !uploading && (
+          <div style={{ marginBottom: '12px' }}>
+            <input
+              type="file"
+              accept="video/*"
+              onChange={handleVideoChange}
+              style={{ display: 'none' }}
+              id="video-replace-input"
+            />
+            <label
+              htmlFor="video-replace-input"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.4)',
+                userSelect: 'none',
+              }}
+            >
+              Replace video
+            </label>
           </div>
         )}
 
