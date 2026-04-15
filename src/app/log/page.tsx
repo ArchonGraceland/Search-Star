@@ -60,6 +60,13 @@ export default async function LogPage() {
     )
   }
 
+  const { data: recentPosts } = await db
+    .from('commitment_posts')
+    .select('id, body, session_number, posted_at, media_urls')
+    .eq('commitment_id', commitment.id)
+    .order('posted_at', { ascending: false })
+    .limit(5)
+
   const now = new Date()
   const streakStart = new Date(commitment.streak_starts_at)
   const dayNumber = Math.min(90, Math.max(1, Math.floor((now.getTime() - streakStart.getTime()) / 86400000) + 1))
@@ -70,6 +77,7 @@ export default async function LogPage() {
       title={commitment.title}
       dayNumber={dayNumber}
       sessionsLogged={commitment.sessions_logged ?? 0}
+      recentPosts={recentPosts ?? []}
     />
   )
 }

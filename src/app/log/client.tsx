@@ -2,138 +2,120 @@
 
 import { useState, useEffect, useRef } from 'react'
 
+interface Post {
+  id: string
+  body: string | null
+  session_number: number
+  posted_at: string
+  media_urls: string[] | null
+}
+
 interface Props {
   commitmentId: string
   title: string
   dayNumber: number
   sessionsLogged: number
+  recentPosts: Post[]
 }
 
 async function uploadToCloudinary(file: File): Promise<string> {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
+  const isVideo = file.type.startsWith('video/')
 
   const formData = new FormData()
   formData.append('file', file)
   formData.append('upload_preset', uploadPreset)
   formData.append('folder', 'searchstar/sessions')
+  if (isVideo) formData.append('resource_type', 'video')
 
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!res.ok) throw new Error('Photo upload failed')
+  const endpoint = isVideo ? 'video' : 'image'
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/${endpoint}/upload`,
+    { method: 'POST', body: formData }
+  )
+  if (!res.ok) throw new Error('Upload failed')
   const data = await res.json()
   return data.secure_url as string
 }
 
-export default function LogClient({ commitmentId, title, dayNumber, sessionsLogged }: Props) {
+function formatTime(iso: string) {
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+    ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
+function isVideo(url: string) {
+  return /\.(mp4|mov|avi|webm|mkv)/i.test(url) || url.includes('/video/upload/')
+}
+
+export default function LogClient({
+  commitmentId, title, dayNumber, sessionsLogged, recentPosts,
+}: Props) {
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [logged, setLogged] = useState(false)
   const [sessionCount, setSessionCount] = useState(sessionsLogged)
   const [error, setError] = useState<string | null>(null)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [videoUrl, setVideoUrl] = useState<string | null>(null)
-  const [videoPreview, setVideoPreview] = useState<string | null>(null)
-  const [videoError, setVideoError] = useState<string | null>(null)
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null)
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+  const [mediaIsVideo, setMediaIsVideo] = useState(false)
+  const [posts, setPosts] = useState<Post[]>(recentPosts)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const videoInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      textareaRef.current?.focus()
-    }, 50)
+    const timer = setTimeout(() => textareaRef.current?.focus(), 50)
     return () => clearTimeout(timer)
   }, [])
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const objectUrl = URL.createObjectURL(file)
-    setPhotoPreview(objectUrl)
-    setPhotoUrl(null)
-    setUploading(true)
+    const isVid = file.type.startsWith('video/')
+    setMediaIsVideo(isVid)
     setError(null)
 
-    try {
-      const url = await uploadToCloudinary(file)
-      setPhotoUrl(url)
-    } catch {
-      setError('Photo upload failed. Try again.')
-      setPhotoPreview(null)
-    } finally {
-      setUploading(false)
-      setTimeout(() => textareaRef.current?.focus(), 100)
-    }
-  }
-
-  const removePhoto = () => {
-    setPhotoUrl(null)
-    setPhotoPreview(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setVideoError(null)
-
-    // 15-second limit enforced by file size: 15s @ 1080p ≈ 8MB max to be safe
-    const MAX_BYTES = 50 * 1024 * 1024 // 50MB — generous for 15s at any quality
-    if (file.size > MAX_BYTES) {
-      setVideoError('Video too long — keep it under 15 seconds.')
-      if (videoInputRef.current) videoInputRef.current.value = ''
+    // Size gate: 50MB
+    if (file.size > 50 * 1024 * 1024) {
+      setError(isVid ? 'Video too large — keep it under 15 seconds.' : 'Photo too large.')
+      e.target.value = ''
       return
     }
 
     const objectUrl = URL.createObjectURL(file)
-    setVideoPreview(objectUrl)
-    setVideoUrl(null)
+    setMediaPreview(objectUrl)
+    setMediaUrl(null)
     setUploading(true)
-    setError(null)
 
     try {
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!
-      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('upload_preset', uploadPreset)
-      formData.append('folder', 'searchstar/sessions')
-      formData.append('resource_type', 'video')
-
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!res.ok) throw new Error('Video upload failed')
-      const data = await res.json()
-      setVideoUrl(data.secure_url as string)
+      const url = await uploadToCloudinary(file)
+      setMediaUrl(url)
     } catch {
-      setError('Video upload failed. Try again.')
-      setVideoPreview(null)
+      setError('Upload failed. Try again.')
+      setMediaPreview(null)
     } finally {
       setUploading(false)
       setTimeout(() => textareaRef.current?.focus(), 100)
     }
   }
 
-  const removeVideo = () => {
-    setVideoUrl(null)
-    setVideoPreview(null)
-    setVideoError(null)
-    if (videoInputRef.current) videoInputRef.current.value = ''
+  const removeMedia = () => {
+    setMediaUrl(null)
+    setMediaPreview(null)
+    setMediaIsVideo(false)
+    if (galleryInputRef.current) galleryInputRef.current.value = ''
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
   }
 
+  const hasContent = body.trim().length > 0 || mediaUrl !== null
+  const isReady = hasContent && !submitting && !uploading
+
   const handleLog = async () => {
-    if (submitting || uploading) return
+    if (!isReady) return
     setSubmitting(true)
     setError(null)
 
@@ -143,23 +125,28 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           body: body.trim() || undefined,
-          media_urls: [photoUrl, videoUrl].filter(Boolean).length > 0
-            ? [photoUrl, videoUrl].filter(Boolean) as string[]
-            : undefined,
+          media_urls: mediaUrl ? [mediaUrl] : undefined,
         }),
       })
 
       if (res.ok) {
+        const data = await res.json()
+        const newPost: Post = {
+          id: data.id,
+          body: body.trim() || null,
+          session_number: sessionCount + 1,
+          posted_at: new Date().toISOString(),
+          media_urls: mediaUrl ? [mediaUrl] : null,
+        }
+        setPosts(prev => [newPost, ...prev].slice(0, 5))
         setSessionCount(c => c + 1)
         setLogged(true)
         setBody('')
-        setPhotoUrl(null)
-        setPhotoPreview(null)
-        setVideoUrl(null)
-        setVideoPreview(null)
-        setVideoError(null)
-        if (fileInputRef.current) fileInputRef.current.value = ''
-        if (videoInputRef.current) videoInputRef.current.value = ''
+        setMediaUrl(null)
+        setMediaPreview(null)
+        setMediaIsVideo(false)
+        if (galleryInputRef.current) galleryInputRef.current.value = ''
+        if (cameraInputRef.current) cameraInputRef.current.value = ''
 
         setTimeout(() => {
           setLogged(false)
@@ -172,7 +159,6 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
     } catch {
       setError('Network error. Try again.')
     }
-
     setSubmitting(false)
   }
 
@@ -183,8 +169,22 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
     }
   }
 
-  const nextSession = sessionCount + 1
-  const isReady = !submitting && !uploading
+  const btnStyle = {
+    flex: 1,
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: '6px',
+    padding: '10px 12px',
+    borderRadius: '3px',
+    cursor: 'pointer' as const,
+    fontFamily: 'Roboto, sans-serif',
+    fontSize: '11px',
+    fontWeight: 700,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase' as const,
+    userSelect: 'none' as const,
+  }
 
   return (
     <div style={{
@@ -192,7 +192,7 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
       background: '#1a3a6b',
       display: 'flex',
       flexDirection: 'column',
-      fontFamily: '\"Crimson Text\", Georgia, serif',
+      fontFamily: '"Crimson Text", Georgia, serif',
       color: '#ffffff',
       overscrollBehavior: 'none',
     }}>
@@ -206,43 +206,29 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
         flexShrink: 0,
       }}>
         <span style={{
-          fontFamily: 'Roboto, sans-serif',
-          fontSize: '13px',
-          fontWeight: 700,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.5)',
+          fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700,
+          letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)',
         }}>
           Search Star
         </span>
         <div style={{ textAlign: 'right' }}>
           <div style={{
-            fontFamily: 'Roboto, sans-serif',
-            fontSize: '11px',
-            fontWeight: 700,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.4)',
+            fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700,
+            letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
           }}>
-            Day {dayNumber} &middot; Session {nextSession}
+            Day {dayNumber} &middot; Session {sessionCount + 1}
           </div>
           <div style={{
-            fontFamily: '\"Crimson Text\", Georgia, serif',
-            fontSize: '14px',
-            color: 'rgba(255,255,255,0.55)',
-            marginTop: '2px',
-            maxWidth: '200px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            fontSize: '14px', color: 'rgba(255,255,255,0.55)', marginTop: '2px',
+            maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {title}
           </div>
         </div>
       </div>
 
-      {/* Textarea */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 24px 12px' }}>
+      {/* Compose area — fixed height, not flex-fill */}
+      <div style={{ padding: '16px 24px 0', flexShrink: 0 }}>
         <textarea
           ref={textareaRef}
           value={body}
@@ -251,14 +237,16 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
           placeholder="What did you work on?"
           autoFocus
           style={{
-            flex: 1,
             width: '100%',
-            background: 'transparent',
-            border: 'none',
+            height: '120px',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '3px',
             outline: 'none',
             resize: 'none',
-            fontFamily: '\"Crimson Text\", Georgia, serif',
-            fontSize: '24px',
+            padding: '12px 14px',
+            fontFamily: '"Crimson Text", Georgia, serif',
+            fontSize: '20px',
             lineHeight: 1.5,
             color: '#ffffff',
             caretColor: 'rgba(255,255,255,0.8)',
@@ -266,130 +254,36 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
           className="log-textarea"
         />
 
-        {/* Photo preview */}
-        {photoPreview && (
-          <div style={{ marginTop: '12px', position: 'relative', alignSelf: 'flex-start' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photoPreview}
-              alt="Session photo"
-              style={{
-                width: '120px',
-                height: '120px',
-                objectFit: 'cover',
-                borderRadius: '3px',
-                opacity: uploading ? 0.5 : 1,
-                transition: 'opacity 0.2s',
-              }}
-            />
-            {uploading && (
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <div className="upload-spinner" />
-              </div>
+        {/* Media preview */}
+        {mediaPreview && (
+          <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
+            {mediaIsVideo ? (
+              <video
+                src={mediaPreview}
+                style={{ width: '140px', height: '100px', objectFit: 'cover', borderRadius: '3px', opacity: uploading ? 0.5 : 1, display: 'block' }}
+                muted playsInline
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mediaPreview}
+                alt="Session media"
+                style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '3px', opacity: uploading ? 0.5 : 1 }}
+              />
             )}
-            {!uploading && (
-              <button
-                onClick={removePhoto}
-                style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  width: '22px',
-                  height: '22px',
-                  borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.7)',
-                  border: '1.5px solid rgba(255,255,255,0.4)',
-                  color: '#fff',
-                  fontSize: '14px',
-                  lineHeight: '1',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 0,
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Video preview */}
-        {videoPreview && (
-          <div style={{ marginTop: '12px', position: 'relative', alignSelf: 'flex-start' }}>
-            <video
-              src={videoPreview}
-              style={{
-                width: '160px',
-                height: '120px',
-                objectFit: 'cover',
-                borderRadius: '3px',
-                opacity: uploading ? 0.5 : 1,
-                transition: 'opacity 0.2s',
-                display: 'block',
-              }}
-              muted
-              playsInline
-            />
             {uploading && (
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'rgba(26,58,107,0.4)',
-                borderRadius: '3px',
-              }}>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(26,58,107,0.5)', borderRadius: '3px' }}>
                 <div className="upload-spinner" />
               </div>
             )}
             {!uploading && (
               <>
-                {/* Play indicator */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: '6px',
-                  left: '6px',
-                  background: 'rgba(0,0,0,0.6)',
-                  borderRadius: '2px',
-                  padding: '2px 5px',
-                  fontFamily: 'Roboto, sans-serif',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  color: '#fff',
-                  letterSpacing: '0.05em',
-                }}>
-                  VIDEO
-                </div>
-                <button
-                  onClick={removeVideo}
-                  style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    width: '22px',
-                    height: '22px',
-                    borderRadius: '50%',
-                    background: 'rgba(0,0,0,0.7)',
-                    border: '1.5px solid rgba(255,255,255,0.4)',
-                    color: '#fff',
-                    fontSize: '14px',
-                    lineHeight: '1',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0,
-                  }}
-                >
+                {mediaIsVideo && (
+                  <div style={{ position: 'absolute', bottom: '5px', left: '5px', background: 'rgba(0,0,0,0.6)', borderRadius: '2px', padding: '2px 5px', fontFamily: 'Roboto, sans-serif', fontSize: '9px', fontWeight: 700, color: '#fff', letterSpacing: '0.05em' }}>
+                    VIDEO
+                  </div>
+                )}
+                <button onClick={removeMedia} style={{ position: 'absolute', top: '-8px', right: '-8px', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: '1.5px solid rgba(255,255,255,0.4)', color: '#fff', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                   ×
                 </button>
               </>
@@ -397,108 +291,31 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
           </div>
         )}
 
-        {videoError && (
-          <p style={{
-            fontFamily: 'Roboto, sans-serif',
-            fontSize: '13px',
-            color: 'rgba(255,120,120,0.9)',
-            marginTop: '8px',
-            marginBottom: 0,
-          }}>
-            {videoError}
-          </p>
-        )}
-
         {error && (
-          <p style={{
-            fontFamily: 'Roboto, sans-serif',
-            fontSize: '13px',
-            color: 'rgba(255,120,120,0.9)',
-            marginTop: '8px',
-            marginBottom: 0,
-          }}>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: 'rgba(255,120,120,0.9)', marginTop: '8px', marginBottom: 0 }}>
             {error}
           </p>
         )}
       </div>
 
-      {/* Bottom controls */}
-      <div style={{ padding: '0 24px 32px', flexShrink: 0 }}>
+      {/* Controls */}
+      <div style={{ padding: '12px 24px 0', flexShrink: 0 }}>
 
-        {/* Photo buttons — Take photo + Upload from gallery */}
-        {!photoPreview && (
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-            {/* Hidden inputs */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-              style={{ display: 'none' }}
-              id="photo-gallery-input"
-            />
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handlePhotoChange}
-              style={{ display: 'none' }}
-              id="photo-camera-input"
-            />
+        {/* Hidden inputs */}
+        <input ref={galleryInputRef} type="file" accept="image/*,video/*" onChange={handleMediaChange} style={{ display: 'none' }} id="gallery-input" />
+        <input ref={cameraInputRef} type="file" accept="image/*,video/*" capture="environment" onChange={handleMediaChange} style={{ display: 'none' }} id="camera-input" />
 
-            {/* Take photo */}
-            <label
-              htmlFor="photo-camera-input"
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '10px 12px',
-                border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.7)',
-                background: 'rgba(255,255,255,0.07)',
-                userSelect: 'none',
-              }}
-            >
+        {/* Media buttons */}
+        {!mediaPreview && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+            <label htmlFor="camera-input" style={{ ...btnStyle, border: '1px solid rgba(255,255,255,0.3)', color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.07)' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                 <circle cx="12" cy="13" r="4"/>
               </svg>
-              Take photo
+              Camera
             </label>
-
-            {/* Upload from gallery */}
-            <label
-              htmlFor="photo-gallery-input"
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '10px 12px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.5)',
-                background: 'transparent',
-                userSelect: 'none',
-              }}
-            >
+            <label htmlFor="gallery-input" style={{ ...btnStyle, border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.5)', background: 'transparent' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                 <circle cx="8.5" cy="8.5" r="1.5"/>
@@ -508,155 +325,10 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
             </label>
           </div>
         )}
-
-        {/* Video buttons — only show when no video attached */}
-        {!videoPreview && (
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-            <input
-              ref={videoInputRef}
-              type="file"
-              accept="video/*"
-              capture="environment"
-              onChange={handleVideoChange}
-              style={{ display: 'none' }}
-              id="video-camera-input"
-            />
-            <input
-              type="file"
-              accept="video/*"
-              onChange={handleVideoChange}
-              style={{ display: 'none' }}
-              id="video-gallery-input"
-            />
-
-            {/* Record video */}
-            <label
-              htmlFor="video-camera-input"
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '10px 12px',
-                border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.7)',
-                background: 'rgba(255,255,255,0.07)',
-                userSelect: 'none',
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="23 7 16 12 23 17 23 7"/>
-                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-              </svg>
-              Record
-            </label>
-
-            {/* Video from gallery */}
-            <label
-              htmlFor="video-gallery-input"
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '10px 12px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.5)',
-                background: 'transparent',
-                userSelect: 'none',
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-              Gallery
-            </label>
-          </div>
-        )}
-
-        {/* After photo is attached — show replace option */}
-        {photoPreview && !uploading && (
-          <div style={{ marginBottom: '12px' }}>
-            <label
-              htmlFor="photo-gallery-input"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.4)',
-                userSelect: 'none',
-              }}
-            >
-              Replace photo
-            </label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-              style={{ display: 'none' }}
-              id="photo-gallery-input"
-            />
-          </div>
-        )}
-
-        {/* After video is attached — show replace option */}
-        {videoPreview && !uploading && (
-          <div style={{ marginBottom: '12px' }}>
-            <input
-              type="file"
-              accept="video/*"
-              onChange={handleVideoChange}
-              style={{ display: 'none' }}
-              id="video-replace-input"
-            />
-            <label
-              htmlFor="video-replace-input"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.4)',
-                userSelect: 'none',
-              }}
-            >
-              Replace video
+        {mediaPreview && !uploading && (
+          <div style={{ marginBottom: '10px' }}>
+            <label htmlFor="gallery-input" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 10px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '3px', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', userSelect: 'none' }}>
+              Replace media
             </label>
           </div>
         )}
@@ -667,23 +339,16 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
           disabled={!isReady}
           style={{
             width: '100%',
-            padding: '18px',
-            background: logged ? 'rgba(255,255,255,0.15)' : '#ffffff',
-            color: logged ? '#ffffff' : '#1a3a6b',
+            padding: '16px',
+            background: logged ? 'rgba(255,255,255,0.15)' : isReady ? '#ffffff' : 'rgba(255,255,255,0.2)',
+            color: logged ? '#ffffff' : isReady ? '#1a3a6b' : 'rgba(255,255,255,0.4)',
             border: logged ? '2px solid rgba(255,255,255,0.3)' : 'none',
             borderRadius: '3px',
-            fontFamily: 'Roboto, sans-serif',
-            fontSize: '14px',
-            fontWeight: 700,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
+            fontFamily: 'Roboto, sans-serif', fontSize: '14px', fontWeight: 700,
+            letterSpacing: '0.12em', textTransform: 'uppercase',
             cursor: isReady ? 'pointer' : 'not-allowed',
-            opacity: isReady ? 1 : 0.6,
             transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
           }}
         >
           {logged ? (
@@ -693,34 +358,68 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
               </svg>
               Logged
             </>
-          ) : uploading ? (
-            'Uploading photo...'
-          ) : submitting ? (
-            'Logging...'
-          ) : (
-            'Log Session'
-          )}
+          ) : uploading ? 'Uploading...' : submitting ? 'Logging...' : 'Log Session'}
         </button>
 
-        <div style={{ textAlign: 'center', marginTop: '12px' }}>
-          <a href="/start" style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>
+        <div style={{ textAlign: 'center', marginTop: '10px' }}>
+          <a href="/start" style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>
             Back to streak
           </a>
         </div>
       </div>
+
+      {/* Recent sessions */}
+      {posts.length > 0 && (
+        <div style={{ flex: 1, padding: '20px 24px 32px', overflowY: 'auto' }}>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: '12px' }}>
+            Recent sessions
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {posts.map(post => (
+              <div key={post.id} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '3px', padding: '10px 12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                {/* Thumbnail if media */}
+                {post.media_urls && post.media_urls[0] && (
+                  <div style={{ flexShrink: 0 }}>
+                    {isVideo(post.media_urls[0]) ? (
+                      <div style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                      </div>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={post.media_urls[0]} alt="" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '2px', display: 'block' }} />
+                    )}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginBottom: '3px', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Session {post.session_number}</span>
+                    <span>{formatTime(post.posted_at)}</span>
+                  </div>
+                  {post.body && (
+                    <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      {post.body}
+                    </p>
+                  )}
+                  {!post.body && post.media_urls && post.media_urls[0] && (
+                    <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.3)', margin: 0, fontStyle: 'italic' }}>
+                      {isVideo(post.media_urls[0]) ? 'Video' : 'Photo'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <style>{`
         .log-textarea::placeholder { color: rgba(255,255,255,0.25); }
         .log-textarea:focus { outline: none; }
         * { -webkit-tap-highlight-color: transparent; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .upload-spinner {
-          width: 24px; height: 24px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: #ffffff;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-        }
+        .upload-spinner { width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #ffffff; border-radius: 50%; animation: spin 0.7s linear infinite; }
       `}</style>
     </div>
   )
