@@ -86,7 +86,7 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
     setVideoError(null)
 
     // 15-second limit enforced by file size: 15s @ 1080p ≈ 8MB max to be safe
-    const MAX_BYTES = 8 * 1024 * 1024 // 8MB
+    const MAX_BYTES = 50 * 1024 * 1024 // 50MB — generous for 15s at any quality
     if (file.size > MAX_BYTES) {
       setVideoError('Video too long — keep it under 15 seconds.')
       if (videoInputRef.current) videoInputRef.current.value = ''
