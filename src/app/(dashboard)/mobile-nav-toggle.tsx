@@ -67,8 +67,7 @@ export default function MobileNavToggle({ navLinks, displayName, children }: Pro
         </div>
 
         {/* Nav — CSS controls visibility */}
-        <div className="dashboard-nav-drawer" data-open={open ? 'true' : 'false'}
-          style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div className="dashboard-nav-drawer" data-open={open ? 'true' : 'false'}>
           <nav style={{ flex: 1, padding: '16px 0' }}>
             {navLinks.map((link) => (
               <Link
