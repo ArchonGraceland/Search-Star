@@ -74,6 +74,25 @@ export default function ActiveStreakClient({
 
   return (
     <StageShell stage={6}>
+      {/* Quick log shortcut */}
+      <div style={{ marginBottom: '20px', textAlign: 'right' }}>
+        <Link href="/log" style={{
+          fontFamily: 'Roboto, sans-serif',
+          fontSize: '11px',
+          fontWeight: 700,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: '#1a3a6b',
+          textDecoration: 'none',
+          padding: '6px 14px',
+          border: '1px solid #1a3a6b',
+          borderRadius: '3px',
+          display: 'inline-block',
+        }}>
+          Quick log
+        </Link>
+      </div>
+
       {/* Title */}
       <div style={{ marginBottom: '28px' }}>
         <p style={{ ...labelStyle, marginBottom: '6px' }}>Active streak</p>
