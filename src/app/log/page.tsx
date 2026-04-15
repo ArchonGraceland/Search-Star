@@ -7,7 +7,6 @@ export default async function LogPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Use service client to bypass RLS for the lookup
   const db = createServiceClient()
   const { data: commitment } = await db
     .from('commitments')
@@ -65,17 +64,20 @@ export default async function LogPage() {
     .select('id, body, session_number, posted_at, media_urls')
     .eq('commitment_id', commitment.id)
     .order('posted_at', { ascending: false })
-    .limit(5)
+    .limit(10)
 
   const now = new Date()
   const streakStart = new Date(commitment.streak_starts_at)
+  const streakEnd = new Date(commitment.streak_ends_at)
   const dayNumber = Math.min(90, Math.max(1, Math.floor((now.getTime() - streakStart.getTime()) / 86400000) + 1))
+  const daysRemaining = Math.max(0, Math.ceil((streakEnd.getTime() - now.getTime()) / 86400000))
 
   return (
     <LogClient
       commitmentId={commitment.id}
       title={commitment.title}
       dayNumber={dayNumber}
+      daysRemaining={daysRemaining}
       sessionsLogged={commitment.sessions_logged ?? 0}
       recentPosts={recentPosts ?? []}
     />
