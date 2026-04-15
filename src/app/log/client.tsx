@@ -274,44 +274,124 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
       {/* Bottom controls */}
       <div style={{ padding: '0 24px 32px', flexShrink: 0 }}>
 
-        {/* Camera button */}
-        <div style={{ marginBottom: '12px' }}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handlePhotoChange}
-            style={{ display: 'none' }}
-            id="photo-input"
-          />
-          <label
-            htmlFor="photo-input"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              border: '1px solid rgba(255,255,255,0.25)',
-              borderRadius: '3px',
-              cursor: 'pointer',
-              fontFamily: 'Roboto, sans-serif',
-              fontSize: '12px',
-              fontWeight: 700,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: photoUrl ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)',
-              background: photoUrl ? 'rgba(255,255,255,0.1)' : 'transparent',
-              transition: 'all 0.15s',
-              userSelect: 'none',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-            {photoUrl ? 'Photo added' : 'Add photo'}
-          </label>
-        </div>
+        {/* Photo buttons — Take photo + Upload from gallery */}
+        {!photoPreview && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            {/* Hidden inputs */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              style={{ display: 'none' }}
+              id="photo-gallery-input"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoChange}
+              style={{ display: 'none' }}
+              id="photo-camera-input"
+            />
+
+            {/* Take photo */}
+            <label
+              htmlFor="photo-camera-input"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 12px',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.7)',
+                background: 'rgba(255,255,255,0.07)',
+                userSelect: 'none',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+              Take photo
+            </label>
+
+            {/* Upload from gallery */}
+            <label
+              htmlFor="photo-gallery-input"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 12px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.5)',
+                background: 'transparent',
+                userSelect: 'none',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              Gallery
+            </label>
+          </div>
+        )}
+
+        {/* After photo is attached — show replace option */}
+        {photoPreview && !uploading && (
+          <div style={{ marginBottom: '12px' }}>
+            <label
+              htmlFor="photo-gallery-input"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.4)',
+                userSelect: 'none',
+              }}
+            >
+              Replace photo
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              style={{ display: 'none' }}
+              id="photo-gallery-input"
+            />
+          </div>
+        )}
 
         {/* Log button */}
         <button
