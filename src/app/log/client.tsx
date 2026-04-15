@@ -18,6 +18,7 @@ interface Props {
   daysRemaining: number
   sessionsLogged: number
   recentPosts: Post[]
+  loggedToday: boolean
 }
 
 async function uploadToCloudinary(file: File): Promise<string> {
@@ -53,12 +54,13 @@ function isVideoUrl(url: string) {
 }
 
 export default function LogClient({
-  commitmentId, title, dayNumber, daysRemaining, sessionsLogged, recentPosts,
+  commitmentId, title, dayNumber, daysRemaining, sessionsLogged, recentPosts, loggedToday: initialLoggedToday,
 }: Props) {
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [logged, setLogged] = useState(false)
+  const [loggedToday, setLoggedToday] = useState(initialLoggedToday)
   const [lastLoggedAt, setLastLoggedAt] = useState<string | null>(null)
   const [sessionCount, setSessionCount] = useState(sessionsLogged)
   const [error, setError] = useState<string | null>(null)
@@ -138,6 +140,7 @@ export default function LogClient({
         setPosts(prev => [newPost, ...prev].slice(0, 10))
         setSessionCount(c => c + 1)
         setLogged(true)
+        setLoggedToday(true)
         setLastLoggedAt(new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
         setBody('')
         setMediaUrl(null)
@@ -206,6 +209,32 @@ export default function LogClient({
               Dashboard
             </Link>
           </div>
+
+          {/* Today complete indicator */}
+          {loggedToday && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              background: 'rgba(74,222,128,0.12)',
+              border: '1px solid rgba(74,222,128,0.3)',
+              borderRadius: '3px', padding: '10px 16px', marginBottom: '20px',
+            }}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <circle cx="9" cy="9" r="9" fill="rgba(74,222,128,0.25)"/>
+                <circle cx="9" cy="9" r="7" fill="rgba(74,222,128,0.2)" stroke="rgba(74,222,128,0.6)" strokeWidth="1"/>
+                <path d="M5.5 9l2.5 2.5 4.5-5" stroke="#4ade80" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div>
+                <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(74,222,128,0.9)' }}>
+                  Done for today
+                </span>
+                {lastLoggedAt && (
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginLeft: '8px' }}>
+                    Last logged at {lastLoggedAt}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* TWO-COLUMN LAYOUT on wide screens */}
           <div style={{

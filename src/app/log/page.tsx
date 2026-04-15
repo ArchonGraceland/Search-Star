@@ -72,6 +72,11 @@ export default async function LogPage() {
   const dayNumber = Math.min(90, Math.max(1, Math.floor((now.getTime() - streakStart.getTime()) / 86400000) + 1))
   const daysRemaining = Math.max(0, Math.ceil((streakEnd.getTime() - now.getTime()) / 86400000))
 
+  const today = new Date().toDateString()
+  const loggedToday = (recentPosts ?? []).some(
+    p => new Date(p.posted_at).toDateString() === today
+  )
+
   return (
     <LogClient
       commitmentId={commitment.id}
@@ -80,6 +85,7 @@ export default async function LogPage() {
       daysRemaining={daysRemaining}
       sessionsLogged={commitment.sessions_logged ?? 0}
       recentPosts={recentPosts ?? []}
+      loggedToday={loggedToday}
     />
   )
 }
