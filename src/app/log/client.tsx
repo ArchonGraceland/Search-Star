@@ -302,8 +302,10 @@ export default function LogClient({
       <div style={{ padding: '12px 24px 0', flexShrink: 0 }}>
 
         {/* Hidden inputs */}
+        {/* Gallery: accepts photos and videos */}
         <input ref={galleryInputRef} type="file" accept="image/*,video/*" onChange={handleMediaChange} style={{ display: 'none' }} id="gallery-input" />
-        <input ref={cameraInputRef} type="file" accept="image/*,video/*" capture="environment" onChange={handleMediaChange} style={{ display: 'none' }} id="camera-input" />
+        {/* Camera: image/* only — the reliable way to force camera open on Android */}
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleMediaChange} style={{ display: 'none' }} id="camera-input" />
 
         {/* Media buttons */}
         {!mediaPreview && (
