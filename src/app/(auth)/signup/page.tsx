@@ -35,7 +35,7 @@ export default function Signup() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex' }}>
+    <div className="login-shell">
 
       {/* ── Left: Form ── */}
       <div style={{

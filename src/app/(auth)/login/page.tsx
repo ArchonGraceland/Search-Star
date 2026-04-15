@@ -36,14 +36,10 @@ export default function Login() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex' }}>
+    <div className="login-shell">
 
       {/* ── Left: Form ── */}
-      <div style={{
-        flex: '0 0 480px', minHeight: '100vh',
-        background: '#ffffff', display: 'flex', flexDirection: 'column',
-        borderRight: '1px solid #e8e8e8',
-      }}>
+      <div className="login-form-panel">
         {/* Logo */}
         <div style={{ padding: '32px 48px', borderBottom: '1px solid #e8e8e8' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
@@ -133,8 +129,7 @@ export default function Login() {
       </div>
 
       {/* ── Right: Image ── */}
-      <div style={{
-        flex: 1, minHeight: '100vh', position: 'relative',
+      <div className="login-image-panel" style={{
         backgroundImage: 'url(/images/hero/table-v2-wider.jpg)',
         backgroundSize: 'cover', backgroundPosition: 'center 40%',
       }}>

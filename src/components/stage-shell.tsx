@@ -36,7 +36,7 @@ export default function StageShell({ stage, children }: StageShellProps) {
       <StageBar current={stage} />
 
       {/* Content */}
-      <main style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '48px 24px 64px' }}>
+      <main className="stage-shell-content" style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '48px 24px 64px' }}>
         <div style={{ width: '100%', maxWidth: '560px' }}>
           {children}
         </div>

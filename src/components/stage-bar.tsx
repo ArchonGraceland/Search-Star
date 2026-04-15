@@ -40,7 +40,7 @@ export default function StageBar({ current }: { current: number }) {
                   </svg>
                 )}
               </div>
-              <span style={{
+              <span className="stage-bar-label" style={{
                 fontFamily: 'Roboto, sans-serif', fontSize: '9px',
                 fontWeight: active ? 700 : 500, letterSpacing: '0.06em',
                 textTransform: 'uppercase', color: active ? '#1a3a6b' : done ? '#5a5a5a' : '#b8b8b8',

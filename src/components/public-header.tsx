@@ -17,9 +17,10 @@ export default function PublicHeader() {
         >
           Search Star
         </Link>
-        <nav style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <nav className="public-header-nav">
           <Link
             href="/onboarding"
+            className="nav-how-it-works"
             style={{
               fontFamily: 'Roboto, sans-serif',
               fontSize: '11px',

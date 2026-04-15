@@ -159,3 +159,189 @@ body {
 }
 
 .callout-teal { background: #f0fdfa; border-left: 3px solid #0d9488; }
+
+/* ═══════════════════════════════════════════════════
+   RESPONSIVE LAYOUT — Mobile-first breakpoints
+   ═══════════════════════════════════════════════════ */
+
+/* Dashboard layout: sidebar → top nav on mobile */
+.dashboard-shell {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.dashboard-sidebar {
+  width: 220px;
+  background: #1a3a6b;
+  border-right: 3px solid #112a4f;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0;
+  flex-shrink: 0;
+}
+
+.dashboard-main {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+/* Mobile hamburger toggle (hidden on desktop) */
+.mobile-nav-toggle {
+  display: none;
+}
+
+.mobile-nav-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .dashboard-shell {
+    flex-direction: column;
+  }
+
+  .dashboard-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 3px solid #112a4f;
+    padding: 0;
+    /* Collapsed by default on mobile — toggled by JS */
+  }
+
+  .dashboard-sidebar-inner {
+    display: none;
+  }
+
+  .dashboard-sidebar-inner.open {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0 24px;
+  }
+
+  .dashboard-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+  }
+
+  .mobile-nav-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 3px;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.7);
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    gap: 6px;
+  }
+
+  .dashboard-main {
+    padding: 24px 20px;
+  }
+}
+
+/* Login: side-by-side → stacked */
+.login-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.login-form-panel {
+  flex: 0 0 480px;
+  min-height: 100vh;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e8e8e8;
+}
+
+.login-image-panel {
+  flex: 1;
+  min-height: 100vh;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .login-shell {
+    flex-direction: column;
+  }
+
+  .login-form-panel {
+    flex: none;
+    min-height: auto;
+    width: 100%;
+    border-right: none;
+  }
+
+  .login-image-panel {
+    display: none;
+  }
+}
+
+/* Public header: nav overflow on mobile */
+.public-header-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 520px) {
+  .public-header-nav .nav-how-it-works {
+    display: none;
+  }
+}
+
+/* Stage bar: compress labels on mobile */
+@media (max-width: 480px) {
+  .stage-bar-label {
+    display: none;
+  }
+}
+
+/* Stage shell content: less padding on mobile */
+@media (max-width: 600px) {
+  .stage-shell-content {
+    padding: 24px 20px 48px !important;
+  }
+}
+
+/* Log grid: already handled inline, but ensure single col on mobile */
+@media (max-width: 700px) {
+  .log-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* General: prevent content overflow on small screens */
+img, video {
+  max-width: 100%;
+}
+
+/* Cards: reduce padding on mobile */
+@media (max-width: 600px) {
+  .card-grace {
+    padding: 16px !important;
+  }
+}
+
+/* Dashboard sidebar inner: always visible on desktop */
+@media (min-width: 769px) {
+  .dashboard-sidebar-inner {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1;
+  }
+  .dashboard-sidebar-header {
+    padding: 0 20px 24px !important;
+  }
+}
