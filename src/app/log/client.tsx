@@ -9,15 +9,37 @@ interface Props {
   sessionsLogged: number
 }
 
+async function uploadToCloudinary(file: File): Promise<string> {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
+
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('upload_preset', uploadPreset)
+  formData.append('folder', 'searchstar/sessions')
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!res.ok) throw new Error('Photo upload failed')
+  const data = await res.json()
+  return data.secure_url as string
+}
+
 export default function LogClient({ commitmentId, title, dayNumber, sessionsLogged }: Props) {
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [logged, setLogged] = useState(false)
   const [sessionCount, setSessionCount] = useState(sessionsLogged)
   const [error, setError] = useState<string | null>(null)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-focus on mount — critical for instant keyboard on PWA launch
   useEffect(() => {
     const timer = setTimeout(() => {
       textareaRef.current?.focus()
@@ -25,8 +47,36 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
     return () => clearTimeout(timer)
   }, [])
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const objectUrl = URL.createObjectURL(file)
+    setPhotoPreview(objectUrl)
+    setPhotoUrl(null)
+    setUploading(true)
+    setError(null)
+
+    try {
+      const url = await uploadToCloudinary(file)
+      setPhotoUrl(url)
+    } catch {
+      setError('Photo upload failed. Try again.')
+      setPhotoPreview(null)
+    } finally {
+      setUploading(false)
+      setTimeout(() => textareaRef.current?.focus(), 100)
+    }
+  }
+
+  const removePhoto = () => {
+    setPhotoUrl(null)
+    setPhotoPreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleLog = async () => {
-    if (submitting) return
+    if (submitting || uploading) return
     setSubmitting(true)
     setError(null)
 
@@ -34,15 +84,20 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
       const res = await fetch(`/api/commitments/${commitmentId}/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: body.trim() || undefined }),
+        body: JSON.stringify({
+          body: body.trim() || undefined,
+          media_urls: photoUrl ? [photoUrl] : undefined,
+        }),
       })
 
       if (res.ok) {
         setSessionCount(c => c + 1)
         setLogged(true)
         setBody('')
+        setPhotoUrl(null)
+        setPhotoPreview(null)
+        if (fileInputRef.current) fileInputRef.current.value = ''
 
-        // Show success briefly, then reset for next entry
         setTimeout(() => {
           setLogged(false)
           setTimeout(() => textareaRef.current?.focus(), 50)
@@ -59,7 +114,6 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Cmd/Ctrl+Enter to submit
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault()
       handleLog()
@@ -67,6 +121,7 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
   }
 
   const nextSession = sessionCount + 1
+  const isReady = !submitting && !uploading
 
   return (
     <div style={{
@@ -74,10 +129,8 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
       background: '#1a3a6b',
       display: 'flex',
       flexDirection: 'column',
-      padding: '0',
-      fontFamily: '"Crimson Text", Georgia, serif',
+      fontFamily: '\"Crimson Text\", Georgia, serif',
       color: '#ffffff',
-      // Prevent iOS bounce
       overscrollBehavior: 'none',
     }}>
 
@@ -99,7 +152,6 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
         }}>
           Search Star
         </span>
-
         <div style={{ textAlign: 'right' }}>
           <div style={{
             fontFamily: 'Roboto, sans-serif',
@@ -112,7 +164,7 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
             Day {dayNumber} &middot; Session {nextSession}
           </div>
           <div style={{
-            fontFamily: '"Crimson Text", Georgia, serif',
+            fontFamily: '\"Crimson Text\", Georgia, serif',
             fontSize: '14px',
             color: 'rgba(255,255,255,0.55)',
             marginTop: '2px',
@@ -126,8 +178,8 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
         </div>
       </div>
 
-      {/* Textarea — fills the middle */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px 24px 16px' }}>
+      {/* Textarea */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 24px 12px' }}>
         <textarea
           ref={textareaRef}
           value={body}
@@ -142,33 +194,129 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
             border: 'none',
             outline: 'none',
             resize: 'none',
-            fontFamily: '"Crimson Text", Georgia, serif',
+            fontFamily: '\"Crimson Text\", Georgia, serif',
             fontSize: '24px',
             lineHeight: 1.5,
             color: '#ffffff',
             caretColor: 'rgba(255,255,255,0.8)',
-            // Placeholder color handled via CSS class
           }}
           className="log-textarea"
         />
+
+        {/* Photo preview */}
+        {photoPreview && (
+          <div style={{ marginTop: '12px', position: 'relative', alignSelf: 'flex-start' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photoPreview}
+              alt="Session photo"
+              style={{
+                width: '120px',
+                height: '120px',
+                objectFit: 'cover',
+                borderRadius: '3px',
+                opacity: uploading ? 0.5 : 1,
+                transition: 'opacity 0.2s',
+              }}
+            />
+            {uploading && (
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <div className="upload-spinner" />
+              </div>
+            )}
+            {!uploading && (
+              <button
+                onClick={removePhoto}
+                style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  background: 'rgba(0,0,0,0.7)',
+                  border: '1.5px solid rgba(255,255,255,0.4)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  lineHeight: '1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        )}
 
         {error && (
           <p style={{
             fontFamily: 'Roboto, sans-serif',
             fontSize: '13px',
             color: 'rgba(255,120,120,0.9)',
-            marginBottom: '8px',
+            marginTop: '8px',
+            marginBottom: 0,
           }}>
             {error}
           </p>
         )}
       </div>
 
-      {/* Bottom button */}
+      {/* Bottom controls */}
       <div style={{ padding: '0 24px 32px', flexShrink: 0 }}>
+
+        {/* Camera button */}
+        <div style={{ marginBottom: '12px' }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoChange}
+            style={{ display: 'none' }}
+            id="photo-input"
+          />
+          <label
+            htmlFor="photo-input"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontFamily: 'Roboto, sans-serif',
+              fontSize: '12px',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: photoUrl ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)',
+              background: photoUrl ? 'rgba(255,255,255,0.1)' : 'transparent',
+              transition: 'all 0.15s',
+              userSelect: 'none',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            {photoUrl ? 'Photo added' : 'Add photo'}
+          </label>
+        </div>
+
+        {/* Log button */}
         <button
           onClick={handleLog}
-          disabled={submitting}
+          disabled={!isReady}
           style={{
             width: '100%',
             padding: '18px',
@@ -181,8 +329,8 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
             fontWeight: 700,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
-            cursor: submitting ? 'not-allowed' : 'pointer',
-            opacity: submitting ? 0.7 : 1,
+            cursor: isReady ? 'pointer' : 'not-allowed',
+            opacity: isReady ? 1 : 0.6,
             transition: 'all 0.2s ease',
             display: 'flex',
             alignItems: 'center',
@@ -197,6 +345,8 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
               </svg>
               Logged
             </>
+          ) : uploading ? (
+            'Uploading photo...'
           ) : submitting ? (
             'Logging...'
           ) : (
@@ -204,31 +354,24 @@ export default function LogClient({ commitmentId, title, dayNumber, sessionsLogg
           )}
         </button>
 
-        <div style={{
-          textAlign: 'center',
-          marginTop: '12px',
-          fontFamily: 'Roboto, sans-serif',
-          fontSize: '11px',
-          color: 'rgba(255,255,255,0.3)',
-        }}>
-          <a
-            href={`/start`}
-            style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}
-          >
+        <div style={{ textAlign: 'center', marginTop: '12px' }}>
+          <a href="/start" style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>
             Back to streak
           </a>
         </div>
       </div>
 
       <style>{`
-        .log-textarea::placeholder {
-          color: rgba(255,255,255,0.25);
-        }
-        .log-textarea:focus {
-          outline: none;
-        }
-        * {
-          -webkit-tap-highlight-color: transparent;
+        .log-textarea::placeholder { color: rgba(255,255,255,0.25); }
+        .log-textarea:focus { outline: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .upload-spinner {
+          width: 24px; height: 24px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: #ffffff;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
         }
       `}</style>
     </div>
