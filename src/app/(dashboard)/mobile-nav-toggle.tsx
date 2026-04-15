@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 
@@ -12,25 +12,50 @@ interface Props {
 
 export default function MobileNavToggle({ navLinks, displayName, children }: Props) {
   const [open, setOpen] = useState(false)
+  const sidebarRef = useRef<HTMLElement>(null)
+
+  // Close on outside tap
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('touchstart', handler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('touchstart', handler)
+    }
+  }, [open])
 
   return (
     <div className="dashboard-shell">
-      <aside className="dashboard-sidebar">
+      <aside className="dashboard-sidebar" ref={sidebarRef}>
+
         {/* Header row — always visible */}
-        <div className="dashboard-sidebar-header" style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)',
+        }}>
           <div>
             <Link href="/" style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '20px', fontWeight: 700, color: '#ffffff', textDecoration: 'none' }}>
               Search Star
             </Link>
             {displayName && (
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)', marginTop: '4px', fontFamily: 'Roboto, sans-serif' }}>
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)', marginTop: '2px', fontFamily: 'Roboto, sans-serif', margin: '2px 0 0' }}>
                 {displayName}
               </p>
             )}
           </div>
-          {/* Mobile toggle button */}
-          <button className="mobile-nav-toggle" onClick={() => setOpen(o => !o)}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          {/* Mobile-only toggle */}
+          <button
+            className="mobile-nav-toggle"
+            onClick={() => setOpen(o => !o)}
+            aria-label={open ? 'Close menu' : 'Open menu'}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               {open ? (
                 <><line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/></>
               ) : (
@@ -41,8 +66,8 @@ export default function MobileNavToggle({ navLinks, displayName, children }: Pro
           </button>
         </div>
 
-        {/* Nav — toggleable on mobile, always visible on desktop */}
-        <div className={`dashboard-sidebar-inner${open ? ' open' : ''}`}
+        {/* Nav — CSS controls visibility */}
+        <div className="dashboard-nav-drawer" data-open={open ? 'true' : 'false'}
           style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <nav style={{ flex: 1, padding: '16px 0' }}>
             {navLinks.map((link) => (
@@ -64,6 +89,7 @@ export default function MobileNavToggle({ navLinks, displayName, children }: Pro
             <SignOutButton />
           </div>
         </div>
+
       </aside>
 
       <main className="dashboard-main">
