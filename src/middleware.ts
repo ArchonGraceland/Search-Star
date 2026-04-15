@@ -30,6 +30,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Logged-in users hitting the homepage go straight to /log
+  if (user && request.nextUrl.pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/log'
+    return NextResponse.redirect(url)
+  }
+
   // Protected routes — redirect to login if not authenticated
   const protectedPrefixes = [
     '/dashboard', '/account', '/admin', '/support',
