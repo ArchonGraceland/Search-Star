@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import PublicFooter from '@/components/public-footer'
 
 export const viewport: Viewport = {
   themeColor: '#1a3a6b',
@@ -30,7 +31,10 @@ export default function RootLayout({
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <PublicFooter />
+      </body>
     </html>
   );
 }

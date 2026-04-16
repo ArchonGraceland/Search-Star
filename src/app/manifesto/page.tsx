@@ -1,5 +1,4 @@
 import PublicHeader from '@/components/public-header'
-import PublicFooter from '@/components/public-footer'
 import Link from 'next/link'
 
 export const metadata = {
@@ -165,7 +164,6 @@ export default function ManifestoPage() {
         </section>
 
       </main>
-      <PublicFooter />
     </>
   )
 }
