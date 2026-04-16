@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Search Star — Specification v3.1</title>
+  <title>Search Star — Specification v4.0</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
@@ -75,7 +75,7 @@
   <div class="wrap">
     <div class="header-top">Search Star — Product Specification</div>
     <h1>Search Star</h1>
-    <p class="header-sub">A platform for building genuine skills through sustained practice, validated by people who know you, and recognized by the institutions and sponsors who reward authentic human development.</p>
+    <p class="header-sub">A platform for building genuine skills through sustained practice, witnessed by sponsors who put their own stake behind the work, and recognized by the institutions and sponsors who reward authentic human development.</p>
     <nav class="header-nav">
       <a href="/spec" class="active">Spec</a>
       <a href="/roadmap">Roadmap</a>
@@ -88,8 +88,8 @@
   <div class="wrap">
 
     <div class="spec-meta">
-      <span>Version 3.1</span>
-      <span>April 2026 — updated</span>
+      <span>Version 4.0</span>
+      <span>April 2026</span>
       <span>Status: Active</span>
     </div>
 
@@ -102,7 +102,7 @@
       <a class="toc-indent" href="#philosophy-garbage">2.1 The Garbage Culture Problem</a>
       <a class="toc-indent" href="#philosophy-formation">2.2 Formation vs. Performance</a>
       <a class="toc-indent" href="#philosophy-conscientiousness">2.3 Conscientiousness as Signal</a>
-      <a class="toc-indent" href="#philosophy-trust">2.4 Trust as Action</a>
+      <a class="toc-indent" href="#philosophy-stake">2.4 Trust as Stake</a>
       <a href="#onboarding">3. Onboarding &amp; Identity</a>
       <a class="toc-indent" href="#onboarding-sequence">3.1 Sequence: Practice First</a>
       <a class="toc-indent" href="#onboarding-profile">3.2 Profile Completion</a>
@@ -112,43 +112,39 @@
       <a class="toc-indent" href="#commitment-launch">4.2 The 14-Day Launch Period</a>
       <a class="toc-indent" href="#commitment-start">4.3 The Start Ritual</a>
       <a class="toc-indent" href="#commitment-cycle">4.4 The Annual Cycle</a>
-      <a href="#practice">5. Practice &amp; Skills</a>
+      <a href="#practice">5. Practice &amp; Documentation</a>
       <a class="toc-indent" href="#practice-what">5.1 What Qualifies</a>
       <a class="toc-indent" href="#practice-documentation">5.2 Documenting Practice</a>
       <a class="toc-indent" href="#practice-privacy">5.3 Private by Default</a>
-      <a class="toc-indent" href="#practice-validatorfeed">5.4 The Validator Feed</a>
+      <a class="toc-indent" href="#practice-sponsorfeed">5.4 The Sponsor Feed</a>
       <a class="toc-indent" href="#practice-categories">5.5 Skill Categories</a>
       <a class="toc-indent" href="#practice-naming">5.6 Naming Your Practice</a>
       <a href="#trust">6. Trust</a>
       <a class="toc-indent" href="#trust-definition">6.1 Trust as Growth, Not Grade</a>
       <a class="toc-indent" href="#trust-stages">6.2 Trust Stages</a>
       <a class="toc-indent" href="#trust-dimensions">6.3 Dimensions: Depth, Breadth, Durability</a>
-      <a class="toc-indent" href="#trust-validators">6.4 Validators &amp; Vouching</a>
-      <a class="toc-indent" href="#trust-quality">6.5 Quality Dimension: Beauty, Grace, Truth</a>
-      <a class="toc-indent" href="#trust-antigaming">6.6 Anti-Gaming Properties</a>
-      <a class="toc-indent" href="#trust-sharing">6.7 Sharing Your Trust</a>
-      <a href="#formation">7. Formation &amp; Leadership</a>
-      <a class="toc-indent" href="#formation-nofeed">7.1 No Public Feed</a>
-      <a class="toc-indent" href="#formation-mentorship">7.2 Mentorship Tracks</a>
-      <a class="toc-indent" href="#formation-roles">7.3 Leadership Roles</a>
-      <a class="toc-indent" href="#formation-domain">7.4 Domain Mentorship</a>
-      <a class="toc-indent" href="#formation-recognition">7.5 Recognition Through Others</a>
-      <a class="toc-indent" href="#formation-livelihood">7.6 Leadership as Livelihood</a>
-      <a href="#selforganizing">8. Self-Organizing Systems</a>
-      <a class="toc-indent" href="#selforganizing-precedents">8.1 Precedents</a>
-      <a class="toc-indent" href="#selforganizing-principles">8.2 Structural Principles</a>
-      <a href="#sponsorship">9. Sponsorship Model</a>
-      <a class="toc-indent" href="#sponsorship-mechanic">7.1 The Practice Sponsorship Mechanic</a>
-      <a class="toc-indent" href="#sponsorship-unified">7.2 Users and Sponsors Are the Same People</a>
-      <a class="toc-indent" href="#sponsorship-types">7.3 Sponsor Types</a>
-      <a class="toc-indent" href="#sponsorship-institutional">7.4 Keeping Institutional Sponsorship in the Background</a>
-      <a class="toc-indent" href="#sponsorship-fees">8.5 Voluntary Donation Model</a>
-      <a class="toc-indent" href="#sponsorship-payout">7.6 Payout Rules</a>
-      <a href="#institutional">10. Institutional Portal</a>
-      <a class="toc-indent" href="#institutional-benefit">10.1 Benefit Model</a>
-      <a class="toc-indent" href="#institutional-marketplace">10.2 Sponsorship Marketplace</a>
-      <a class="toc-indent" href="#institutional-buyers">10.3 Institutional Buyer Types</a>
-      <a class="toc-indent" href="#institutional-features">10.4 Portal Features</a>
+      <a class="toc-indent" href="#trust-sponsors">6.4 Sponsors Who Deliver</a>
+      <a class="toc-indent" href="#trust-antigaming">6.5 Anti-Gaming Properties</a>
+      <a class="toc-indent" href="#trust-sharing">6.6 Sharing Your Trust</a>
+      <a href="#sponsorship">7. Sponsorship</a>
+      <a class="toc-indent" href="#sponsorship-unit">7.1 The 90-Day Sponsorship Unit</a>
+      <a class="toc-indent" href="#sponsorship-invitation">7.2 Invitation &amp; Onboarding of Sponsors</a>
+      <a class="toc-indent" href="#sponsorship-veto">7.3 The Veto Rule</a>
+      <a class="toc-indent" href="#sponsorship-noescape">7.4 The No-Escape-Hatch Principle</a>
+      <a class="toc-indent" href="#sponsorship-join-anytime">7.5 Sponsors Can Join at Any Time</a>
+      <a class="toc-indent" href="#sponsorship-institutional">7.6 Institutional Sponsorship Cannot Stand Alone</a>
+      <a class="toc-indent" href="#sponsorship-donation">7.7 The Voluntary Donation Model</a>
+      <a class="toc-indent" href="#sponsorship-payout">7.8 Payout Rules</a>
+      <a href="#companion">8. The AI Companion</a>
+      <a class="toc-indent" href="#companion-role">8.1 Role &amp; Purpose</a>
+      <a class="toc-indent" href="#companion-authority">8.2 No Authority Over Trust</a>
+      <a class="toc-indent" href="#companion-other">8.3 Other AI Surfaces</a>
+      <a href="#selforganizing">9. Self-Organizing Systems</a>
+      <a class="toc-indent" href="#selforganizing-precedents">9.1 Precedents</a>
+      <a class="toc-indent" href="#selforganizing-principles">9.2 Structural Principles</a>
+      <a href="#institutional">10. Institutional Sponsorship</a>
+      <a class="toc-indent" href="#institutional-principle">10.1 Standing Principle</a>
+      <a class="toc-indent" href="#institutional-deferred">10.2 Deferred Mechanics</a>
       <a href="#identity">11. Profile &amp; Data</a>
       <a class="toc-indent" href="#identity-schema">11.1 Profile Schema</a>
       <a class="toc-indent" href="#identity-consent">11.2 Consent &amp; Control</a>
@@ -159,9 +155,8 @@
       <a href="#roadmap">13. Roadmap</a>
       <a href="#product-as-built">14. Product as Built</a>
       <a class="toc-indent" href="#built-spine">14.1 The Six-Stage Spine</a>
-      <a class="toc-indent" href="#built-validator">14.2 The Validator Experience</a>
-      <a class="toc-indent" href="#built-sessions">14.3 Session Logging</a>
-      <a class="toc-indent" href="#built-decisions">14.4 Key Product Decisions Made in Build</a>
+      <a class="toc-indent" href="#built-sessions">14.2 Session Logging</a>
+      <a class="toc-indent" href="#built-decisions">14.3 Key Product Decisions Made in Build</a>
     </div>
 
 
@@ -196,17 +191,22 @@
           </tr>
           <tr>
             <td><strong>Session post</strong></td>
-            <td>The record of a logged session. Contains optional text body and optional media (photo or video). Visible only to the practitioner's validator circle.</td>
+            <td>The record of a logged session. Contains optional text body and optional media (photo or video). Visible only to the practitioner's sponsor circle.</td>
             <td>—</td>
           </tr>
           <tr>
             <td><strong>Launch period</strong></td>
-            <td>The 14-day window between a commitment declaration and the start ritual, during which sponsors may pledge. The commitment is in <code>launch</code> status during this period.</td>
+            <td>The 14-day window between a commitment declaration and the start ritual, during which the initial roster of sponsors is assembled. The commitment is in <code>launch</code> status during this period. Additional sponsors may still join after the launch period ends.</td>
             <td><em>Launch window, sponsorship window</em></td>
           </tr>
           <tr>
             <td><strong>Start ritual</strong></td>
             <td>The deliberate act marking the transition from launch period to active commitment. A written statement of intent, timestamped. The 90-day clock begins at this moment.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><strong>Completed sponsored streak</strong></td>
+            <td>A 90-day commitment where every sponsor who pledged — whether during the launch period or during the active commitment — released payment at day 90. The atomic unit of the Trust Record.</td>
             <td>—</td>
           </tr>
         </tbody>
@@ -222,44 +222,19 @@
             <td>—</td>
           </tr>
           <tr>
-            <td><strong>Validator</strong></td>
-            <td>A person who witnesses and confirms a practitioner's sessions. Invited by the practitioner. Has a status: invited → active → declined. Validators are not required to have a Search Star account.</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td><strong>Validator circle</strong></td>
-            <td>The group of active validators for a given commitment. The only audience for session posts. A private, trusted witness community — not a public following.</td>
-            <td>—</td>
-          </tr>
-          <tr>
             <td><strong>Sponsor</strong></td>
-            <td>A person or institution that pledges financial support against a commitment during the launch period. Sponsors are not required to have a Search Star account. Three types: personal, institutional, brand.</td>
-            <td>—</td>
+            <td>A person or institution that pledges financial support against a commitment. Witnesses the 90 days through the sponsor feed. Decides at day 90 whether to release payment (the attestation) or, at any point during the 90 days, to veto (ending the streak). Sponsors may or may not have a Search Star account. Two types: personal and institutional.</td>
+            <td><em>Validator</em> (retired — see v4 decisions), <em>backer</em>, <em>donor</em></td>
           </tr>
           <tr>
-            <td><strong>Mentor</strong> (relationship)</td>
-            <td>lowercase. A person in an active mentor relationship with a practitioner — guiding their practice, not necessarily in a formal leadership role. A mentor relationship precedes and may lead to the Mentor role.</td>
-            <td>—</td>
+            <td><strong>Sponsor circle</strong></td>
+            <td>The set of sponsors who have pledged against a given commitment, at any point during its lifecycle. The only audience for session posts. A private, trusted witness community — not a public following.</td>
+            <td><em>Validator circle</em> (retired)</td>
           </tr>
           <tr>
-            <td><strong>Mentor</strong> (role)</td>
-            <td>Capitalised. One of the four formal leadership roles in the mentor economy. Earned through sustained one-on-one mentorship with documented Trust Record growth in the mentee. Receives a share of voluntary donations.</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td><strong>Coach</strong></td>
-            <td>Capitalised. A leadership role earned by actively mentoring three or more practitioners simultaneously in the same skill category as one's own primary practice.</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td><strong>Community Builder</strong></td>
-            <td>Capitalised. A leadership role earned by recruiting and onboarding ten or more practitioners who maintain active practices.</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td><strong>Practice Leader</strong></td>
-            <td>Capitalised. The senior leadership role, earned by a Coach or Community Builder with sustained formation outcomes over two or more years.</td>
-            <td>—</td>
+            <td><strong>Companion</strong></td>
+            <td>The AI that accompanies the practitioner through formation. Teacher, coach, pattern-noticer, documentation helper. Produces a summary of the practice record for sponsors at day 90. Holds no authority over the Trust Record.</td>
+            <td><em>Mentor, coach, tutor</em> (ambiguous with retired v3 roles)</td>
           </tr>
         </tbody>
       </table>
@@ -270,7 +245,7 @@
         <tbody>
           <tr>
             <td><strong>Trust Record</strong></td>
-            <td>Capitalised. The portable credential built from validated practice over time. Tracks three dimensions: Depth, Breadth, and Durability. Belongs to the practitioner and is private by default.</td>
+            <td>Capitalised. The portable credential built from completed sponsored streaks over time. Tracks three dimensions: Depth, Breadth, and Durability. Belongs to the practitioner and is private by default.</td>
             <td><em>Trust score, trust rating</em></td>
           </tr>
           <tr>
@@ -280,22 +255,22 @@
           </tr>
           <tr>
             <td><strong>trust</strong></td>
-            <td>lowercase. The philosophical concept: the willingness to stake one's reputation on another person's character and genuine effort. Used in the manifesto and spec narrative. Not a product feature — a value the platform embodies.</td>
+            <td>lowercase. The philosophical concept: staking something real on another person's character and genuine effort. On Search Star, sponsors express this by putting money behind a commitment and staying present through the 90 days.</td>
             <td>—</td>
           </tr>
           <tr>
             <td><strong>Depth</strong></td>
-            <td>One of three Trust Record dimensions. How far the practitioner has developed within individual skill tracks. Grows with session count, milestone achievements, and validator quality attestations.</td>
+            <td>One of three Trust Record dimensions. Completed sponsored streaks within a single skill category, weighted by sponsor count, diversity, and reliability.</td>
             <td>—</td>
           </tr>
           <tr>
             <td><strong>Breadth</strong></td>
-            <td>One of three Trust Record dimensions. How many distinct skill categories the practitioner maintains active tracks in. Reflects wholeness of development.</td>
+            <td>One of three Trust Record dimensions. Distinct skill categories across completed sponsored streaks. Reflects wholeness of development.</td>
             <td>—</td>
           </tr>
           <tr>
             <td><strong>Durability</strong></td>
-            <td>One of three Trust Record dimensions. How long the practitioner has maintained consistent practice. The dimension most resistant to gaming — elapsed time cannot be accelerated.</td>
+            <td>One of three Trust Record dimensions. Elapsed calendar time across completed sponsored streaks — the oldest unbroken pattern of completion. The dimension most resistant to gaming because elapsed time cannot be accelerated.</td>
             <td>—</td>
           </tr>
         </tbody>
@@ -307,28 +282,23 @@
         <tbody>
           <tr>
             <td><strong>Pledge</strong></td>
-            <td>A sponsor's pre-commitment to pay on streak completion. Made during the launch period. A pledge is not a charge — no money moves until the commitment is completed and validated.</td>
+            <td>The amount a sponsor commits to contribute when the practitioner completes the 90-day commitment. Collected at pledge time, held, and released at day 90 (or refunded on veto / abandonment).</td>
             <td>—</td>
           </tr>
           <tr>
-            <td><strong>Payout</strong></td>
-            <td>The release of pledged funds to the practitioner on completion of a validated commitment. The practitioner receives 100% of what was pledged — processing fees and voluntary donations are separate transactions.</td>
+            <td><strong>Release</strong></td>
+            <td>The sponsor's act at day 90 of releasing their pledged amount to the practitioner. The passive attestation that the 90 days were real.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><strong>Veto</strong></td>
+            <td>A sponsor's act, available at any time during the 90 days, of ending the streak. One sponsor's veto ends the streak for the entire roster — no majority rule, no arbitration. The active attestation that the sponsor is no longer convinced.</td>
             <td>—</td>
           </tr>
           <tr>
             <td><strong>Voluntary donation</strong></td>
-            <td>An optional amount a sponsor may choose to contribute at payout, above and beyond their pledge. Suggested at 50% of the payout amount. Fully removable in one action. Distributed across the value chain: 5% to Search Star, 23.75% each to the four Mentor role tiers. Never deducted from the practitioner's payout.</td>
-            <td><em>Tip, contribution, voluntary contribution</em></td>
-          </tr>
-          <tr>
-            <td><strong>Donation split</strong></td>
-            <td>The distribution of a voluntary donation across the value chain. Always transparent to the donor before confirmation.</td>
-            <td><em>Contribution split</em></td>
-          </tr>
-          <tr>
-            <td><strong>Mentor economy</strong></td>
-            <td>The system by which voluntary donations flow to the four leadership roles (Mentor, Coach, Community Builder, Practice Leader) at a 1:100 ratio, designed to provide living wages for community leadership at platform scale.</td>
-            <td>—</td>
+            <td>An optional amount a sponsor may choose to contribute to Search Star at payout, above and beyond their pledge. Suggested at 5% of the pledge. Fully editable and removable in one action. Goes entirely to Search Star. Never deducted from the practitioner's payout.</td>
+            <td><em>Tip, contribution, platform fee</em></td>
           </tr>
         </tbody>
       </table>
@@ -357,19 +327,19 @@
     <!-- 1. OVERVIEW -->
     <div class="doc" id="overview">
       <h2>1. Overview</h2>
-      <p>Search Star is a platform for building genuine skills through sustained practice. Users define a practice — anything requiring real effort, learning, and sustained attention — invite people who know them to validate their progress, and earn sponsorship from friends, institutions, and organizations that want to reward authentic human development.</p>
+      <p>Search Star is a platform for building genuine skills through sustained practice. Users define a practice — anything requiring real effort, learning, and sustained attention — invite sponsors who believe in what they are doing, and earn recognition for completing 90-day commitments witnessed by the people who put their own stake behind the work.</p>
 
-      <p>The platform produces a Trust Record: a portable credential built from validated practice over time. A high Trust Stage cannot be performed into existence. It can only be grown through the actual work, witnessed over time by people who know the difference.</p>
+      <p>The platform produces a Trust Record: a portable credential built from completed sponsored streaks over time. A mature Trust Record cannot be performed into existence. It can only be grown through the actual work, witnessed over months and years by sponsors with skin in the game.</p>
 
       <div class="callout callout-info">
-        <strong>The core loop:</strong> User declares a 90-day practice commitment → shares it with sponsors during a 14-day launch period → performs the start ritual → documents sessions privately to their validator circle → validators confirm genuine effort across 90 days → sponsors pay out on completion → Trust grows → the portable Trust Record is recognized by employers, schools, and institutions.
+        <strong>The core loop:</strong> User declares a 90-day practice commitment → shares it with sponsors during a 14-day launch period → performs the start ritual → documents sessions privately to the sponsor circle → the AI Companion accompanies the practice and surfaces patterns → sponsors stay present or veto across the 90 days → at day 90, sponsors release payment → Trust grows → the portable Trust Record is recognized by employers, schools, and institutions.
       </div>
 
       <p>Three principles govern every product decision:</p>
       <ul>
         <li><strong>Practice before profile.</strong> You arrive as a practitioner, not a data subject. Identity emerges from what you do, not the other way around.</li>
-        <li><strong>Private by default.</strong> Documentation flows to your validator circle, not to a public feed. You control what becomes visible and when.</li>
-        <li><strong>Recognition flows through others.</strong> The only path to leadership and expanded recognition on Search Star is helping other people build genuine practices. You cannot perform your way to status.</li>
+        <li><strong>Private by default.</strong> Documentation flows to your sponsor circle, not to a public feed. You control what becomes visible and when.</li>
+        <li><strong>Stake precedes witness.</strong> The only people with standing to attest that the 90 days were real are the people who put money behind the commitment. Witness without stake is not the product.</li>
       </ul>
     </div>
 
@@ -385,7 +355,7 @@
       <h3 id="philosophy-formation">2.2 Formation vs. Performance</h3>
       <p>Every platform that rewards documentation eventually gets captured by the documenters — people optimizing for the record rather than the practice. The medium becomes the message and the message becomes performance. Instagram fitness is the canonical example: what began as a community of people who love training became a venue for people who love being seen training. The activity serves the content rather than the content serving the activity.</p>
 
-      <p>Search Star is built around the opposite orientation. Documentation exists to serve validation, and validation exists to serve practice. The person who is genuinely becoming a woodworker, a runner, a reader — who is undergoing real formation — is the person the platform is built for. The person performing those identities for an audience will find nothing here to reward the performance.</p>
+      <p>Search Star is built around the opposite orientation. Documentation exists to serve witness, and witness exists to serve practice. The person who is genuinely becoming a woodworker, a runner, a reader — who is undergoing real formation — is the person the platform is built for. The person performing those identities for an audience will find nothing here to reward the performance.</p>
 
       <p>The goal is not fitness or craft or learning as such. It is the pursuit of beauty, grace, and truth through sustained effort in any domain that develops the whole person. A woman getting genuinely stronger is practicing. A woman performing strength for an audience is not. The platform is designed so that only the first kind of person finds the platform rewarding.</p>
 
@@ -394,12 +364,12 @@
 
       <p>Despite its importance, conscientiousness is almost impossible to verify reliably. GPAs inflate. Resumes embellish. Interviews measure presentation skills. Recommendations are social obligations. What institutions lack is a behavioral record of sustained effort that is hard to fake because it was accumulated over months and years — not performed in a single high-stakes moment.</p>
 
-      <p>A Search Star Trust Record, built from peer-validated practice sustained over time, is exactly that. It is not a personality test or a self-assessment. It is an observable track record of who someone actually is.</p>
+      <p>A Search Star Trust Record, built from sponsored streaks sustained over time, is exactly that. It is not a personality test or a self-assessment. It is an observable track record of who someone actually is, witnessed by people who were present and had their own stake on the line.</p>
 
-      <h3 id="philosophy-trust">2.4 Trust as Action</h3>
-      <p>Trust in the Search Star model is not a rating or a status. It is an action: the willingness to stake one's own reputation on someone else's claim. When a validator confirms a practice session, they are not clicking a button — they are putting their name behind a statement about another person's character and genuine effort. This is the classical definition of authentic relationship: knowing someone well enough to vouch for them in contexts where it matters.</p>
+      <h3 id="philosophy-stake">2.4 Trust as Stake</h3>
+      <p>Trust in the Search Star model is not a rating or a status. It is an action: staking something real on another person's character and genuine effort. When a sponsor pledges against a commitment, they are putting money behind a statement about that practitioner's conscientiousness. When they stay present across ninety days and release payment at the end, they are affirming it. When they veto, they are withdrawing it. No separate confirmation layer is needed — the money is the attestation.</p>
 
-      <p>This distinction has a structural consequence. Because validation requires a real relationship and real knowledge of the person's practice, Trust cannot be manufactured by accumulating strangers. The only path to a mature Trust Record is the same as the path to genuine character: sustained effort, witnessed by people who actually know you.</p>
+      <p>This distinction has a structural consequence. Because witness requires real stake and real knowledge of the person's practice, Trust cannot be manufactured by accumulating strangers. The only path to a mature Trust Record is the same as the path to genuine character: sustained effort, witnessed by people who actually know you and are willing to put something behind their belief.</p>
 
       <div class="callout callout-info">
         <strong>Convergence principle:</strong> The only way to advance your Trust is to actually be the kind of person your Trust Record describes. Gaming the metric produces the virtue.
@@ -412,33 +382,33 @@
     <div class="doc" id="onboarding">
       <h2>3. Onboarding &amp; Identity</h2>
 
-      <h3 id="onboarding-sequence">3.1 Sequence: Practice First — The Six-Stage Spine</h3>
+      <h3 id="onboarding-sequence">3.1 Sequence: Practice First</h3>
       <p>Onboarding begins with a single question: what do you want to practice? The user defines their first skill before completing a profile, before providing any personal information. Identity on Search Star emerges from practice.</p>
 
-      <p>The implemented onboarding spine is a six-stage linear flow at <code>/start</code>. A stage resolver reads the user's current state and routes them to the correct stage automatically — returning users always land exactly where they are, not at the beginning.</p>
+      <p>The onboarding spine is a linear flow at <code>/start</code>. A stage resolver reads the user's current state and routes them to the correct stage automatically — returning users always land exactly where they are, not at the beginning.</p>
 
       <table>
         <thead><tr><th>Stage</th><th>URL</th><th>What happens</th></tr></thead>
         <tbody>
           <tr><td>1 — Practice</td><td><code>/start/practice</code></td><td>Name your practice, choose a label (skill / craft / pursuit) and skill category</td></tr>
-          <tr><td>2 — Commitment</td><td><code>/start/commitment</code></td><td>Declare a 90-day commitment: title, description, frequency (daily or weekly)</td></tr>
-          <tr><td>3 — Validator</td><td><code>/start/validator/[id]</code></td><td>Invite your first validator by email. Up to 3 per commitment. Skippable.</td></tr>
-          <tr><td>4 — Mentor</td><td><code>/start/mentor/[id]</code></td><td>Mentor matching placeholder. Shown once (tracked via <code>mentor_step_seen</code> flag), then never shown again.</td></tr>
-          <tr><td>5 — Launch</td><td><code>/start/launch/[id]</code></td><td>Launch window: sponsor link, validator status, sponsors pledged. Contains the start ritual button.</td></tr>
-          <tr><td>6 — Active</td><td><code>/start/active/[id]</code></td><td>Daily session logging. Progress bar, session form, recent sessions, "three jobs" guidance.</td></tr>
+          <tr><td>2 — Commitment</td><td><code>/start/commitment</code></td><td>Declare a 90-day commitment: title, description, frequency (daily or weekly), target payout amount</td></tr>
+          <tr><td>3 — Sponsors</td><td><code>/start/sponsors/[id]</code></td><td>Invite your first sponsor(s) by email, or copy your personal sponsor link to share directly. Skippable — additional sponsors can join at any time.</td></tr>
+          <tr><td>4 — Companion</td><td><code>/start/companion/[id]</code></td><td>Meet the AI Companion. Shown once per user, then never shown again.</td></tr>
+          <tr><td>5 — Launch</td><td><code>/start/launch/[id]</code></td><td>Launch dashboard: countdown, sponsor link, sponsors pledged so far. Contains the start ritual button.</td></tr>
+          <tr><td>6 — Active</td><td><code>/log</code></td><td>Daily session logging. Progress, session form, recent sessions, Companion reflections.</td></tr>
         </tbody>
       </table>
 
       <div class="callout callout-info">
-        The stage resolver is implemented in <code>src/lib/stage.ts</code>. It checks: practice exists → commitment exists → validator exists → mentor step seen → launch vs active status. The auth callback and dashboard both redirect to <code>/start</code>, which resolves to the correct stage. A stage bar with six dots runs across the top of every stage page.
+        The stage resolver is implemented in <code>src/lib/stage.ts</code>. It checks: practice exists → commitment exists → sponsor invited → Companion step seen → launch vs active status. The auth callback and dashboard both redirect to <code>/start</code>, which resolves to the correct stage.
       </div>
 
-      <p>A user with one defined practice, one validator, and an active commitment is fully onboarded. The start ritual — a written statement of intent — marks the transition from the launch period to the active commitment. It is timestamped and sent to validators as the first session post (session_number: 0).</p>
+      <p>A user with one defined practice and an active commitment is fully onboarded. The start ritual — a written statement of intent — marks the transition from the launch period to the active commitment. It is timestamped and shared with the sponsor circle as the first session post (session_number: 0).</p>
 
       <h3 id="onboarding-profile">3.2 Profile Completion</h3>
-      <p>After defining a first practice and inviting a validator, the user completes a minimal profile manually: name, location, and a brief description in their own words. Nothing is inferred, discovered, or imported without explicit user action. The profile is what the user chooses to say about themselves — no more, no less.</p>
+      <p>After defining a first practice, the user completes a minimal profile manually: name, location, and a brief description in their own words. Nothing is inferred, discovered, or imported without explicit user action. The profile is what the user chooses to say about themselves — no more, no less.</p>
 
-      <p>Profile completeness is not a gate. A user with a name, a practice, and one validator is fully onboarded. Additional profile sections — skills, credentials, background — can be filled in over time as the user's comfort and trust in the platform grows. The platform never prompts for information the user has not chosen to provide.</p>
+      <p>Profile completeness is not a gate. Additional profile sections — skills, credentials, background — can be filled in over time as the user's comfort with the platform grows. The platform never prompts for information the user has not chosen to provide.</p>
 
       <h3 id="onboarding-visibility">3.3 Visibility by Choice</h3>
       <p>Profile and Trust Record visibility is set by the user and can be changed at any time. Three visibility modes are available:</p>
@@ -446,8 +416,8 @@
       <table>
         <thead><tr><th>Mode</th><th>Who Can See</th><th>When to Use</th></tr></thead>
         <tbody>
-          <tr><td>Private</td><td>Validator circle only</td><td>Early practice, building confidence, not yet ready to share</td></tr>
-          <tr><td>Network</td><td>Validators and their connections</td><td>Open to organic discovery through trusted relationships</td></tr>
+          <tr><td>Private</td><td>Sponsor circle only</td><td>Early practice, building confidence, not yet ready to share</td></tr>
+          <tr><td>Network</td><td>Sponsors and their connections</td><td>Open to organic discovery through trusted relationships</td></tr>
           <tr><td>Public</td><td>Anyone, including employers and institutions</td><td>Ready to use Trust Record as a credential for opportunities</td></tr>
         </tbody>
       </table>
@@ -460,119 +430,101 @@
       <h2>4. The 90-Day Commitment</h2>
 
       <h3 id="commitment-why">4.1 Why 90 Days</h3>
-      <p>The primary sponsorable unit on Search Star is a 90-day validated practice commitment. This number is not arbitrary. Research by Phillippa Lally at University College London found that the median time for a new behavior to become automatic is 66 days, with a range of 18 to 254 days depending on the complexity of the habit. 90 days sits comfortably above the median, covering the formation period for virtually any practice a person might undertake.</p>
+      <p>The primary sponsorable unit on Search Star is a 90-day practice commitment. This number is not arbitrary. Research by Phillippa Lally at University College London found that the median time for a new behavior to become automatic is 66 days, with a range of 18 to 254 days depending on the complexity of the habit. 90 days sits comfortably above the median, covering the formation period for virtually any practice a person might undertake.</p>
 
-      <p>90 days also has a natural legibility that shorter periods lack. Three months of genuine effort is something any sponsor — a grandmother, an employer, a foundation program officer — immediately recognizes as meaningful. It is long enough that completion reflects real commitment, short enough that it can be attempted twice a year as the standard commitment — with a third streak possible for the especially dedicated. It is not a weekend challenge or a month-long resolution. It is a season of genuine formation.</p>
+      <p>90 days also has a natural legibility that shorter periods lack. Three months of genuine effort is something any sponsor — a grandmother, an employer, a foundation program officer — immediately recognizes as meaningful. It is long enough that completion reflects real commitment, short enough that it can be attempted twice a year as the standard commitment. It is not a weekend challenge or a month-long resolution. It is a season of genuine formation.</p>
 
       <div class="callout callout-info">
-        <strong>The ask a practitioner makes to a sponsor:</strong> I am committing to 90 days of this practice. My validators will confirm I showed up. Will you back me? That sentence is legible to anyone. The effort required to complete it is real. The payout at the end is proportional to genuine work done.
+        <strong>The ask a practitioner makes to a sponsor:</strong> I am committing to 90 days of this practice. I'm asking you to put something behind my intention, stay with me across the 90 days, and at the end decide whether I did the work. That sentence is legible to anyone. The effort required to complete it is real. The payout at the end is proportional to genuine work done.
       </div>
 
-      <p>The 90-day commitment is also the structural foundation of the Trust Record. A completed commitment is the minimum unit of genuine formation — the smallest period that meaningfully distinguishes sustained practice from a burst of motivated activity. Each completed commitment adds to the Durability dimension of the Trust Record in a way that shorter commitments cannot.</p>
+      <p>The 90-day commitment is also the structural foundation of the Trust Record. A completed sponsored streak — 90 days of genuine practice with every sponsor staying present and releasing payment — is the minimum unit of genuine formation and the atomic input to the Trust Record.</p>
 
       <h3 id="commitment-launch">4.2 The 14-Day Launch Period</h3>
-      <p>Every 90-day commitment begins with a 7-day launch period. The launch period is the time between a practitioner declaring their commitment and the day they begin. It exists for a specific purpose: to give the practitioner time to share their commitment with the people who matter, recruit sponsors and validators, and prepare mentally for the transition from announcing to doing.</p>
+      <p>Every 90-day commitment begins with a 14-day launch period. The launch period is the time between a practitioner declaring their commitment and the day they begin. It exists for a specific purpose: to give the practitioner time to share their commitment with the people who matter, assemble an initial roster of sponsors, and prepare mentally for the transition from announcing to doing.</p>
 
-      <p>7 days is the right length for several reasons. It is long enough for news of the commitment to travel — a practitioner tells their friends, their friends tell others who might want to sponsor, family members have time to discuss and commit. It mirrors other socially legible notice periods: a wedding RSVP window, a crowdfunding campaign launch, a job start date. And it keeps the practitioner's motivation high — the gap between intention and action is short enough that momentum is preserved.</p>
+      <p>14 days is the right length for several reasons. It is long enough for news of the commitment to travel — a practitioner tells their friends, their friends tell others who might want to sponsor, family members have time to discuss and commit. It mirrors other socially legible notice periods: a wedding RSVP window, a crowdfunding campaign launch, a job start date. And it keeps the practitioner's motivation high — the gap between intention and action is short enough that momentum is preserved.</p>
 
       <p>The 14-day launch period has a defined structure:</p>
       <ul>
-        <li><strong>Day 1 — Declaration.</strong> The practitioner declares their commitment: title, description, and frequency (daily or weekly). They invite validators — the people who will witness and confirm their practice.</li>
-        <li><strong>Days 1–7 — Launch period.</strong> The practitioner shares their commitment with potential sponsors. Friends, family, employers, and institutions can pledge support during this window. The platform shows the practitioner who has pledged and how much is behind them.</li>
-        <li><strong>Day 7 — Sponsor commitment closes.</strong> No new sponsors can join after the launch period ends. This creates a clean boundary — the commitment belongs to the people who were present at the beginning.</li>
-        <li><strong>Day 8 — The 90-day commitment begins.</strong> The start ritual marks the transition from announcing to doing.</li>
+        <li><strong>Day 1 — Declaration.</strong> The practitioner declares their commitment: title, description, frequency, target payout. They begin inviting sponsors.</li>
+        <li><strong>Days 1–14 — Launch window.</strong> The practitioner shares their sponsor link with friends, family, and potential institutional sponsors. The platform shows the practitioner who has pledged and what is behind them so far.</li>
+        <li><strong>Day 15 — The 90-day commitment begins.</strong> The start ritual marks the transition from announcing to doing.</li>
       </ul>
 
       <div class="callout callout-green">
-        <strong>Why sponsors commit during the launch period rather than afterward:</strong> A sponsor who commits before the commitment begins is backing the person's intention — an act of genuine relationship and belief. A sponsor who pays after the fact is just rewarding an outcome. The former is more meaningful to both parties and creates stronger accountability during the streak itself.
+        <strong>The launch period is the runway, not a cutoff.</strong> The 14-day period is when the practitioner assembles their initial roster of sponsors. But additional sponsors can join at any time during the 90 days — see <a href="#sponsorship-join-anytime">§ 7.5</a>. The launch period's boundary marks when the work begins, not when sponsorship closes.
       </div>
 
       <h3 id="commitment-start">4.3 The Start Ritual</h3>
-      <p>The transition from launch period to active commitment is marked by a deliberate start ritual. This is not a calendar notification or an automated state change. It is a conscious act by the practitioner: a short written statement of what they are beginning, sent to their validator circle, marking the moment practice becomes active.</p>
+      <p>The transition from launch period to active commitment is marked by a deliberate start ritual. This is not a calendar notification or an automated state change. It is a conscious act by the practitioner: a short written statement of what they are beginning, sent to their sponsor circle, marking the moment practice becomes active.</p>
 
-      <p>The start ritual serves two functions. First, it creates a clear psychological boundary between intention and action — the practitioner is not drifting into their commitment but stepping into it deliberately. Second, it gives validators a concrete signal that their witnessing role has begun. From this moment their job is to watch, confirm, and attest.</p>
+      <p>The start ritual serves two functions. First, it creates a clear psychological boundary between intention and action — the practitioner is not drifting into their commitment but stepping into it deliberately. Second, it gives sponsors a concrete signal that the 90-day clock is running. From this moment their role is to witness, stay present, and decide at day 90 whether to release.</p>
 
-      <p>The platform records the start ritual timestamp. The 90-day commitment clock begins at this moment. If a practitioner does not complete the start ritual by Day 15, the launch period expires and sponsors are notified that the commitment did not begin — no funds are collected.</p>
+      <p>The platform records the start ritual timestamp. The 90-day clock begins at this moment. If a practitioner does not complete the start ritual by Day 15, the launch period expires and sponsors are notified that the commitment did not begin — no funds are collected.</p>
 
       <h3 id="commitment-cycle">4.4 The Annual Cycle</h3>
-      <p>Two 90-day commitments per year is the standard cadence — one per half-year, aligned with the sponsorship model and with how most people naturally sustain serious effort. The rhythm is semi-annual, with a meaningful rest period between streaks that is as deliberate as the streaks themselves.</p>
+      <p>Two 90-day commitments per year is the standard cadence — one per half-year, aligned with how most people naturally sustain serious effort. The rhythm is semi-annual, with a meaningful rest period between commitments that is as deliberate as the commitments themselves.</p>
 
       <table>
-        <thead><tr><th>Half-year</th><th>Launch period</th><th>Active streak</th><th>Rest period</th></tr></thead>
+        <thead><tr><th>Half-year</th><th>Launch period</th><th>Active 90 days</th><th>Rest period</th></tr></thead>
         <tbody>
           <tr><td>First half</td><td>Jan 1–14</td><td>Jan 15 – Apr 14</td><td>Apr 15 – Jun 30</td></tr>
           <tr><td>Second half</td><td>Jul 1–14</td><td>Jul 15 – Oct 12</td><td>Oct 13 – Dec 31</td></tr>
         </tbody>
       </table>
 
-      <p>A third streak is possible for practitioners who want to push further — launched at any point during the rest period — and represents exceptional commitment. Practitioners who complete three streaks in a year demonstrate significant durability, contributing meaningfully to the Durability dimension of their Trust Record. This is the exception, not the expectation.</p>
+      <p>A third commitment is possible for practitioners who want to push further — launched at any point during the rest period — and represents exceptional commitment. Practitioners who complete three sponsored streaks in a year demonstrate significant durability, contributing meaningfully to the Durability dimension of their Trust Record. This is the exception, not the expectation.</p>
 
-      <p>The rest period between streaks is deliberate and protected. It gives practitioners time to reflect on what they built, receive honest assessment from their validator circle, and recommit with intention rather than momentum. It also prevents the commitment mechanic from becoming mechanical — each streak should feel like a genuine decision, not an automatic renewal. A practitioner who pauses to reflect and then re-launches is demonstrating the same kind of conscientiousness the platform is designed to reward.</p>
+      <p>The rest period between commitments is deliberate and protected. It gives practitioners time to reflect on what they built, and recommit with intention rather than momentum. It also prevents the commitment mechanic from becoming mechanical — each commitment should feel like a genuine decision, not an automatic renewal.</p>
     </div>
 
-    <!-- 5. PRACTICE & SKILLS -->
+    <!-- 5. PRACTICE & DOCUMENTATION -->
     <div class="doc" id="practice">
-      <h2>5. Practice &amp; Skills</h2>
+      <h2>5. Practice &amp; Documentation</h2>
 
       <h3 id="practice-what">5.1 What Qualifies</h3>
       <p>Any activity requiring genuine practice, sustained learning, or the development of skill qualifies. The domain does not need to be prestigious or sophisticated. The criterion is real effort over time and the genuine development of capability — not cultural capital, socioeconomic access, or the impressiveness of the activity to an outside observer.</p>
 
       <div class="callout callout-green">
-        <strong>Qualifying examples:</strong> woodworking, furniture restoration, bread baking, language learning, instrument practice, distance running, chess, drawing, gardening, cooking from scratch, martial arts, home repair, serious reading, film study, volunteering, mentorship, ceramics, athletic training, academic study beyond required coursework, sewing, metalwork, foraging, photography, writing.
+        <strong>Qualifying examples:</strong> woodworking, furniture restoration, bread baking, language learning, instrument practice, distance running, chess, drawing, gardening, cooking from scratch, martial arts, home repair, serious reading, film study, volunteering, ceramics, athletic training, academic study beyond required coursework, sewing, metalwork, foraging, photography, writing.
       </div>
 
       <div class="callout callout-warn">
         <strong>Non-qualifying:</strong> Passive consumption without engagement — watching, scrolling, listening without active attention or development. Single-occurrence events without a practice dimension. Activities that produce no skill development over time.
       </div>
 
-      <p>The distinction is not between highbrow and lowbrow. It is between activities that develop the person and activities that do not. A person restoring antique furniture has as strong a claim to an advanced Trust Record as one reading philosophy — provided the effort is genuine and the validation is real.</p>
+      <p>The distinction is not between highbrow and lowbrow. It is between activities that develop the person and activities that do not. A person restoring antique furniture has as strong a claim to an advanced Trust Record as one reading philosophy — provided the effort is genuine and the sponsorship is real.</p>
 
       <h3 id="practice-documentation">5.2 Documenting Practice</h3>
-      <p>Users document practice through session posts: text, photos, or short notes attesting to a session, milestone, or completed work. Documentation serves one primary purpose: to give validators something concrete to assess. It is not content for a feed. It is evidence in a private conversation between the practitioner and the people who know them.</p>
+      <p>Users document practice through session posts: text, photos, or short notes attesting to a session, milestone, or completed work. Documentation serves one primary purpose: to give sponsors something concrete to witness. It is not content for a feed. It is evidence in a private conversation between the practitioner and the people who have put something behind the work.</p>
 
-      <p>The quality of documentation matters less than its honesty. A photo of a rough first attempt at joinery is more valuable than a polished shot of a finished piece if the former reflects where the practitioner actually is. Validators assess effort and genuine development, not presentation quality.</p>
+      <p>The quality of documentation matters less than its honesty. A photo of a rough first attempt at joinery is more valuable than a polished shot of a finished piece if the former reflects where the practitioner actually is. Sponsors want to see the work as it happens, not as it would look in a portfolio.</p>
 
       <h3 id="practice-privacy">5.3 Private by Default</h3>
-      <p>Session posts are visible only to the user's validator circle by default. There is no public feed. There is no like button on practice documentation. There is no follower count attached to skill posts. The social surface of practice is intentionally narrow: the practitioner and the people who actually know them.</p>
+      <p>Session posts are visible only to the user's sponsor circle. There is no public feed. There is no like button on practice documentation. There is no follower count attached to skill posts. The social surface of practice is intentionally narrow: the practitioner, the AI Companion, and the specific people who have agreed to put something behind the commitment.</p>
 
-      <p>This is not a limitation — it is the architecture that makes genuine validation possible. A validator who sees every session post in context, over months and years, can assess real development. A public audience cannot. The intimacy of the validation circle is what gives the Trust Record its meaning.</p>
+      <p>This is not a limitation — it is the architecture that makes genuine witness possible. A sponsor who sees every session post in context, over the 90 days, can form a real view of whether the work is happening. A public audience cannot. The intimacy of the sponsor circle is what gives the Trust Record its meaning.</p>
 
-      <h3 id="practice-validatorfeed">5.4 The Validator Feed</h3>
-      <p>Each user's session posts appear in a private feed visible only to their validator circle. This is the primary social surface of the platform — a shared stream between a practitioner and the specific people who have agreed to witness their practice. It is closer in spirit to a shared journal or a group thread among trusted friends than to a social media feed.</p>
+      <h3 id="practice-sponsorfeed">5.4 The Sponsor Feed</h3>
+      <p>Each user's session posts appear in a private feed visible only to their sponsor circle. This is the primary social surface of the platform — a shared stream between a practitioner and the specific people who have pledged against their commitment. It is closer in spirit to a shared journal or a group thread among trusted friends than to a social media feed.</p>
 
-      <p>The validator feed has three deliberate constraints that distinguish it from a conventional social feed:</p>
+      <p>The sponsor feed has three deliberate constraints that distinguish it from a conventional social feed:</p>
       <ul>
-        <li><strong>Fixed audience.</strong> The feed is visible only to validators the user has explicitly invited. Validators access it via a permanent personal URL: <code>/validate/[commitment_id]/[token]</code>. The token is unique per validator per commitment and does not expire once accepted.</li>
-        <li><strong>No engagement metrics.</strong> Posts have no like count, no view count, no comment count. The only action available to a validator on a post is confirmation. There is no number attached to a post that creates social pressure or rewards performance.</li>
-        <li><strong>No algorithmic curation.</strong> Posts appear in reverse chronological order. Nothing is surfaced or suppressed based on engagement.</li>
+        <li><strong>Fixed audience.</strong> The feed is visible only to sponsors the practitioner has invited (or who arrived via the practitioner's sponsor link). It cannot be discovered, followed, or accessed by anyone outside that circle. Sponsors access it via a permanent personal URL: <code>/sponsor/[commitment_id]/[token]</code>. The token is unique per sponsor per commitment and does not expire once accepted.</li>
+        <li><strong>No engagement metrics.</strong> Posts have no like count, no view count, no comment count. There is no inline "confirm this session" button. A sponsor's meaningful actions — release at day 90, veto at any point — are deliberate and rare, not per-post reactions.</li>
+        <li><strong>No algorithmic curation.</strong> Posts appear in chronological order. Nothing is surfaced or suppressed based on engagement. The feed reflects what the practitioner actually did, not what performed well.</li>
       </ul>
 
-      <h4>Session logging</h4>
-      <p>Practitioners log sessions from the active commitment page (<code>/start/active/[id]</code>). Each session post has a body (optional) and a session number. Multiple sessions per day are permitted — there is no one-session-per-day limit. The start ritual (session_number: 0) is recorded separately from practice sessions (session_number: 1+) and does not count toward the session total.</p>
-
-      <h4>Validator notifications</h4>
-      <p>Every time a practitioner logs a session, all active validators receive an email notification from <code>noreply@searchstar.com</code>. The email includes the session number, the practitioner's name and commitment title, the session note if one was written, and a direct "Confirm this session →" button linking to the validator's personal feed URL. Email delivery is best-effort — a failed notification does not fail the session log.</p>
+      <h4>Sponsor notifications</h4>
+      <p>Every time a practitioner logs a session, all active sponsors receive an email notification from <code>noreply@searchstar.com</code>. The email includes the session number, the practitioner's name and commitment title, the session note if one was written, and a direct link to the sponsor's personal feed URL. Email delivery is best-effort — a failed notification does not fail the session log.</p>
 
       <div class="callout callout-info">
-        <strong>Why no likes or view counts:</strong> Any engagement metric visible to the practitioner creates an incentive to post for the metric rather than for the practice. Removing engagement metrics keeps documentation in service of validation rather than the other way around.
+        <strong>Why no likes or view counts:</strong> Any engagement metric visible to the practitioner creates an incentive to post for the metric rather than for the practice. Removing engagement metrics keeps documentation in service of witness rather than the other way around.
       </div>
 
       <h3 id="practice-categories">5.5 Skill Categories</h3>
-      <p>Skill categories organize practices for sponsorship matching and Trust Record computation. Categories are broad by design — sponsors attach to categories, allowing users flexibility in how they pursue development within a domain.</p>
-
-      <table>
-        <thead><tr><th>Category</th><th>Examples</th></tr></thead>
-        <tbody>
-          <tr><td>Craft &amp; Making</td><td>Woodworking, ceramics, sewing, metalwork, restoration, building</td></tr>
-          <tr><td>Culinary</td><td>Cooking, baking, fermentation, foraging, brewing</td></tr>
-          <tr><td>Physical Practice</td><td>Running, strength training, martial arts, dance, swimming, cycling</td></tr>
-          <tr><td>Creative Arts</td><td>Drawing, painting, writing, photography, music, film</td></tr>
-          <tr><td>Intellectual</td><td>Reading, language learning, chess, mathematics, academic study</td></tr>
-          <tr><td>Community &amp; Service</td><td>Volunteering, mentorship, coaching, civic participation</td></tr>
-          <tr><td>Nature &amp; Land</td><td>Gardening, farming, ecology, hiking, conservation</td></tr>
-          <tr><td>Technical Skills</td><td>Programming, electronics, mechanics, home repair, engineering</td></tr>
-        </tbody>
-      </table>
+      <p>Skill categories organize practices for Trust Record computation. Categories are broad by design. See <a href="#terminology">Terminology §0</a> for the current twelve-category taxonomy.</p>
 
       <h3 id="practice-naming">5.6 Naming Your Practice</h3>
       <p>Users choose how to label their practice from three options, with Skill as the default. The choice is personal and can be changed at any time.</p>
@@ -589,14 +541,14 @@
       <p>Internally the platform uses <em>practice</em> as the universal verb form — you practice a skill, you practice a craft, you practice a pursuit. This keeps product copy consistent regardless of the user's chosen label.</p>
     </div>
 
-    <!-- 5. TRUST -->
+    <!-- 6. TRUST -->
     <div class="doc" id="trust">
       <h2>6. Trust</h2>
 
       <h3 id="trust-definition">6.1 Trust as Growth, Not Grade</h3>
-      <p>Trust on Search Star is not a score out of 100. It is a living record of practice — something that grows at its own pace, reflects the genuine development of the person, and cannot be rushed any more than a tree can be rushed. A practitioner with six months of validated woodworking is not failing at mastery. They are six months in. Nobody blames a five-year-old for being five.</p>
+      <p>Trust on Search Star is not a score out of 100. It is a living record of practice — something that grows at its own pace, reflects the genuine development of the person, and cannot be rushed any more than a tree can be rushed. A practitioner who has completed one sponsored streak is not failing at mastery. They are one streak in. Nobody blames a five-year-old for being five.</p>
 
-      <p>The Trust Record is expressed as a Trust Stage, not a percentage. Stages reflect the organic accumulation of practice, validation, and time. They carry no implicit judgment about where a practitioner should be. They simply describe where they are — and suggest, without pressure, where continued practice leads.</p>
+      <p>The Trust Record is expressed as a Trust Stage, not a percentage. Stages reflect the organic accumulation of completed sponsored streaks over time. They carry no implicit judgment about where a practitioner should be. They simply describe where they are — and suggest, without pressure, where continued practice leads.</p>
 
       <p>The platform never displays a practitioner's Trust Stage to others without explicit consent. There are no comparisons, no leaderboards, no rankings. The only question the platform asks is: what are you growing?</p>
 
@@ -605,16 +557,16 @@
       </div>
 
       <h3 id="trust-stages">6.2 Trust Stages</h3>
-      <p>Every practitioner begins at Seedling — not as a deficit but as a beginning. Stages advance through sustained validated practice across the three dimensions of Depth, Breadth, and Durability. No stage can be purchased, accelerated, or performed into existence.</p>
+      <p>Every practitioner begins at Seedling — not as a deficit but as a beginning. Stages advance through completed sponsored streaks across the three dimensions of Depth, Breadth, and Durability. No stage can be purchased, accelerated, or performed into existence.</p>
 
       <table>
         <thead><tr><th>Stage</th><th>Character</th><th>What It Reflects</th></tr></thead>
         <tbody>
-          <tr><td>🌱 Seedling</td><td>A practice has begun</td><td>First validated sessions in at least one skill track</td></tr>
-          <tr><td>🌿 Rooting</td><td>A practice is taking hold</td><td>Consistent validated sessions over several months; first validator relationship established</td></tr>
-          <tr><td>🌳 Growing</td><td>A practice is becoming part of who you are</td><td>Multiple skill tracks active; validators attesting to genuine development over a year or more</td></tr>
-          <tr><td>🌲 Established</td><td>A practice has shaped the person</td><td>Deep multi-year record across multiple categories; strong validator network; mentorship beginning</td></tr>
-          <tr><td>🏔 Mature</td><td>A practice that forms others</td><td>Sustained leadership outcomes; mentees with their own growing records; long durability across categories</td></tr>
+          <tr><td>🌱 Seedling</td><td>A practice has begun</td><td>A commitment is declared or underway; no completed sponsored streaks yet</td></tr>
+          <tr><td>🌿 Rooting</td><td>A practice is taking hold</td><td>At least one completed sponsored streak; a sponsor circle has formed and delivered</td></tr>
+          <tr><td>🌳 Growing</td><td>A practice is becoming part of who you are</td><td>Multiple completed streaks over a year or more; returning sponsors and expanding circles</td></tr>
+          <tr><td>🌲 Established</td><td>A practice has shaped the person</td><td>Deep multi-year record, multiple categories, strong sponsor network with a track record of delivering</td></tr>
+          <tr><td>🏔 Mature</td><td>A practice of deep durability</td><td>Sustained completion across many years and many skill categories; a Trust Record that reads clearly from a distance</td></tr>
         </tbody>
       </table>
 
@@ -623,49 +575,39 @@
       <h3 id="trust-dimensions">6.3 Dimensions: Depth, Breadth, Durability</h3>
 
       <h4>Depth</h4>
-      <p>How far the practitioner has developed within individual skill tracks. Depth grows with session count, milestone achievements, and validator assessments of genuine progression. Two years of validated woodworking reflects greater depth than two months regardless of how much was posted about either.</p>
+      <p>How far the practitioner has developed within individual skill tracks. Depth grows with completed sponsored streaks within a single skill category, weighted by the count of sponsors, their diversity, and their reliability (see <a href="#trust-sponsors">§ 6.4</a>). Three completed 90-day commitments in woodworking, each witnessed by a distinct circle of sponsors, reflects greater depth than a single commitment — regardless of session volume inside each streak.</p>
 
       <h4>Breadth</h4>
-      <p>How many distinct skill categories the practitioner maintains active tracks in. Breadth reflects wholeness of development — the pursuit of beauty, grace, and truth across the full range of human capability. A practitioner with active practices in Physical, Craft, and Intellectual categories has grown in more directions than one deeply focused on a single domain.</p>
+      <p>How many distinct skill categories the practitioner maintains completed streaks in. Breadth reflects wholeness of development — the pursuit of beauty, grace, and truth across the full range of human capability. A practitioner with completed streaks in Physical Practice, Craft &amp; Making, and Reading has grown in more directions than one deeply focused on a single domain.</p>
 
       <h4>Durability</h4>
-      <p>How long the practitioner has maintained consistent practice. Durability is the dimension most resistant to gaming because elapsed time cannot be accelerated. A skill track active for three years reflects something that a track started last month cannot — the evidence that the practice has become genuinely part of who the person is.</p>
+      <p>How long the practitioner has maintained a consistent pattern of completion. Durability is the dimension most resistant to gaming because elapsed time cannot be accelerated. A practitioner whose first completed streak was three years ago, with continuous further completions since, reflects something that a brand-new practitioner with the same total streak count cannot — the evidence that the practice has become genuinely part of who the person is.</p>
 
-      <h3 id="trust-validators">6.4 Validators &amp; Vouching</h3>
-      <p>Validators are people who know the practitioner in real life — friends, family members, coaches, collaborators, teachers. They are the witnesses to genuine practice. Without them the Trust Record means nothing; with them it means everything, because their attestation carries the weight of real relationship and real knowledge.</p>
+      <h3 id="trust-sponsors">6.4 Sponsors Who Deliver</h3>
+      <p>Not every completed streak counts equally. Two meta-considerations apply to each one:</p>
 
-      <p>The strength of a validator's contribution reflects relationship tenure, validation consistency, the validator's own Trust Stage, and the range of skill categories they have witnessed. A validator who has known you for three years and confirmed practices across multiple domains contributes substantially more than someone who has known you for a month.</p>
+      <h4>Sponsor count and diversity</h4>
+      <p>A streak completed with one sponsor carries less weight than a streak completed with five. A streak where all sponsors are immediate family carries less weight than one with sponsors across multiple social circles — close friends, work relationships, community connections. The credibility signal is that multiple real people, across multiple relationships, stayed convinced through ninety days.</p>
 
-      <p>Validators stake their own trust when they confirm. False validation — attesting to effort that was not genuine — degrades the validator's own record. This makes confirmation a meaningful act with real consequences, not a formality.</p>
+      <h4>Sponsor reliability</h4>
+      <p>A sponsor who has backed and released payment on multiple practitioners' commitments is a more credible witness than someone who has never done so. Their continued presence on a new practitioner's streak carries more signal. Over time, a subpopulation of sponsors emerges who have a track record of delivering — backing real practitioners, staying present across the 90 days, releasing payment when the work was real, and vetoing when it wasn't. Their participation in a practitioner's commitment adds more to that practitioner's Trust Record than a first-time sponsor's does.</p>
 
-      <h4>How validators are invited and access the feed</h4>
-      <p>Validators are invited by email during the onboarding spine (Stage 3) or at any point from the launch period. Each validator receives a unique personal URL: <code>/validate/[commitment_id]/[invite_token]</code>. Clicking this link marks the invitation as accepted. No Search Star account is required — a validator can confirm sessions, view the full session history, and receive email notifications entirely without signing up.</p>
+      <div class="callout callout-info">
+        <strong>A clean recursion:</strong> Trust is earned by completing streaks under the witness of sponsors who themselves have a track record of witnessing well. Nothing in the system can be gamed by performance, recruitment, or documentation volume. The only path to a mature Trust Record is to do real work and attract real witnesses over time.
+      </div>
 
-      <h4>Validator arrival experience</h4>
-      <p>A validator's first visit shows a personal greeting screen: who invited them, what the commitment is, and what being a validator means — in plain language, without jargon. Three numbered explanations cover: you'll see their sessions, you confirm the work is real, your word carries weight. A soft Search Star introduction appears below, with a link to start their own commitment. Returning visits skip the arrival screen and go directly to the session feed.</p>
-
-      <h4>Up to 3 validators per commitment</h4>
-      <p>Each commitment supports up to 3 validators. Validators can be added at any stage. Future functionality will allow both the practitioner to remove a validator and the validator to remove themselves, with confirmations preserved.</p>
-
-      <h3 id="trust-quality">6.5 Quality Dimension: Beauty, Grace, Truth</h3>
-      <p>Beyond confirming that a session occurred, validators attest to a qualitative dimension: is this person genuinely developing? Is the practice producing real formation — greater capability, deeper understanding, more honest engagement with the difficulty of the work?</p>
-
-      <p>This is what trusted human witnesses are uniquely positioned to assess. A coach who has been running with someone for a year knows whether they are becoming a runner or going through motions. A fellow craftsperson knows whether the work is improving. A reading partner knows whether the books are changing the person. A session confirmed with genuine quality attestation reflects more growth than a bare confirmation of occurrence.</p>
-
-      <p>Domain knowledge amplifies the quality of attestation. A validator who shares the practitioner's skill category — a woodworker validating another woodworker, a runner validating another runner — can assess subtleties that a non-practitioner cannot. They know what a genuine breakthrough looks like in that domain. They can distinguish real progress from the appearance of progress. A domain-matched quality attestation therefore carries greater weight in the Trust Record than a general one, reflecting the credibility of the witness.</p>
-
-      <h3 id="trust-antigaming">6.6 Anti-Gaming Properties</h3>
-      <p>The Trust Record is structurally resistant to gaming because the only inputs that matter are real validated practice over real time:</p>
+      <h3 id="trust-antigaming">6.5 Anti-Gaming Properties</h3>
+      <p>The Trust Record is structurally resistant to gaming because the only inputs that matter are completed sponsored streaks:</p>
       <ul>
-        <li><strong>Validator stake:</strong> False validation degrades the validator's own record</li>
-        <li><strong>Time lock:</strong> Durability cannot be accelerated — gaps in practice history are permanent</li>
-        <li><strong>Validator diversity:</strong> A record confirmed by only one validator carries low weight — independent attestation across multiple relationships is required for advanced stages</li>
-        <li><strong>Evidence requirement:</strong> Session posts require documentation that validators assess — undocumented self-reports carry lower weight</li>
-        <li><strong>Network analysis:</strong> Coordinated validation rings are detectable by graph analysis and flagged for review</li>
-        <li><strong>No performance surface:</strong> The absence of a public feed removes the primary incentive for performing rather than practicing</li>
+        <li><strong>Money as stake:</strong> Every sponsor has pledged real money. False witness costs the sponsor too.</li>
+        <li><strong>Unanimous release required:</strong> One sponsor's veto ends the streak. Convincing a majority is not enough.</li>
+        <li><strong>Time lock:</strong> Durability cannot be accelerated — gaps in completion history are permanent.</li>
+        <li><strong>Sponsor diversity requirement:</strong> A record of streaks all witnessed by the same small circle carries less weight than streaks witnessed by independent circles. Advanced stages require real breadth of witness.</li>
+        <li><strong>Sponsor reliability weighting:</strong> First-time sponsors contribute less signal than proven ones. This naturally slows reciprocal collusion rings.</li>
+        <li><strong>No performance surface:</strong> The absence of a public feed removes the primary incentive for performing rather than practicing.</li>
       </ul>
 
-      <h3 id="trust-sharing">6.7 Sharing Your Trust</h3>
+      <h3 id="trust-sharing">6.6 Sharing Your Trust</h3>
       <p>A practitioner's Trust Stage and record are private by default. Sharing is always initiated by the practitioner, never by the platform. Three sharing contexts are supported:</p>
       <ul>
         <li><strong>Direct share:</strong> Practitioner sends a verified Trust attestation to a specific person or institution — an employer, a school, a sponsor</li>
@@ -675,110 +617,177 @@
       <p>The platform never exposes a Trust Record to any third party without explicit practitioner authorization. Trust is shared when the practitioner is ready — not when the platform decides it would be useful.</p>
     </div>
 
-    <!-- 6. FORMATION & LEADERSHIP -->
-    <div class="doc" id="formation">
-      <h2>7. Formation &amp; Leadership</h2>
+    <!-- 7. SPONSORSHIP -->
+    <div class="doc" id="sponsorship">
+      <h2>7. Sponsorship</h2>
 
-      <h3 id="formation-nofeed">7.1 No Public Feed</h3>
-      <p>Search Star has no public activity feed. There is no stream of other people's session posts, no algorithmic amplification of popular practitioners, no mechanism for practice documentation to accumulate public attention. This is a deliberate architectural choice, not a missing feature.</p>
+      <h3 id="sponsorship-unit">7.1 The 90-Day Sponsorship Unit</h3>
+      <p>The primary sponsorable unit is a 90-day practice commitment. A practitioner declares a 90-day commitment and enters the 14-day launch period. Sponsors pledge support during the launch period (and may continue joining throughout the active 90 days — see <a href="#sponsorship-join-anytime">§ 7.5</a>). The payout is triggered when the commitment is completed and every sponsor has released payment. The structure is simple and universally legible: I committed to 90 days of genuine practice, I did the work, the people who put something behind me stayed present and released.</p>
 
-      <p>A public feed would create exactly the incentive structure the platform is designed to avoid: reward for documentation volume, visibility for impressive-looking activity, status for people who practice performing rather than performing practice. The absence of a feed is what keeps the platform oriented toward formation rather than performance.</p>
+      <p>The expected payout for a completed 90-day commitment is <strong>$2,500</strong> — proportional to the genuine effort required. Three months of practice is a meaningful achievement. A sponsor backing a 90-day commitment is not giving a tip — they are staking something real on a transformation they will witness.</p>
 
-      <p>The social surface of Search Star is the validator circle — small, trusted, real. Everything that needs to be social about practice happens there.</p>
+      <p>The sponsorship is a private agreement between specific people. It requires no audience, no public announcement, no performance. A grandmother who pledges $5 toward her grandson's 90-day woodworking commitment is participating in exactly the same mechanism as a foundation sponsoring a student cohort. The scale differs; the structure and spirit are identical.</p>
 
-      <h3 id="formation-mentorship">7.2 Mentorship Tracks</h3>
-      <p>Users who want expanded recognition and influence on the platform earn it through a dedicated mechanism: mentorship tracks. A mentorship track documents a sustained relationship in which one practitioner actively helps another develop a genuine practice.</p>
+      <p>There is no separate sponsor account type. Every Search Star user can sponsor other practitioners, and the primary economic activity on the platform is practitioners backing each other's commitments — a running group whose members back each other's training, a reading circle whose members pledge against each other's monthly commitments, a craft community whose members celebrate each other's milestones with small tangible gestures of support. This peer sponsorship economy is the heart of the platform.</p>
 
-      <p>Mentorship is validated by the mentee — specifically by the growth in the mentee's own Trust Record during the mentorship period. A mentor whose mentees develop genuine durable practices earns more Trust contribution from their mentorship track than from any volume of their own session documentation. Recognition is earned by making other people better, not by demonstrating how good you are.</p>
-
-      <h3 id="formation-roles">7.3 Leadership Roles</h3>
-      <p>Four leadership roles are available to users who have demonstrated sustained commitment to helping others build genuine practices:</p>
-
-      <table>
-        <thead><tr><th>Role</th><th>Domain</th><th>How Earned</th><th>Recognition &amp; Compensation Path</th></tr></thead>
-        <tbody>
-          <tr><td>Mentor</td><td>Primary domain required — must have active verified practice in the skill category they mentor</td><td>Sustained one-on-one mentorship with documented Trust growth in mentee</td><td>Mentorship track contribution to own Trust Record; share of voluntary donations from mentee payout moments</td></tr>
-          <tr><td>Coach</td><td>Domain specialist — mentors three or more practitioners in the same skill category as their own primary practice</td><td>Active mentorship of three or more practitioners simultaneously in a shared skill category</td><td>Elevated validator weight; institutional validator eligibility; share of community contribution pool</td></tr>
-          <tr><td>Community Builder</td><td>Domain or process — may build within a single skill category or across categories as a generalist formation guide</td><td>Recruited and onboarded ten or more practitioners who maintain active practices</td><td>Share of community contribution pool; institutional portal access; eligible for institutional placement as program facilitator</td></tr>
-          <tr><td>Practice Leader</td><td>Typically domain-anchored — leads a recognizable community (the woodworking community, the running community) though process leaders who form practitioners across domains are also recognized</td><td>Coach or Community Builder with sustained outcomes over two or more years</td><td>Largest share of community contribution pool; institutional partnership eligibility; placement marketplace for running institutional programs as a paid role</td></tr>
-        </tbody>
-      </table>
-
-      <h3 id="formation-domain">7.4 Domain Mentorship</h3>
-      <p>Mentors on Search Star are domain practitioners first. A mentor's credibility to guide another person's practice derives directly from their own verified record in the same skill category. A woodworker with a three-year verified practice history can mentor woodworkers not because they hold a credential but because they have walked the same road further. Their quality attestations carry weight because they know what genuine progress looks like from the inside.</p>
-
-      <p>This is how the guild system worked and why it worked. The master's assessment of the apprentice's work was meaningful precisely because the master had made the same objects, encountered the same failures, and developed the same sensibilities over years of practice. Generalized encouragement cannot substitute for domain knowledge when the question is whether someone is genuinely improving.</p>
-
-      <h4>Domain specialists and process mentors</h4>
-      <p>Two legitimate mentor types exist on Search Star and both are recognized:</p>
-      <ul>
-        <li><strong>Domain specialists</strong> mentor within a specific skill category — the woodworking mentor, the running coach, the serious reading guide. Their value is deep domain knowledge. Their mentees benefit from someone who can assess the quality of their specific practice at a level of granularity only a fellow practitioner can reach.</li>
-        <li><strong>Process mentors</strong> mentor across domains — their gift is helping people build and sustain any serious practice. A former athlete who helps people through the psychological challenges of demanding commitment. A teacher whose skill is watching people learn regardless of subject. Their value is knowledge of the formation process itself rather than any particular domain.</li>
-      </ul>
-      <p>Both types contribute genuinely. Domain specialists tend toward the Mentor and Coach roles; process mentors tend toward the Community Builder role. A Practice Leader may be either, though most naturally emerge from domain communities where they are recognized by fellow practitioners as having formed others with real outcomes.</p>
-
-      <h4>Domain matching in practice discovery</h4>
-      <p>When a practitioner looks for a mentor, domain is the primary matching dimension. The platform surfaces potential mentors whose verified practice history overlaps with the practitioner's skill category. A practitioner beginning a woodworking practice sees woodworkers with established Trust Records. A practitioner beginning a running practice sees runners. The social graph is legible in domain terms — you can find the serious practitioners in your field and approach the ones who have demonstrated they can form others.</p>
-
-      <h4>Domain credibility and validator weight</h4>
-      <p>A validator's quality attestation carries greater weight when their own Trust Record includes verified practice in the same skill category as what they are confirming. This is not a rigid requirement — any validator who knows the practitioner well can confirm sessions — but domain-matched attestation is recognized as carrying stronger signal. A running mentor's confirmation that a practitioner's form is genuinely improving means more than a friend's general encouragement, because the mentor has the context to know the difference.</p>
-
-      <div class="callout callout-info">
-        <strong>The emergent community structure:</strong> As domain mentors attract domain practitioners, Search Star naturally develops recognizable communities — the woodworking community, the running community, the serious reading community, the language learning community. These communities are not created by the platform; they emerge from the domain matching of mentor relationships. The platform's job is to make that emergence visible and to ensure the people who build those communities are rewarded for doing so.
+      <div class="callout callout-green">
+        <strong>Any dollar amount counts.</strong> A grandmother's $5 signals as strongly as a senior engineer's $500. The credibility signal for a Trust Record is the count and diversity of sponsors who stayed present through 90 days, not the total dollars. This keeps the platform generous — a practitioner doesn't need wealthy friends to build a Trust Record.
       </div>
 
-      <h3 id="formation-recognition">7.5 Recognition Through Others</h3>
-      <p>The asymmetry between personal documentation and mentorship contribution is intentional and significant. A user with 500 session posts and no mentorship history will have a less advanced Trust Record than a user with 200 session posts and three mentees who have each built genuine two-year practice records. The platform rewards the person who is forming others, not the person who is documenting themselves.</p>
+      <h3 id="sponsorship-invitation">7.2 Invitation &amp; Onboarding of Sponsors</h3>
+      <p><strong>Sponsors are invited only by the practitioner, or they arrive via the practitioner's sponsor link.</strong> There is no public directory of commitments needing sponsorship. There is no sponsor-side discovery surface where someone could browse practitioners to back. The practitioner owns the invitation entirely — they either email someone directly through the platform, or they share a link the platform generated for their commitment.</p>
 
-      <p>This creates a natural growth mechanic that selects for the right kind of user: people who want to help others develop genuine skills will find Search Star increasingly rewarding as they do so. People who want attention for their own activity will find the platform unrewarding compared to alternatives that offer a public feed and follower counts.</p>
+      <p>This is a structural choice. A sponsor who arrives via either path is someone the practitioner chose to bring in. It keeps the peer-sponsorship model honest and forecloses an entire category of attention-seeking behavior that a sponsor marketplace would produce.</p>
 
-      <h3 id="formation-livelihood">7.6 Leadership as Livelihood</h3>
-      <p>Search Star does not pretend that people can give serious time to forming others without eventually needing that time to pay their bills. A platform that reserves deep community leadership for people who can afford to do it for free will be led only by the wealthy and the retired — which contradicts everything the platform stands for.</p>
+      <p>Two invitation mechanisms exist:</p>
+      <ul>
+        <li><strong>Direct email invitation.</strong> The practitioner enters a sponsor's email address and the platform sends an invitation with a unique token URL: <code>/sponsor/[commitment_id]/[token]</code>. The recipient clicks through, sees the commitment, and can pledge.</li>
+        <li><strong>Personal sponsor link.</strong> The practitioner has a single shareable link for the commitment. Sharing it via text, email, social channels, or in person is entirely up to the practitioner. Anyone who receives the link can open it, see the commitment, and pledge. The link is sharable but the decision to share it is deliberately the practitioner's.</li>
+      </ul>
 
-      <p>Three paths exist for leadership roles to become financially viable over time:</p>
+      <p>No Search Star account is required to sponsor. A sponsor who clicks through either path can pledge, see the sponsor feed, and participate fully without signing up.</p>
 
-      <h4>Voluntary Donation Share</h4>
-      <p>Mentors, Coaches, Community Builders, and Practice Leaders receive a share of the voluntary donations made at payout moments within their community. This income grows as the community grows and as the practitioners they have formed complete more sponsored goals. It is not a salary and not a guarantee — but for a Practice Leader with a large thriving community, it accumulates meaningfully. The structure ensures that compensation tracks genuine outcomes rather than activity or tenure.</p>
+      <h3 id="sponsorship-veto">7.3 The Veto Rule</h3>
+      <p>Streak completion requires <strong>unanimous continued confidence from every sponsor who has pledged.</strong> One sponsor vetoing ends the streak. There is no majority rule, no weighted voting, no arbitration body, no appeals process, no partial credit.</p>
 
-      <h4>Institutional Placement</h4>
-      <p>Institutions deploying Search Star through the Institutional Portal frequently need someone to run the program — to onboard practitioners, facilitate cohort sessions, manage validator relationships, and track progress. Search Star operates a placement pathway through which verified Practice Leaders and Community Builders are matched with institutions seeking facilitators. This is a real paid role, compensated directly by the institution, earned through demonstrated outcomes on the platform rather than through credentials or interviews alone.</p>
-
-      <h4>Direct Community Support</h4>
-      <p>Practitioners who have been genuinely formed by a mentor have a natural inclination to support that person's continued work. Search Star makes direct voluntary support easy — a practitioner can choose to support a mentor or community leader directly, outside of any specific payout moment, as an ongoing expression of gratitude and investment in the community. This is never required, never prompted repeatedly, and never platformized in a way that creates social pressure. It is simply made possible.</p>
+      <p>A sponsor expresses continued confidence passively — by staying present through the 90 days and releasing payment at day 90. A sponsor expresses veto actively — one button, at any point during the 90 days. Both actions are final in their respective directions: a released payment cannot be un-released, a veto cannot be un-vetoed.</p>
 
       <div class="callout callout-info">
-        <strong>The principle:</strong> Compensation flows from genuine formation outcomes — not from holding a title, not from volume of activity, not from seniority. A Practice Leader who stops forming people stops earning. A new mentor who helps three people build genuine practices earns from the first payout moment. The economic structure rewards what the platform values.
+        <strong>Deliberately asymmetric in favor of veto.</strong> A single doubt, honestly held by one person who put money on the line, is enough to end a streak. That is the right default. It means the practitioner must earn continued belief from every sponsor across the whole window — which is much closer to what genuine character actually requires than a mechanical session-count threshold.
+      </div>
+
+      <p>On veto: pledged funds are refunded to every sponsor, including the one who vetoed. The commitment is marked abandoned. The practitioner retains their session history but the streak does not contribute to the Trust Record. The practitioner is free to declare a new commitment and assemble a new sponsor roster at any time.</p>
+
+      <h3 id="sponsorship-noescape">7.4 The No-Escape-Hatch Principle</h3>
+      <p>If a practitioner loses a sponsor mid-streak for any reason — honest disagreement, personal falling-out, the sponsor going silent, the sponsor changing their mind — <strong>the streak ends and the practitioner must bail and restart.</strong></p>
+
+      <p>Not paused. Not partially credited. Not arbitrated. Ended. The practitioner restarts from the launch period with a new roster of sponsors.</p>
+
+      <div class="callout callout-red">
+        <strong>The platform does not mediate sponsor relationships and does not provide a safety net for them breaking down.</strong> Maintaining those relationships across ninety days is part of the practice. It is arguably the most important part, because it is the part that is hardest to fake: staying on good terms with someone who has put money behind your word, for three months, while you do the work they are watching.
+      </div>
+
+      <p>A clarifying note: bringing in <em>additional</em> sponsors during the 90 days is permitted and normal (see <a href="#sponsorship-join-anytime">§ 7.5</a>). Replacing a lost one is not. If sponsor A vetoes on day 40, the streak ends — even if sponsor B joined on day 30 and is still fully on board. The principle is about the integrity of a single committed roster, not about the total count of supporters.</p>
+
+      <p>Three consequences follow directly:</p>
+      <ul>
+        <li><strong>The Trust Record is built from completed sponsored streaks only.</strong> "Completed" means every sponsor who pledged at any point during the commitment was still present and released payment at day 90. A streak that ended via veto or sponsor withdrawal contributes nothing to the Trust Record.</li>
+        <li><strong>There is no partial Trust credit for partial effort.</strong> The session count at which a veto occurs is irrelevant — day 3 or day 89, the result is the same. This is what makes the rule clean. It removes any temptation for the platform to quantify near-misses or award effort points.</li>
+        <li><strong>Practitioners develop a strong interest in sponsor selection.</strong> Because losing one sponsor means losing the whole streak, practitioners think carefully about who they invite. A sponsor likely to go silent or lose interest is a liability from day one. The invitation decision is consequential — not a social nicety but a genuine act of discernment about whose continued belief the practitioner can earn across ninety days.</li>
+      </ul>
+
+      <h3 id="sponsorship-join-anytime">7.5 Sponsors Can Join at Any Time</h3>
+      <p>The 14-day launch period is where the initial sponsor roster is assembled. But sponsors are not locked out after the start ritual. <strong>Additional sponsors can pledge at any point during the active 90 days.</strong> A sponsor who joins on day 40 is in for the remaining fifty days, bound by the same veto-or-release mechanic as everyone else.</p>
+
+      <p>This is the right asymmetry: adding belief mid-stream is welcome; losing belief mid-stream is final. A practitioner whose commitment is going well can invite more sponsors as momentum builds. A practitioner whose commitment is struggling cannot paper over a lost sponsor with a new one.</p>
+
+      <p>A sponsor who pledges mid-stream sees the full session history of the commitment up to that point. They are witnessing from the present forward but with the context of what has already happened. At day 90 their release decision is informed by whatever portion of the 90 days they were present for — the Companion's summary at completion helps contextualize this for sponsors who joined late.</p>
+
+      <h3 id="sponsorship-institutional">7.6 Institutional Sponsorship Cannot Stand Alone</h3>
+      <p>An institution — an employer, a foundation, a university — cannot be the sole sponsor of a commitment. Institutional sponsorship must ride alongside personal sponsorship. A commitment backed only by an employer's wellness budget, with no friend or family member on the pledge list, does not qualify as a sponsored streak.</p>
+
+      <p>The standing principle: <strong>personal stake must precede institutional stake.</strong> The practitioner demonstrates that real people who know them are willing to back the commitment, and institutional money joins that pledge rather than substituting for it. The full treatment of how institutional sponsorship integrates with personal sponsorship is in <a href="#institutional">§ 10</a>.</p>
+
+      <h3 id="sponsorship-donation">7.7 The Voluntary Donation Model</h3>
+      <p>Search Star charges no mandatory platform fee beyond the cost of payment processing, passed through at cost. Platform revenue comes from a single voluntary donation mechanism at payout — modeled on GoFundMe's pattern.</p>
+
+      <div class="callout callout-info">
+        <strong>The only mandatory charge:</strong> Payment processing at cost (approximately 2.9% + $0.30 per transaction via Stripe). This covers the actual cost of moving money and nothing more. Search Star takes no margin on processing.
+      </div>
+
+      <p>At the payout moment — when a 90-day commitment is completed and sponsors are releasing payment — each sponsor sees an optional prompt: "Add a voluntary donation to Search Star?" The default is <strong>5% of the pledge amount</strong>. The sponsor can adjust it up, down, or remove it entirely with a single click. There is no guilt, no dark pattern, no follow-up prompt.</p>
+
+      <h4>How it works, concretely</h4>
+      <p>A sponsor who pledged $500 against a 90-day commitment sees at payout:</p>
+      <ul>
+        <li>Your pledge: $500 (will be released to the practitioner)</li>
+        <li>Optional Search Star donation: $25 <em>(5%, editable)</em></li>
+        <li>Total charge to your card: $525 <em>(or $500 if you remove the donation)</em></li>
+      </ul>
+
+      <p>The donation goes entirely to Search Star. It is never deducted from the practitioner's payout. The practitioner receives exactly what was pledged.</p>
+
+      <div class="callout callout-green">
+        <strong>Why this model works:</strong> GoFundMe operates on this pattern and reports high voluntary tip conversion rates — most people leave something even when they don't have to. People who have just witnessed a sponsored commitment complete are in a moment of genuine satisfaction. A small voluntary donation at that moment is an invitation to sustain the platform, not a toll for passing through.
+      </div>
+
+      <h4>Revenue at scale</h4>
+      <p>At the target $2,500 average payout and two commitments per year, a practitioner generates ~$5,000 in sponsor flow annually. A 5% donation on that is $250 per practitioner per year at full conversion. The realistic number is lower, but the model is structurally simple: platform revenue grows directly with platform activity, without any intermediate economic tier to fund.</p>
+
+      <h3 id="sponsorship-payout">7.8 Payout Rules</h3>
+      <ul>
+        <li><strong>Payout triggered on 90-day commitment completion.</strong> A commitment is complete when all sponsors have released payment at day 90.</li>
+        <li><strong>Practitioner receives the full pledged amount.</strong> Processing fees and voluntary donations are separate transactions — never deducted from what was promised to the practitioner.</li>
+        <li><strong>Processing fee is mandatory and passed through at cost.</strong> No margin is taken on payment processing.</li>
+        <li><strong>Voluntary donation is genuinely optional.</strong> One prompt per sponsor at payout, one removal action, no follow-up. The platform does not use dark patterns to recover declined donations.</li>
+        <li><strong>Veto refunds fully.</strong> If any sponsor vetoes during the 90 days, all pledged funds are refunded to all sponsors, including the one who vetoed. The commitment is marked abandoned.</li>
+        <li><strong>Sponsor-joins-late is supported.</strong> A sponsor pledging on day 40 has funds held through day 90 the same as a sponsor who pledged on day 1.</li>
+      </ul>
+    </div>
+
+    <!-- 8. THE AI COMPANION -->
+    <div class="doc" id="companion">
+      <h2>8. The AI Companion</h2>
+
+      <h3 id="companion-role">8.1 Role &amp; Purpose</h3>
+      <p>Search Star includes an AI Companion present in every commitment. It is the third party to every practice — alongside the practitioner and the sponsor circle — and it has two purposes:</p>
+
+      <p><strong>Accompany the practitioner through formation.</strong> The Companion asks the questions a good teacher would ask. It notices patterns across sessions. It helps with documentation when the practitioner wants help. It reflects on progress, points out what is being avoided, and surfaces the things worth remembering. This is the daily presence — the teacher, the coach, and the one who is actually watching the work develop.</p>
+
+      <p><strong>Help sponsors assess at day 90.</strong> When a commitment reaches completion, the Companion produces a summary of the practice record — what was done, how it developed, where the effort showed, where it faltered. Sponsors use this summary to decide whether to release payment. The summary is a reading aid, not a verdict.</p>
+
+      <div class="callout callout-info">
+        <strong>Why AI and not human mentorship:</strong> For the skill categories Search Star supports, a well-designed AI Companion is a better teacher than a human mentor who shows up weekly. Available continuously. Patient. Domain-deep. Capable of remembering everything a practitioner has done and relating it to everything anyone has ever done in the same category. Paying humans to do what AI does better is not a model the platform wants to build its economics on.
+      </div>
+
+      <h3 id="companion-authority">8.2 No Authority Over Trust</h3>
+      <p>The Companion holds <strong>no authority over the Trust Record.</strong> It cannot confirm practice. It cannot advance a Trust Stage. It cannot vote on completion. It cannot veto. Its role is descriptive and supportive. All consequential attestation flows through sponsors — people with real money and real relationships on the line.</p>
+
+      <p>This distinction is structural. The Companion sees everything the practitioner logs. It could, in principle, assess whether a practice was real. The choice not to grant it that authority is a choice about what kind of trust the platform produces. A Trust Record witnessed by AI would be a statement about the AI's judgment. A Trust Record witnessed by sponsors with stake is a statement about human relationships and human stakes.</p>
+
+      <h3 id="companion-other">8.3 Other AI Surfaces</h3>
+      <p>The Companion is the default AI surface, present in every commitment and facing the practitioner directly. Other AI surfaces may exist alongside it over time — surfaces that address specific needs like sponsor onboarding, commitment framing help, or domain-specific tutoring. All such surfaces share three properties:</p>
+      <ul>
+        <li>They are AI, clearly identified as such to users</li>
+        <li>They hold no authority over the Trust Record</li>
+        <li>They are subordinate to the two human roles (Practitioner and Sponsor) in every interaction</li>
+      </ul>
+
+      <p>When the spec or product copy refers to "the AI" it means whichever surface is relevant to that moment. When it refers to "the Companion" it means specifically the default, practitioner-facing surface described in <a href="#companion-role">§ 8.1</a>.</p>
+
+      <div class="callout callout-green">
+        <strong>Open questions (deferred):</strong> Naming (Companion vs. other options). Memory architecture across sessions, commitments, and years. Exact format of the day-90 sponsor summary. Whether and how the Companion surfaces to sponsors during the 90 days versus only at completion. These are product-design questions to be resolved as the Companion is built.
       </div>
     </div>
 
-    <!-- 7. SELF-ORGANIZING SYSTEMS -->
+    <!-- 9. SELF-ORGANIZING SYSTEMS -->
     <div class="doc" id="selforganizing">
-      <h2>8. Self-Organizing Systems</h2>
+      <h2>9. Self-Organizing Systems</h2>
 
-      <h3 id="selforganizing-precedents">8.1 Precedents</h3>
+      <h3 id="selforganizing-precedents">9.1 Precedents</h3>
       <p>Search Star is not the first attempt to build a community that reinforces genuine human development through peer accountability and shared practice. Several self-organizing systems have succeeded at this at scale — and their structural features are worth studying deliberately rather than reinventing.</p>
 
       <p><strong>Alcoholics Anonymous</strong> succeeds because there are no spectators. Everyone in the room is a participant. Status comes from longevity and from helping newcomers, not from performance. The shared language and ritual create belonging without hierarchy. Anonymity removes the performance incentive entirely — you cannot humble-brag your sobriety to strangers.</p>
 
-      <p><strong>CrossFit</strong> succeeds because progress is measured in absolute personal terms, not relative rankings. Your clean-and-jerk PR is yours — it does not diminish because someone else lifted more. The coach's role is to help every person in the room improve, and coaches earn respect through the outcomes of their athletes. The community is the product.</p>
+      <p><strong>CrossFit</strong> succeeds because progress is measured in absolute personal terms, not relative rankings. Your clean-and-jerk PR is yours — it does not diminish because someone else lifted more. The community is the product.</p>
 
-      <p><strong>The guild system</strong> succeeded because mastery was assessed by masters who knew what quality looked like — not by popularity, not by self-report, not by credential. The apprentice advanced when the work advanced. The record was in the objects made and the skills demonstrated, not in what the apprentice said about themselves.</p>
+      <p><strong>GoFundMe</strong> succeeds because the economic model is simple and honest: the platform takes only what donors freely give. Most donors leave a voluntary tip. The platform's revenue aligns with the value actually delivered — people sustain the thing that helped them.</p>
 
       <p><strong>Monastic communities</strong> succeeded at sustaining high-effort practice over lifetimes because the practice was oriented toward something beyond the self. The work was not performed for an audience. The audience was the work itself, and the community existed to support each member's engagement with it.</p>
 
-      <h3 id="selforganizing-principles">8.2 Structural Principles</h3>
-      <p>From these precedents, Search Star draws the following structural principles — each one reflected in a specific product decision:</p>
+      <h3 id="selforganizing-principles">9.2 Structural Principles</h3>
+      <p>From these precedents, Search Star draws the following structural principles — each reflected in a specific product decision:</p>
 
       <table>
         <thead><tr><th>Principle</th><th>Source</th><th>Search Star Expression</th></tr></thead>
         <tbody>
-          <tr><td>No spectators — everyone participates</td><td>AA, CrossFit</td><td>No public feed; sponsors are practitioners too</td></tr>
+          <tr><td>No spectators — everyone participates</td><td>AA, CrossFit</td><td>No public feed; every user is a practitioner and a potential sponsor</td></tr>
           <tr><td>Progress in absolute personal terms</td><td>CrossFit</td><td>Trust expressed as Trust Stage, not ranking</td></tr>
-          <tr><td>Status earned by forming others</td><td>AA, guilds</td><td>Leadership roles earned through mentee outcomes</td></tr>
-          <tr><td>Mastery assessed by those who know</td><td>Guild system</td><td>Validation by trusted human witnesses, not algorithms</td></tr>
-          <tr><td>Shared language creates belonging</td><td>AA, monasteries</td><td>Consistent vocabulary: practice, validator, Trust Stage</td></tr>
+          <tr><td>Witness by those with real stake</td><td>AA sponsorship model, lending-circle traditions</td><td>Sponsors put money behind the commitment; their release or veto is the attestation</td></tr>
+          <tr><td>Voluntary support aligned with value</td><td>GoFundMe</td><td>5% suggested donation at payout, fully optional and editable</td></tr>
+          <tr><td>Shared language creates belonging</td><td>AA, monasteries</td><td>Consistent vocabulary: practice, commitment, sponsor, Trust Stage, Companion</td></tr>
           <tr><td>The work is oriented beyond the self</td><td>Monastic tradition</td><td>Beauty, grace, truth as the telos of practice</td></tr>
-          <tr><td>Anonymity from outside audiences</td><td>AA</td><td>Private by default; institutional sponsorship invisible to validator circle</td></tr>
+          <tr><td>Anonymity from outside audiences</td><td>AA</td><td>Private by default; the sponsor circle is the only audience</td></tr>
         </tbody>
       </table>
 
@@ -787,196 +796,42 @@
       </div>
     </div>
 
-    <!-- 8. SPONSORSHIP MODEL -->
-    <div class="doc" id="sponsorship">
-      <h2>9. Sponsorship Model</h2>
-
-      <h3 id="sponsorship-mechanic">9.1 The 90-Day Sponsorship Unit</h3>
-      <p>The primary sponsorable unit is a 90-day validated practice commitment. A practitioner declares a 90-day commitment during the 14-day launch period, sponsors pledge support during that window, and the payout is triggered when the commitment is completed and confirmed by the validator circle. The structure is simple and universally legible: I committed to 90 days of genuine practice, I did the work, people who believed in me backed it.</p>
-
-      <p>The expected payout for a completed 90-day commitment is <strong>$2,500</strong> — consistent with the average payout on comparable commitment platforms and proportional to the genuine effort required. Three months of validated practice is a meaningful achievement. The payout reflects that. A sponsor backing a 90-day commitment is not giving a tip — they are investing in a real transformation they have witnessed.</p>
-
-      <p>The sponsorship is a private agreement between specific people. It requires no audience, no public announcement, no performance. A grandmother who pledges $100 toward her grandson's 90-day woodworking streak is participating in exactly the same mechanism as a foundation sponsoring a student cohort's reading habits. The scale differs; the structure and spirit are identical.</p>
-
-      <h3 id="sponsorship-unified">9.2 Users and Sponsors Are the Same People</h3>
-      <p>There is no separate sponsor account type. Every Search Star user is simultaneously a practitioner building their own skills and a potential sponsor of other practitioners they believe in. Sponsoring someone else's practice is itself an act of authentic relationship — it expresses trust, encourages effort, and deepens the bond between people who are growing together.</p>
-
-      <p>The primary economic activity on Search Star is practitioners sponsoring each other. A running group whose members back each other's training goals. A reading circle whose members pledge to each other's monthly commitments. A craft community whose members celebrate each other's milestones with small tangible gestures of support. This peer sponsorship economy is the heart of the platform — not a feature, but the thing the platform is for.</p>
-
-      <div class="callout callout-green">
-        <strong>The right mental model:</strong> Search Star is a community where people who are growing back each other's growth. The economic layer expresses the relational layer — I believe in what you're building, and I'm willing to put something behind that belief.
-      </div>
-
-      <h3 id="sponsorship-types">9.3 Sponsor Types</h3>
-
-      <h4>Peer Sponsors (Primary)</h4>
-      <p>Fellow practitioners, friends, and family who sponsor someone they know and believe in. Peer sponsorships are small-dollar and high-meaning. They are social accountability structures as much as financial ones — the sponsor cares about the person, not the category. Peer sponsors participate through a simple pledge flow requiring no separate account or institutional setup.</p>
-
-      <h4>Institutional Sponsors (Background)</h4>
-      <p>Employers, schools, foundations, and civic organizations that attach rewards to specific skill categories across their communities. Institutional sponsors operate through the Institutional Portal and manage budgets at scale. Their sponsorships are deliberately kept in the background of the practitioner's experience — they augment what the peer community is already doing, without displacing it or creating performance incentives toward institutional approval.</p>
-
-      <h4>Brand Sponsors (Marketplace)</h4>
-      <p>Companies that want to reach verified practitioners with genuine engagement in specific skill categories. Brand sponsorships are category-level, not individual — a tools company sponsors the Craft &amp; Making category, not individual practitioners. Practitioners who match the criteria earn automatically; there is no competition for brand attention and nothing to perform toward.</p>
-
-      <h3 id="sponsorship-institutional">9.4 Keeping Institutional Sponsorship in the Background</h3>
-      <p>Institutional and brand sponsorship will likely become the dominant driver of economic activity on the platform at scale. This creates a structural risk: if practitioners can see which institutional sponsors are active in their category and how much those sponsors are paying, they will inevitably begin optimizing their practice for institutional approval rather than genuine development. The humble-brag problem returns, wearing a corporate wellness program as a costume.</p>
-
-      <p>Four design decisions prevent this:</p>
-      <ul>
-        <li><strong>Institutional sponsorships attach to categories, not individuals.</strong> A foundation sponsors reading practices in a cohort — not the most impressive readers. Practitioners earn by meeting validated goal criteria, not by attracting institutional attention.</li>
-        <li><strong>Institutional rewards are invisible to the validator circle.</strong> Validators see practice. They do not see what the practitioner is earning or which institutions have attached sponsorships to their category. The economic layer is structurally separated from the relational layer.</li>
-        <li><strong>Peer sponsorship is foregrounded in the UI.</strong> The practitioner's primary experience of sponsorship is the people in their life who believe in them. Institutional contributions appear in earnings summaries but not in the daily practice experience.</li>
-        <li><strong>No featured practitioners or leaderboards in sponsored categories.</strong> Institutions see aggregate outcomes across their community. They cannot create competitions among practitioners or single out high performers for additional visibility.</li>
-      </ul>
-
-      <h3 id="sponsorship-fees">9.5 Voluntary Donation Model</h3>
-      <p>Search Star charges no mandatory platform fee beyond the cost of payment processing, passed through at cost. Every other charge is voluntary. This is not a freemium strategy or a loss leader — it is a philosophical commitment: a platform that creates genuine value should be able to sustain itself through the freely given support of the people it serves.</p>
-
-      <div class="callout callout-info">
-        <strong>The only mandatory charge:</strong> Payment processing at cost (approximately 2.9% + $0.30 per transaction via Stripe). This covers the actual cost of moving money and nothing more. Search Star takes no margin on processing.
-      </div>
-
-      <p>At every payout moment — when a sponsored practice goal is validated and funds are released — a voluntary donation prompt appears. A suggested amount and suggested split are pre-filled based on the payout size and the depth of the value chain involved. Both the amount and the split are fully editable. The contribution can be removed entirely with a single action. There is no guilt, no dark pattern, no repeated prompt.</p>
-
-      <p>The suggested contribution defaults to 10% of the payout amount — consistent with the intuitive social norm of a tithe or a generous donation. People who have just witnessed a sponsored practice goal validated are in a moment of genuine satisfaction. The voluntary donation at that moment is an invitation to affirm the whole community that made it possible, not a toll for passing through.</p>
-
-      <div class="callout callout-green">
-        <strong>Why this works:</strong> GoFundMe operates on this model and reports voluntary donation conversion rates around 70% — meaning most people leave something even when they don't have to. People who experience genuine value want to sustain the thing creating it. A voluntary donation is a stronger signal of real value delivered than any mandatory fee.
-      </div>
-
-      <h3 id="sponsorship-split">9.6 Donation Split &amp; Value Chain</h3>
-      <p>When a voluntary donation is made, it flows through the full value chain that made the payout possible — not just to Search Star. This honors the reality that the platform is built by many people: the mentor who helped the practitioner establish their practice, the community builder who created the environment, the practice leader who sustains it, and Search Star which provides the infrastructure.</p>
-
-      <table>
-        <thead><tr><th>Recipient</th><th>Default Share</th><th>Role</th></tr></thead>
-        <tbody>
-          <tr><td>Search Star</td><td>40%</td><td>Platform infrastructure, development, and operations</td></tr>
-          <tr><td>Immediate Mentor</td><td>30%</td><td>The person who directly supported this practitioner's growth</td></tr>
-          <tr><td>Community &amp; Leadership Pool</td><td>30%</td><td>Distributed among Community Builders and Practice Leaders in the practitioner's community</td></tr>
-        </tbody>
-      </table>
-
-      <p>If no mentor relationship exists, their share flows to the Community &amp; Leadership Pool. If no community leadership exists, their share flows to Search Star. The split is always transparent to the contributor — they can see exactly who receives what before confirming.</p>
-
-      <p>Contributors can adjust the split freely. Someone who wants to direct more support to their mentor can increase that share. Someone who wants to support Search Star's development specifically can redirect accordingly. The default split is a suggestion, not a contract.</p>
-
-      <div class="callout callout-info">
-        <strong>Compensation flows from outcomes, not position.</strong> A Practice Leader earns from the contribution pool only when practitioners in their community are completing genuine validated goals and generating payout moments. A dormant community generates no contributions. This keeps leadership compensation structurally tied to genuine formation outcomes rather than to holding a title.
-      </div>
-
-      <h3 id="sponsorship-pricing">9.7 Pricing Model &amp; Mentor Economics</h3>
-      <p>The pricing model is built around a single governing insight: at a $2,500 average payout per 90-day commitment, with two streaks per year (~$5,000 maximum annual earning per practitioner), the voluntary donation flow is large enough to fund living wages for every Mentor role at modest platform scale — without requiring complex pricing tiers or mandatory fees beyond payment processing.</p>
-
-      <h4>The atomic unit of economics</h4>
-      <p>Each practitioner completing two 90-day commitments per year at a $2,500 average payout generates the following donation flow — a maximum annual earning of approximately $5,000:</p>
-
-      <table>
-        <thead><tr><th>Variable</th><th>Value</th><th>Basis</th></tr></thead>
-        <tbody>
-          <tr><td>Annual payout received</td><td>$5,000</td><td>2 streaks × $2,500</td></tr>
-          <tr><td>Tip rate</td><td>90%</td><td>Sponsors who leave a voluntary donation</td></tr>
-          <tr><td>Tip size</td><td>50%</td><td>Suggested contribution as % of payout</td></tr>
-          <tr><td>Contribution per practitioner / yr</td><td><strong>$2,250</strong></td><td>$5,000 × 90% × 50%</td></tr>
-        </tbody>
-      </table>
-
-      <h4>How contributions are split</h4>
-      <p>Every voluntary donation is divided equally among Search Star and the four Mentor role types. With a 1:100 ratio (one person in each role per 100 practitioners), and 5% to Search Star, the remaining 95% divides into four equal shares of 23.75% each.</p>
-
-      <table>
-        <thead><tr><th>Recipient</th><th>Share</th><th>Basis</th></tr></thead>
-        <tbody>
-          <tr><td>Search Star</td><td>5%</td><td>Platform infrastructure and operations</td></tr>
-          <tr><td>Mentor</td><td>23.75%</td><td>Direct income — the practitioner's immediate mentor</td></tr>
-          <tr><td>Coach</td><td>23.75%</td><td>Community pool — Coach tier</td></tr>
-          <tr><td>Community Builder</td><td>23.75%</td><td>Community pool — Community Builder tier</td></tr>
-          <tr><td>Practice Leader</td><td>23.75%</td><td>Community pool — Practice Leader tier</td></tr>
-        </tbody>
-      </table>
-
-      <h4>Living wage at scale</h4>
-      <p>At a 1:100 ratio each Mentor role has 100 people per 10,000 practitioners. Each person in a Mentor role earns their tier's share divided by the number of people in that tier. Platform scale stages use a separate vocabulary from the individual Trust Record Trust Stages to avoid confusion between the two systems.</p>
-
-      <table>
-        <thead><tr><th>Platform stage</th><th>Practitioners</th><th>Total pool / yr</th><th>Each role earns / yr</th><th>vs $55K target</th><th>Search Star / yr</th></tr></thead>
-        <tbody>
-          <tr><td>Early</td><td>1,000</td><td>$2.25M</td><td>$53,400</td><td>−$1,562</td><td>$113K</td></tr>
-          <tr><td>Growing</td><td>5,000</td><td>$11.25M</td><td>$53,400</td><td>−$1,562</td><td>$563K</td></tr>
-          <tr><td>Established</td><td>10,000</td><td>$22.50M</td><td>$53,400</td><td>−$1,562</td><td>$1.13M</td></tr>
-          <tr><td>Scaling</td><td>25,000</td><td>$56.25M</td><td>$53,400</td><td>−$1,562</td><td>$2.81M</td></tr>
-          <tr><td>Mature</td><td>50,000</td><td>$112.50M</td><td>$53,400</td><td>−$1,562</td><td>$5.63M</td></tr>
-          <tr><td>At Scale</td><td>100,000</td><td>$225.00M</td><td>$53,400</td><td>−$1,562</td><td>$11.25M</td></tr>
-        </tbody>
-      </table>
-
-      <div class="callout callout-green">
-        <strong>The living wage threshold:</strong> Every Mentor role earns $53,400/yr at all platform stages — within $1,600 of the $55K target — because the 1:100 ratio means income per mentor scales exactly with the contribution pool. A nudge to donation rate (90% → 93%) or donation size (50% → 52%) closes the gap entirely at any scale.
-      </div>
-
-      <div class="callout callout-info">
-        <strong>Platform stages vs Trust Record stages:</strong> The platform scale stages (Early → At Scale) describe how many practitioners are on Search Star. The Trust Record Trust Stages (Seedling → Mature) describe an individual practitioner's personal development. These are entirely separate systems — a practitioner at the Seedling Trust Stage can exist on a platform at the At Scale stage, and vice versa.
-      </div>
-
-      <h4>The load-bearing assumption</h4>
-      <p>The $2,500 average payout requires institutional sponsors in the mix. Personal sponsors — friends and family — typically pledge $25–150 per goal. A blended average of $2,500 requires that employers, foundations, schools, or civic organizations represent a meaningful share of the sponsorship base. This is why institutional deployment is the first commercial priority: not just for Search Star's revenue but because institutional sponsors are what makes the mentor economy viable from the beginning.</p>
-
-      <p>Practitioners can adjust their commitment scale to warrant a $2,500 payout. A 90-day commitment is three months of genuine work. Framed correctly — to an employer, a foundation, a university — that is worth backing at a level that makes the economics work. The practitioner's job during the 14-day launch period is partly to tell that story convincingly to the right sponsors.</p>
-
-      <h3 id="sponsorship-payout">9.8 Payout Rules</h3>
-      <ul>
-        <li><strong>Payout triggered on 90-day commitment completion.</strong> A commitment is complete when the practitioner has documented consistent practice and validators have confirmed genuine effort across the full 90-day period.</li>
-        <li><strong>Practitioner receives the full pledged amount.</strong> The sponsor's pledge is delivered in full. Processing fees and voluntary donations are separate transactions — never deducted from what was promised to the practitioner.</li>
-        <li><strong>Processing fee is mandatory and passed through at cost.</strong> No margin is taken on payment processing.</li>
-        <li><strong>Voluntary contribution is genuinely optional.</strong> One prompt, one removal action, no follow-up. The platform does not use dark patterns to recover declined contributions.</li>
-        <li><strong>Validation required before payout.</strong> Payout triggers only after required validator confirmations are received. Validators required scales with pledge amount.</li>
-        <li><strong>72-hour dispute window.</strong> Sponsors may flag a dispute before funds are released. Disputes are reviewed with additional validator attestation as needed.</li>
-        <li><strong>Contribution split is transparent before confirmation.</strong> Contributors see exactly where their contribution goes before completing the transaction.</li>
-      </ul>
-    </div>
-
-    <!-- 8. INSTITUTIONAL PORTAL -->
+    <!-- 10. INSTITUTIONAL SPONSORSHIP -->
     <div class="doc" id="institutional">
-      <h2>10. Institutional Portal</h2>
+      <h2>10. Institutional Sponsorship</h2>
 
-      <h3 id="institutional-benefit">10.1 Benefit Model</h3>
-      <p>The primary institutional entry point is the benefit model. An institution allocates a rewards budget and deploys Search Star to its community. Members earn from the institution's budget by completing validated practice goals. The institution controls which skill categories are eligible, reward amounts, and goal structure.</p>
+      <h3 id="institutional-principle">10.1 Standing Principle</h3>
+      <p>Institutional sponsors — employers, foundations, universities, civic organizations — can back a practitioner's 90-day commitment, but they cannot do so alone. Institutional pledges must ride alongside personal sponsorship from people who know the practitioner.</p>
 
-      <p>For employers, this replaces or supplements conventional wellness benefits — gym memberships, meditation apps, step-count programs — with a platform that rewards any high-effort practice the employee actually cares about. The value proposition to HR is measurable behavioral engagement and a growing Trust Record that reflects genuine employee development, not just program enrollment.</p>
+      <div class="callout callout-info">
+        <strong>Personal stake must precede institutional stake.</strong> The practitioner first demonstrates that real people in their life are willing to back the commitment. Institutional money then joins that pledge, rather than substituting for it.
+      </div>
 
-      <p>The benefit model requires no external sponsor network to function. The institution is both the sponsor and the distributor. It fits existing budget categories and requires no explanation of marketplace economics — it is simply a benefit that rewards employees for building genuine skills.</p>
+      <p>The reason is structural. A commitment backed only by an employer's wellness budget — with no friend or family member on the pledge list — has no human witness independent of the institutional funder. The sponsor feed would be read by compliance officers, not by people who know whether the work is real. The platform's core integrity depends on human sponsors with real relationships being the primary audience for the practice. Institutional money is welcome as an amplifier; it cannot be the sole source of witness.</p>
 
-      <h3 id="institutional-marketplace">10.2 Sponsorship Marketplace</h3>
-      <p>As the verified practitioner base grows, the sponsorship marketplace becomes viable. External sponsors — brands, foundations, civic organizations — attach rewards to specific skill categories across the Search Star population. Institutions that have deployed the benefit model find that their members earn from external sponsors in addition to institutional budgets, increasing the value of the program.</p>
+      <h4>Why institutions would want to participate</h4>
+      <p>The institutional value proposition is signal, not program administration. Employers hiring for conscientiousness can ask candidates to share a Trust Record. Universities looking for evidence of sustained effort in applicants can do the same. Foundations funding community development can measure program outcomes in completed sponsored streaks across a cohort. These uses do not require institutions to run the platform themselves — they require a population of practitioners with portable, verifiable records of genuine practice.</p>
 
-      <p>The marketplace creates a compounding network effect: more verified practitioners attract more external sponsors, which makes the platform more valuable to practitioners, which attracts more institutional deployments. The benefit model is the seed; the marketplace is the scale mechanism.</p>
+      <p>Institutional sponsorship sits on top of that. An employer that pledges against an employee's commitment is affirming the value of the practice; the employee's personal sponsors are the ones attesting that the work happened. Both matter; neither replaces the other.</p>
 
-      <h3 id="institutional-buyers">10.3 Institutional Buyer Types</h3>
+      <h3 id="institutional-deferred">10.2 Deferred Mechanics</h3>
+      <p>The exact mechanics of how institutional and personal sponsorship combine are deferred. Real data on practitioner behavior, institutional interest, and sponsorship patterns is needed before hardening the rules. The principle is firm; the rules wait.</p>
 
-      <table>
-        <thead><tr><th>Buyer Type</th><th>Primary Motivation</th><th>Entry Model</th></tr></thead>
-        <tbody>
-          <tr><td>Employers</td><td>Employee development, retention, conscientiousness signal in hiring</td><td>Benefit model</td></tr>
-          <tr><td>Universities</td><td>Student formation, admissions signal, scholarship criteria</td><td>Benefit model</td></tr>
-          <tr><td>Trade programs</td><td>Completion rates, skill verification, employer placement</td><td>Benefit model</td></tr>
-          <tr><td>Foundations</td><td>Program outcomes, grantee accountability, community formation</td><td>Sponsorship flow</td></tr>
-          <tr><td>Civic organizations</td><td>Member engagement, community building, leadership development</td><td>Benefit model or sponsorship flow</td></tr>
-          <tr><td>Brands</td><td>Verified audience reach, authentic engagement, category relevance</td><td>Sponsorship marketplace</td></tr>
-        </tbody>
-      </table>
-
-      <h3 id="institutional-features">10.4 Portal Features</h3>
+      <p>Questions pending resolution:</p>
       <ul>
-        <li>Community management — invite and manage members, set eligibility rules by skill category</li>
-        <li>Budget management — allocate sponsorship budgets by category, cohort, or individual</li>
-        <li>Goal templates — define standard practice goals for the community</li>
-        <li>Analytics dashboard — track engagement, completion rates, Trust Stage distributions across the community</li>
-        <li>Trust reporting — aggregate and individual stage reports for HR, admissions, or program evaluation</li>
-        <li>Validator management — designate institutional validators (coaches, managers, advisors) with appropriate permissions</li>
-        <li>Cohort tools — group practitioners by shared goals for community building and peer accountability</li>
+        <li>Minimum number of personal sponsors required before institutional pledges can attach</li>
+        <li>Ordering rules — do personal sponsors need to pledge first in calendar time, or merely be present in the final roster?</li>
+        <li>Relationship requirements for personal sponsors — all family acceptable, or is cross-circle diversity required?</li>
+        <li>Ratio requirements between personal and institutional pledge amounts, if any</li>
+        <li>The product surface for institutional deployments where the employer is the primary funder — this may warrant a distinct Institutional Portal, or may be simpler as a sponsor account with elevated permissions</li>
       </ul>
+
+      <div class="callout callout-green">
+        <strong>What this section does not describe.</strong> The v3 spec included an Institutional Portal with cohort management, member enrollment, budget allocation, Trust Stage reporting dashboards, and a placement pathway for human facilitators. Most of that is deferred or retired. The cohort/facilitator infrastructure was built on the Mentor economy, which v4 retires entirely (see <a href="#product-as-built">§ 14</a>). What an institutional deployment looks like in the v4 model is an open product-design question.
+      </div>
     </div>
 
-    <!-- 9. PROFILE & DATA -->
+    <!-- 11. PROFILE & DATA -->
     <div class="doc" id="identity">
       <h2>11. Profile &amp; Data</h2>
 
@@ -986,28 +841,28 @@
       <table>
         <thead><tr><th>Section</th><th>Default Visibility</th><th>Purpose</th></tr></thead>
         <tbody>
-          <tr><td>Identity</td><td>Private → user-controlled</td><td>Name, location, professional summary</td></tr>
+          <tr><td>Identity</td><td>Private → user-controlled</td><td>Name, location, brief bio</td></tr>
           <tr><td>Trust Record</td><td>Private → user-controlled</td><td>Portable credential — shared on user's terms</td></tr>
-          <tr><td>Practice Record</td><td>Private → user-controlled</td><td>Active skill tracks and milestone history</td></tr>
-          <tr><td>Validator Network</td><td>Private → partial on request</td><td>Validator relationships and tenure</td></tr>
+          <tr><td>Practice Record</td><td>Private → user-controlled</td><td>Active and past commitments, completed streaks</td></tr>
+          <tr><td>Sponsor Network</td><td>Private → partial on request</td><td>Sponsor relationships and tenure</td></tr>
           <tr><td>Skills &amp; Credentials</td><td>Private → user-controlled</td><td>Formal credentials and verified capabilities</td></tr>
-          <tr><td>Session Documentation</td><td>Validator circle only</td><td>Practice evidence — never public without explicit share</td></tr>
+          <tr><td>Session Documentation</td><td>Sponsor circle only</td><td>Practice evidence — never public without explicit share</td></tr>
           <tr><td>Sponsorship History</td><td>Private — user only</td><td>Earnings record</td></tr>
         </tbody>
       </table>
 
       <h3 id="identity-consent">11.2 Consent &amp; Control</h3>
-      <p>Search Star stores all data needed to make the platform function on standard infrastructure. There is no proxy architecture or self-hosting requirement. The complexity of the original sovereignty architecture has been replaced with a simpler and more honest model: explicit consent and granular user control.</p>
+      <p>Search Star stores all data needed to make the platform function on standard infrastructure. There is no proxy architecture or self-hosting requirement. The complexity of earlier sovereignty designs has been replaced with a simpler and more honest model: explicit consent and granular user control.</p>
 
-      <p>Users control visibility of every profile section independently. Sponsors and institutions see only what the user has explicitly authorized. Session documentation never becomes visible to third parties without a specific share action by the user. Commercial use of profile data — including sponsorship targeting — requires opt-in, not opt-out.</p>
+      <p>Users control visibility of every profile section independently. Sponsors and institutions see only what the user has explicitly authorized. Session documentation never becomes visible to third parties without a specific share action by the user. Commercial use of profile data — including any future advertising or targeting — requires opt-in, not opt-out.</p>
 
-      <p>Search Star does not sell profile data. It does not monetize behavioral data for advertising. Revenue comes from voluntary donations at payout moments, distributed across the full value chain, and from institutional portal facilitation. The only mandatory charge is payment processing at cost. The business model is aligned with genuine value creation — Search Star earns when practitioners and sponsors experience real outcomes, and only as much as people freely choose to give.</p>
+      <p>Search Star does not sell profile data. It does not monetize behavioral data for advertising. Revenue comes from voluntary donations at payout moments. The only mandatory charge is payment processing at cost. The business model is aligned with genuine value creation — Search Star earns when practitioners and sponsors experience real outcomes, and only as much as people freely choose to give.</p>
 
       <h3 id="identity-portability">11.3 Portability</h3>
-      <p>A user's practice record, Trust history, validator relationships, and session documentation belong to the user. Full data export is available at any time in standard formats. Account deletion removes all data from Search Star infrastructure within 30 days. The Trust Record and practice history can be exported as a portable attestation document for use outside the platform.</p>
+      <p>A user's practice record, Trust history, sponsor relationships, and session documentation belong to the user. Full data export is available at any time in standard formats. Account deletion removes all data from Search Star infrastructure within 30 days. The Trust Record and practice history can be exported as a portable attestation document for use outside the platform.</p>
     </div>
 
-    <!-- 10. TECHNICAL ARCHITECTURE -->
+    <!-- 12. TECHNICAL ARCHITECTURE -->
     <div class="doc" id="technical">
       <h2>12. Technical Architecture</h2>
 
@@ -1015,178 +870,216 @@
       <ul>
         <li><strong>Frontend:</strong> Next.js 16 (App Router), TypeScript, Tailwind v4</li>
         <li><strong>Backend:</strong> Supabase (PostgreSQL, RLS) — project ID <code>qgjyfcqgnuamgymonblj</code></li>
-        <li><strong>Deployment:</strong> Vercel — push to <code>v3</code> branch triggers GitHub Actions deploy hook, auto-promotes to <code>searchstar.com</code></li>
+        <li><strong>Deployment:</strong> Vercel — push to deploy branch triggers GitHub Actions deploy hook, auto-promotes to <code>searchstar.com</code></li>
         <li><strong>Email:</strong> Resend, from <code>noreply@searchstar.com</code></li>
+        <li><strong>AI:</strong> Anthropic Claude (Companion surfaces). Exact model selection and inference patterns deferred.</li>
         <li><strong>Design system:</strong> Project Graceland — Crimson Text headings, Roboto body, navy <code>#1a3a6b</code>, 3px border-radius, no emojis in UI chrome</li>
-        <li><strong>Repo:</strong> <code>ArchonGraceland/Search-Star</code>, branch <code>v3</code></li>
+        <li><strong>Repo:</strong> <code>ArchonGraceland/Search-Star</code></li>
       </ul>
 
-      <h4>Key implementation patterns</h4>
+      <h4>Key implementation patterns (carried from v3)</h4>
       <ul>
         <li><strong>Service client for DB operations:</strong> All API routes use <code>createServiceClient()</code> for database reads/writes, and <code>createClient()</code> only for <code>auth.getUser()</code>. This bypasses RLS for authenticated operations and avoids recursion bugs in complex policies.</li>
-        <li><strong>Server components for token-gated pages:</strong> The validator feed (<code>/validate/[commitment_id]/[token]</code>) is a server component — token lookup happens server-side before the browser receives anything, eliminating client-side auth failures.</li>
-        <li><strong>Stage resolver:</strong> <code>src/lib/stage.ts</code> reads user state and returns which of 6 stages they are on. All post-login redirects go to <code>/start</code>, which delegates to the resolver.</li>
+        <li><strong>Server components for token-gated pages:</strong> The sponsor feed (<code>/sponsor/[commitment_id]/[token]</code>) is a server component — token lookup happens server-side before the browser receives anything, eliminating client-side auth failures.</li>
+        <li><strong>Stage resolver:</strong> <code>src/lib/stage.ts</code> reads user state and returns which stage they are on. All post-login redirects go to <code>/start</code>, which delegates to the resolver.</li>
         <li><strong>Dynamic params:</strong> All Next.js App Router dynamic params use <code>{ params }: { params: Promise&lt;{ id: string }&gt; }</code> with <code>await params</code> — synchronous destructuring causes build failures.</li>
         <li><strong>Resend lazy init:</strong> <code>getResend()</code> factory pattern — module-level instantiation causes build failures when <code>RESEND_API_KEY</code> is absent at build time.</li>
       </ul>
 
-      <h3 id="technical-api">12.2 Implemented API Routes</h3>
+      <h3 id="technical-api">12.2 API (v4 target)</h3>
+      <p>The v4 API surface is a simplification of v3. Routes related to validators, mentors, and the mentor economy are retired. Routes related to sponsors, payment flow, and the Companion are added or expanded.</p>
+
+      <h4>Core practitioner + commitment routes (carried from v3)</h4>
       <table>
         <thead><tr><th>Route</th><th>Method</th><th>Purpose</th></tr></thead>
         <tbody>
           <tr><td><code>/api/practices</code></td><td>POST</td><td>Create a practice (name, label, category)</td></tr>
           <tr><td><code>/api/commitments</code></td><td>POST</td><td>Create a 90-day commitment</td></tr>
-          <tr><td><code>/api/commitments/[id]</code></td><td>GET</td><td>Fetch commitment + posts</td></tr>
-          <tr><td><code>/api/commitments/[id]/posts</code></td><td>POST</td><td>Log a session; notifies all active validators by email</td></tr>
+          <tr><td><code>/api/commitments/[id]</code></td><td>GET</td><td>Fetch commitment + session posts</td></tr>
+          <tr><td><code>/api/commitments/[id]/posts</code></td><td>POST</td><td>Log a session; notifies all active sponsors by email</td></tr>
           <tr><td><code>/api/commitments/[id]/start</code></td><td>POST</td><td>Perform start ritual — transitions commitment to active</td></tr>
-          <tr><td><code>/api/commitments/[id]/complete</code></td><td>POST</td><td>Mark commitment as completed</td></tr>
-          <tr><td><code>/api/commitments/[id]/validators</code></td><td>GET / POST</td><td>List validators; invite a new validator by email</td></tr>
-          <tr><td><code>/api/validate/accept/[token]</code></td><td>GET</td><td>Accept a validator invitation; redirects to feed</td></tr>
-          <tr><td><code>/api/validate/[id]/posts/[postId]/confirm</code></td><td>POST</td><td>Validator confirms a session post (token-authenticated)</td></tr>
+          <tr><td><code>/api/commitments/[id]/complete</code></td><td>POST</td><td>Trigger completion check; all sponsors must release for payout</td></tr>
           <tr><td><code>/api/profiles/visibility</code></td><td>PATCH</td><td>Update profile visibility setting</td></tr>
-          <tr><td><code>/api/profiles/mentor-step-seen</code></td><td>POST</td><td>Mark mentor onboarding step as seen</td></tr>
-          <tr><td><code>/api/sponsorships/pledge</code></td><td>POST</td><td>Create a sponsorship pledge</td></tr>
         </tbody>
       </table>
+
+      <h4>Sponsor routes (new in v4)</h4>
+      <table>
+        <thead><tr><th>Route</th><th>Method</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/sponsors/invite</code></td><td>POST</td><td>Practitioner invites a sponsor by email. Valid during launch or active commitment.</td></tr>
+          <tr><td><code>/api/sponsors/pledge</code></td><td>POST</td><td>Sponsor pledges against a commitment. Creates sponsorship record, holds funds.</td></tr>
+          <tr><td><code>/api/sponsors/release</code></td><td>POST</td><td>Sponsor releases pledge at day 90. Optional voluntary donation included.</td></tr>
+          <tr><td><code>/api/sponsors/veto</code></td><td>POST</td><td>Sponsor vetoes at any time during active commitment. Ends streak, refunds all pledges.</td></tr>
+          <tr><td><code>/sponsor/[commitment_id]/[token]</code></td><td>GET (page)</td><td>Token-gated sponsor feed (server component)</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Trust routes</h4>
+      <table>
+        <thead><tr><th>Route</th><th>Method</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/trust/[userId]</code></td><td>GET</td><td>Retrieve Trust Record with stage and dimension breakdown (respects visibility)</td></tr>
+          <tr><td><code>/api/trust/compute</code></td><td>POST</td><td>Recompute Trust Record from completed sponsored streaks. Rebuilt in v4.</td></tr>
+          <tr><td><code>/api/trust/share</code></td><td>POST</td><td>Generate a shareable Trust attestation link</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Companion routes (shape deferred)</h4>
+      <table>
+        <thead><tr><th>Route</th><th>Method</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/companion/*</code></td><td>—</td><td>AI Companion endpoints. Exact shape deferred pending Companion design.</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Routes retired in v4</h4>
+      <p>The following v3 routes are retired and must be removed during the v4 build:</p>
+      <ul>
+        <li><code>/api/validate/*</code> (entire namespace)</li>
+        <li><code>/api/validators/invite</code></li>
+        <li><code>/api/confirmations/*</code></li>
+        <li><code>/api/commitments/[id]/validators</code></li>
+        <li><code>/api/mentors/*</code>, <code>/api/mentoring/*</code>, <code>/api/profiles/mentor-step-seen</code></li>
+        <li>Page routes: <code>/validate/*</code>, <code>/start/mentor/</code>, <code>/(dashboard)/mentors/</code>, <code>/(dashboard)/mentoring/</code></li>
+      </ul>
     </div>
 
-    <!-- 11. ROADMAP -->
+    <!-- 13. ROADMAP -->
     <div class="doc" id="roadmap">
       <h2>13. Roadmap</h2>
 
       <table>
         <thead><tr><th>Milestone</th><th>Description</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>v1.4 — Activate Pipeline</td><td>Public identity discovery pipeline. Retired — inconsistent with the product's private-relational philosophy and practice-first onboarding.</td><td>Retired</td></tr>
-          <tr><td>v3.0 — Foundation</td><td>Auth, design system (Project Graceland), admin pages, new v3 schema, public narrative pages (homepage, manifesto, spec, onboarding explainer)</td><td>Live</td></tr>
-          <tr><td>v3.1 — Core Practice Spine</td><td>Six-stage onboarding spine at <code>/start</code>, 90-day commitment declaration, 14-day launch period, start ritual, session logging (multiple per day), stage bar, dashboard with active commitment status, Trust Record computation, Trust Stages (Seedling→Mature), account and visibility controls</td><td>Live</td></tr>
-          <tr><td>v3.2 — Validator System</td><td>Validator invitation by email, token-based access at <code>/validate/[id]/[token]</code>, private validator feed, session confirmation with quality notes, validator arrival experience, email notification to all active validators on every session log</td><td>Live</td></tr>
-          <tr><td>v3.3 — Session Logging (PWA)</td><td>PWA manifest and home screen icon, fast-log route at <code>/log</code> as default landing for logged-in users, photo upload (Cloudinary, unsigned), video upload (15-second cap), Camera + Gallery buttons, "Done for today" indicator, last 5 sessions inline, empty-submit prevention, responsive two-column desktop layout, mobile single-column</td><td>Live</td></tr>
-          <tr><td>v3.4 — Responsive Site</td><td>Full site responsive: dashboard sidebar → hamburger menu on mobile, login/signup two-column → single column, public header collapses, stage bar labels hidden on mobile. <code>/start/active/[id]</code> merged into <code>/log</code>. Logged-in users redirected from / to /log.</td><td>Live</td></tr>
-          <tr><td>v3.5 — Terminology &amp; Categories</td><td>Terminology standardised throughout (Commitment, launch period, voluntary donation, Trust Record, Trust Stage, Mentor/Coach/Community Builder/Practice Leader capitalised). Skill categories expanded from 8 to 12: Intellectual split into Language &amp; Communication, Study &amp; Knowledge, Strategy &amp; Games; Reading and Spiritual Practice added. Glossary section added to spec.</td><td>Live</td></tr>
-          <tr><td>v3.6 — Sponsorship Flow</td><td>Public sponsor pledge page, payout trigger on commitment completion, voluntary donation prompt (50% suggested, fully removable, one-action dismiss), donation split display (5% Search Star / 23.75% × 4 Mentor role tiers), Stripe integration, 72-hour dispute window</td><td>Next</td></tr>
-          <tr><td>v3.7 — Mentor Economy</td><td>Mentor relationships, mentor invitation flow, donation routing to Mentor role tier, community pool distribution (Coach/Community Builder/Practice Leader), leadership role progression tracking, earnings dashboard</td><td>Planned</td></tr>
-          <tr><td>v3.8 — Institutional Portal</td><td>Institution accounts, benefit model, budget management, cohort sponsorship, analytics dashboard, Trust Stage reporting, validator management for institutional validators</td><td>Planned</td></tr>
-          <tr><td>v3.9 — Sponsor Marketplace</td><td>Brand and foundation sponsor accounts, category-level sponsorship, audience targeting by Trust Stage and skill category</td><td>Planned</td></tr>
-          <tr><td>v3.10 — Portable Trust</td><td>Trust Record sharing API, employer and university integration, portable attestation document export, institutional credential recognition</td><td>Planned</td></tr>
+          <tr><td>v3.0–3.5</td><td>v3 foundation: auth, six-stage onboarding spine, 90-day commitments, session logging, validator feed, PWA, responsive site, terminology standardization, 12-category taxonomy</td><td>Live (to be migrated in v4)</td></tr>
+          <tr><td>v4.0 — Decisions &amp; Spec</td><td>Decisions doc (<code>docs/v4-decisions.md</code>) and this spec rewrite. No code changes. Source of truth for all subsequent v4 work.</td><td>This milestone</td></tr>
+          <tr><td>v4.1 — Role &amp; Schema Excision</td><td>Retire validator role end-to-end: drop <code>validators</code> and <code>post_confirmations</code> tables, retire <code>/api/validate/*</code>, rename validator references in commitments RLS, remove mentor tables and routes (<code>mentor_relationships</code>, <code>/api/mentors/*</code>, <code>/api/mentoring/*</code>, mentor pages). Simplify <code>contributions</code> table to a single <code>ss_share</code> at 5% default.</td><td>Next</td></tr>
+          <tr><td>v4.2 — Sponsor Flow Build</td><td>Sponsor invitation routes (<code>/api/sponsors/invite</code>, <code>/pledge</code>, <code>/release</code>, <code>/veto</code>). Sponsor feed at <code>/sponsor/[commitment_id]/[token]</code>. Update RLS to permit mid-streak pledging. Email templates for sponsor invitation, session notification, day-90 release prompt, veto notification.</td><td>Planned</td></tr>
+          <tr><td>v4.3 — Stage Resolver &amp; Onboarding Rework</td><td>Rewrite stage resolver: step 3 becomes sponsor invitation, step 4 becomes Companion introduction. Update <code>/start/</code> pages accordingly. Retire <code>mentor_step_seen</code> profile flag.</td><td>Planned</td></tr>
+          <tr><td>v4.4 — Trust Record Rebuild</td><td>Rewrite <code>/api/trust/compute</code> from completed sponsored streaks. New Depth/Breadth/Durability inputs per spec §6.3. Calibrate thresholds against whatever completions exist (notional until more data). Drop <code>active_validators</code> and <code>mentees_formed</code> columns.</td><td>Planned</td></tr>
+          <tr><td>v4.5 — Payment Flow</td><td>Stripe integration. Pledge-time hold, day-90 release, veto refund, voluntary donation at release. Dashboard earnings summary showing practitioner payouts and, separately, voluntary donations to Search Star.</td><td>Planned</td></tr>
+          <tr><td>v4.6 — Companion v1</td><td>First Companion surface: practitioner-facing reflection and pattern-noticing during active commitments. Day-90 sponsor summary generation. Memory architecture minimal (per-commitment) in v1.</td><td>Planned</td></tr>
+          <tr><td>v4.7 — Narrative Rewrite</td><td>Homepage, manifesto, and onboarding explainer rewritten against v4 spec. Videos replaced or recut. Retire remaining v3 language (validator, mentor economy, etc.) from all public-facing surfaces.</td><td>Planned</td></tr>
+          <tr><td>v4.8 — Institutional Sponsorship (experimental)</td><td>Enable institutional pledges riding alongside personal sponsorship. Enforce the standing principle: at least one personal sponsor required. Revisit deferred mechanics (§10.2) with whatever real data exists.</td><td>Future</td></tr>
+          <tr><td>v4.9 — Portable Trust Export</td><td>Trust Record as shareable attestation document. Employer/university verification flow. Third-party attestation format.</td><td>Future</td></tr>
         </tbody>
       </table>
 
-      <div class="callout callout-green">
-        <strong>Current build status:</strong> Phases 3.0–3.5 are live at searchstar.com. The core loop — declare a Commitment, invite validators, log sessions, receive validator confirmations — is fully functional. Next priority is the sponsorship flow (v3.6).
+      <div class="callout callout-info">
+        <strong>Build rule:</strong> Every v4 code session starts by reading <code>docs/v4-decisions.md</code> and this spec. No session makes changes grounded in inline chat instructions alone. The spec is the source of truth; inline instructions are additions to that source, not substitutes for it.
       </div>
 
       <div class="callout callout-green">
-        <strong>Open questions for future resolution:</strong> Exact Trust Trust Stage thresholds and calibration methodology. Validator ring detection algorithm specifics. Institutional validator permission model. Cross-platform Trust Record attestation format and verification standard.
+        <strong>Open questions for future resolution:</strong> Trust Stage thresholds and calibration. Anti-collusion rules for reciprocal peer sponsorship at scale. Companion memory architecture and cross-commitment continuity. Exact format of the day-90 sponsor summary. Institutional-to-personal sponsorship ratios and ordering rules. Product surface for institutional deployments.
       </div>
     </div>
 
-  </div>
     <!-- 14. PRODUCT AS BUILT -->
     <div class="doc" id="product-as-built">
       <h2>14. Product as Built</h2>
-      <p>This section documents decisions made during the v3 build that are not captured elsewhere in the spec. Where the spec describes the intended product, this section describes what was actually built, why, and what was learned.</p>
+      <p>This section documents the v3 build that v4 migrates from, and the key product decisions made or being made in the v4 transition. Where the spec describes the intended v4 product, this section describes what was actually built in v3 and the surgery required to reach v4.</p>
 
       <h3 id="built-spine">14.1 The Six-Stage Spine</h3>
-      <p>The original spec described onboarding as a four-step sequence (define practice → invite validator → set visibility → complete profile). In implementation this was redesigned as a six-stage linear spine at <code>/start</code>, with a server-side stage resolver that automatically routes users to the correct stage every time they arrive.</p>
+      <p>The v3 onboarding was implemented as a six-stage linear spine at <code>/start</code>, with a server-side stage resolver that automatically routes users to the correct stage every time they arrive.</p>
 
-      <p>The key insight driving this change: users returning to the platform after days away should land exactly where they are — not at a dashboard that requires them to figure out what to do next, and not at the beginning of onboarding. The stage resolver reads database state and routes deterministically. There is no session state, no cookie, no user preference to manage. The resolver is the single source of truth for where a user is in their practice journey.</p>
+      <p>The key insight driving this design: users returning to the platform after days away should land exactly where they are — not at a dashboard that requires them to figure out what to do next, and not at the beginning of onboarding. The stage resolver reads database state and routes deterministically. There is no session state, no cookie, no user preference to manage. The resolver is the single source of truth for where a user is in their practice journey.</p>
 
       <div class="callout callout-info">
-        <strong>Resolver logic:</strong> No practice → Stage 1. Practice, no commitment → Stage 2. Commitment, no validator → Stage 3. Has validator, mentor step unseen → Stage 4. Mentor seen, commitment in launch → Stage 5. Commitment active → Stage 6.
+        <strong>Resolver logic (v3):</strong> No practice → Stage 1. Practice, no commitment → Stage 2. Commitment, no validator → Stage 3. Has validator, mentor step unseen → Stage 4. Mentor seen, commitment in launch → Stage 5. Commitment active → Stage 6.
       </div>
 
-      <p>The mentor step (Stage 4) is a placeholder — mentor matching is not yet available. It shows once per user (tracked via a <code>mentor_step_seen</code> boolean on the profiles table) and is never shown again. This is a deliberate decision: the stage should exist in the flow even before the feature is built, so the product feels complete and the mentor concept is introduced early.</p>
+      <div class="callout callout-warn">
+        <strong>v4 resolver changes:</strong> Stage 3 becomes "no sponsor invited" (not "no validator"). Stage 4 becomes Companion introduction, replacing the mentor placeholder. The <code>mentor_step_seen</code> flag is retired; a new <code>companion_step_seen</code> flag takes its place. Sponsor invitation at Stage 3 is skippable — unlike the v3 validator invitation, which gated progression. Additional sponsors can always be invited later.
+      </div>
 
-      <p>The stage bar across the top of every stage page shows all six stages with checkmarks for completed ones. This gives users a sense of where they are and how far they've come — without creating pressure to rush through.</p>
-
-      <h3 id="built-validator">14.2 The Validator Experience</h3>
-
-      <h4>Token-based access without accounts</h4>
-      <p>Validators do not need a Search Star account. Each validator invitation generates a unique token stored on the <code>validators</code> table. The validator's permanent personal URL is <code>/validate/[commitment_id]/[token]</code> — both IDs are path segments, not query parameters. Query parameters were tried first but proved unreliable: email clients (particularly Gmail on mobile) would mangle the token when it appeared after a <code>?</code>. Path segments are not mangled.</p>
-
-      <h4>Server component for token lookup</h4>
-      <p>The validator feed page is a Next.js server component. The token lookup — verifying the token is valid, fetching the commitment and posts, checking which posts have been confirmed — all happens server-side using the service client before the browser receives anything. Client-side Supabase queries against the validators table were tried first and failed intermittently due to RLS context issues for unauthenticated visitors. The server component approach eliminates this class of failure entirely.</p>
-
-      <h4>Arrival experience</h4>
-      <p>A validator's first visit (detected server-side by checking <code>status === 'invited'</code> before marking accepted) shows a personal arrival screen rather than the session feed directly. The screen names the practitioner who invited them, shows the commitment in a navy card, and explains in plain language what being a validator means across three numbered items. A soft Search Star introduction appears below the fold with a link to start their own commitment. Returning visits skip the arrival screen.</p>
-      <p>The validator is marked <code>active</code> on the server as soon as the page loads — clicking the link is the acceptance. No separate "accept" button is required. This is intentional: the act of opening the link is sufficient signal of willingness to witness.</p>
-
-      <h4>Email notifications</h4>
-      <p>Every session log triggers an email to all active validators for that commitment. The email includes the session number, practitioner name, commitment title, the session note (if written) in a blockquote, and a "Confirm this session →" button linking directly to the validator's personal feed URL. Email is sent via Resend from <code>noreply@searchstar.com</code> as a fire-and-forget operation — a failed email does not fail the session log.</p>
-
-      <h3 id="built-sessions">14.3 Session Logging</h3>
+      <h3 id="built-sessions">14.2 Session Logging</h3>
 
       <h4>No one-session-per-day limit</h4>
-      <p>The original implementation enforced one session per day. This was removed. If a practitioner practices twice in a day, both sessions should be logged. The platform rewards showing up — not limiting how much showing up is recorded.</p>
+      <p>Session logging has no daily cap. If a practitioner practices twice in a day, both sessions are logged. The platform rewards showing up — not limiting how much showing up is recorded.</p>
 
       <h4>Start ritual is session 0</h4>
-      <p>The start ritual is stored as a session post with <code>session_number: 0</code>. It does not count toward the session total displayed on the active commitment page or the validator feed. It appears in the session history labelled "Start ritual." This distinction matters because the start ritual is a declaration of intent, not a practice session — conflating the two would misrepresent the practitioner's actual practice record.</p>
+      <p>The start ritual is stored as a session post with <code>session_number: 0</code>. It does not count toward the session total displayed on the active commitment page or the sponsor feed. It appears in the session history labelled "Start ritual." This distinction matters because the start ritual is a declaration of intent, not a practice session.</p>
 
-      <h4>The three jobs</h4>
-      <p>The active commitment page shows a "Your three jobs" section below the session logging form. The three jobs are: come back tomorrow and log your session (every day for 90 days); share your sponsor link with people who believe in what you're building; invite more validators. This section exists because early testing showed that users who completed the start ritual had no clear sense of what to do next. The three jobs make the ongoing commitment legible.</p>
+      <h4>The three jobs (v3 copy — being rewritten)</h4>
+      <p>The v3 active commitment page showed a "Your three jobs" section: come back tomorrow and log; share your sponsor link; invite more validators. In v4 this becomes two jobs: log tomorrow's session; invite more sponsors (or share your sponsor link). The "validators" framing is retired. The guidance text is otherwise preserved — users who complete the start ritual still benefit from explicit direction about what to do next.</p>
 
-      <h3 id="built-decisions">14.4 Key Product Decisions Made in Build</h3>
+      <h3 id="built-decisions">14.3 Key Product Decisions Made in Build</h3>
 
       <table>
-        <thead><tr><th>Decision</th><th>What was tried first</th><th>What was built</th><th>Why</th></tr></thead>
+        <thead><tr><th>Decision</th><th>Resolution</th><th>Rationale</th></tr></thead>
         <tbody>
           <tr>
+            <td>Validator vs. sponsor roles</td>
+            <td>Retire validator entirely; sponsor is the witness</td>
+            <td>Asking a friend to be an unpaid evaluator is the wrong social ask. Sponsors already stake something real; separating the roles duplicated a function money performs cleanly. See <code>docs/v4-decisions.md</code> decision #1.</td>
+          </tr>
+          <tr>
+            <td>Launch period as cutoff</td>
+            <td>Launch period is runway, not cutoff; sponsors can join anytime</td>
+            <td>The 14-day boundary is when the work begins, not when sponsorship closes. Adding belief mid-stream is welcome; losing belief mid-stream is final. See decision #3.</td>
+          </tr>
+          <tr>
+            <td>Sponsor confirmation mechanism</td>
+            <td>Unanimous release at day 90; any single veto ends streak</td>
+            <td>Asymmetric in favor of veto. One honest doubt from one person with stake ends the streak. Simpler and more honest than majority rule or arbitration. See decision #3.</td>
+          </tr>
+          <tr>
+            <td>Replacement sponsors</td>
+            <td>No — a lost sponsor ends the streak; practitioner restarts</td>
+            <td>Maintaining sponsor relationships across 90 days is part of the practice. The platform does not mediate or provide a safety net. See decision #3 and spec §7.4.</td>
+          </tr>
+          <tr>
+            <td>Mentor economy</td>
+            <td>Retired entirely; two human roles only (Practitioner, Sponsor); Companion is AI</td>
+            <td>AI Companion is a better teacher than a weekly human mentor for the skill categories Search Star supports. Paying humans to do what AI does better is not a model to build economics on. See decisions #2 and #5.</td>
+          </tr>
+          <tr>
+            <td>Revenue model</td>
+            <td>Single 5% voluntary donation to Search Star at payout, GoFundMe-pattern</td>
+            <td>The mentor economy split (23.75% × 4) collapsed with the Mentor role retirement. A single voluntary donation is simpler, more honest, and aligned with real value delivered. See decision #5 and spec §7.7.</td>
+          </tr>
+          <tr>
+            <td>Trust Record inputs</td>
+            <td>Completed sponsored streaks only, weighted by sponsor count, diversity, and reliability</td>
+            <td>v3's per-session confirmation mechanic is gone. The new input is the whole 90-day streak witnessed by sponsors who stayed present. Sponsors who deliver across multiple practitioners carry more signal over time. See decision #6 and spec §6.4.</td>
+          </tr>
+          <tr>
             <td>Launch period length</td>
-            <td>14 days (as specced)</td>
-            <td>7 days</td>
-            <td>14 days felt too long for the first version. The urgency of a 7-day window keeps practitioner momentum higher. Can be extended later.</td>
+            <td>14 days (per v4 spec) — v3 shipped with 7 days</td>
+            <td>v3 shipped a 7-day version for implementation speed. v4 restores the spec-original 14 days: long enough for news to travel, short enough to preserve momentum. Mirrors other socially legible notice periods.</td>
           </tr>
           <tr>
-            <td>Validator URL format</td>
-            <td><code>/validate/[id]?token=X</code></td>
-            <td><code>/validate/[id]/[token]</code></td>
-            <td>Query parameters are mangled by Gmail and other mobile email clients. Path segments are not.</td>
-          </tr>
-          <tr>
-            <td>Validator page architecture</td>
-            <td>Client component with client-side Supabase query</td>
-            <td>Server component with service client</td>
-            <td>Client-side queries against the validators table failed intermittently for unauthenticated visitors. Server component eliminates the failure mode.</td>
+            <td>Validator URL format (v3, now retired)</td>
+            <td>Path segments, not query parameters</td>
+            <td>Query parameters were mangled by Gmail and other mobile email clients. Path segments are not. The sponsor URL format <code>/sponsor/[commitment_id]/[token]</code> inherits this pattern.</td>
           </tr>
           <tr>
             <td>API route database client</td>
-            <td>Auth client (<code>createClient()</code>) for all DB operations</td>
-            <td>Service client (<code>createServiceClient()</code>) for DB operations; auth client only for <code>getUser()</code></td>
-            <td>RLS policies on commitments and practices caused intermittent failures for newly created users. Service client bypasses RLS entirely while still verifying the user's identity via auth.</td>
+            <td>Service client for DB ops; auth client only for <code>getUser()</code></td>
+            <td>RLS policies caused intermittent failures for newly created users. Service client bypasses RLS while still verifying user identity via auth.</td>
           </tr>
           <tr>
-            <td>One-session-per-day limit</td>
-            <td>Enforced — one session per day maximum</td>
-            <td>Removed — unlimited sessions per day</td>
-            <td>Practitioners who practice twice in a day should be able to log both sessions. The limit was arbitrary and punished genuine effort.</td>
-          </tr>
-          <tr>
-            <td>Validator acceptance</td>
-            <td>Separate "Accept" button on arrival screen</td>
-            <td>Accepted automatically on page load</td>
-            <td>Opening the link is sufficient signal of willingness. Requiring a button press adds friction without adding information.</td>
-          </tr>
-          <tr>
-            <td>Onboarding structure</td>
-            <td>4-step linear sequence, then dashboard</td>
-            <td>6-stage spine with persistent stage resolver</td>
-            <td>Users returning after days away need to land exactly where they are, not navigate from a dashboard. The resolver handles this automatically.</td>
+            <td>Server component for token-gated pages</td>
+            <td>Server component with service client, not client-side queries</td>
+            <td>Client-side queries against unauthenticated-visitor tables failed intermittently. Server component eliminates the failure mode. Applies to the v4 sponsor feed same as the retired v3 validator feed.</td>
           </tr>
         </tbody>
       </table>
 
       <div class="callout callout-green">
-        <strong>Pending product decisions:</strong> Validator removal (practitioner-initiated and validator-initiated). Validator notification preferences. Mentor matching (currently a placeholder). Trust Record computation thresholds. Contribution split UI at payout moment.
+        <strong>Pending v4 product decisions:</strong> Companion memory architecture and naming. Exact format of the day-90 sponsor summary. Trust Stage calibration thresholds. Anti-collusion rules for reciprocal peer sponsorship. Institutional-to-personal sponsorship ratios. UX for mid-streak veto. UX for sponsor-joins-late. Institutional Portal design post-mentor-economy.
       </div>
     </div>
 
+
+  </div>
 </main>
 
 <footer class="site-footer">
   <div class="wrap">
     <div class="footer-inner">
-      <span><strong>Search Star</strong> — Specification v3.1 — April 2026</span>
+      <span><strong>Search Star</strong> — Specification v4.0 — April 2026</span>
       <div class="footer-links">
         <a href="/spec">Spec</a>
         <a href="/roadmap">Roadmap</a>
