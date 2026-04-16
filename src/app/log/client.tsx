@@ -18,7 +18,7 @@ interface Confirmation {
   witness_note: string | null
   private_message: string | null
   confirmed_at: string
-  validators: ValidatorInfo | null
+  validators: ValidatorInfo[] | null
   confirmation_acknowledgments: AckInfo[]
 }
 
@@ -454,7 +454,7 @@ export default function LogClient({
                       const conf = post.post_confirmations?.[0] ?? null
                       const isAcked = conf && (conf.confirmation_acknowledgments?.length > 0 || ackDone[conf.id])
                       const isExpanded = expandedPostId === post.id
-                      const validatorName = conf?.validators?.profiles?.[0]?.display_name ?? 'Your validator'
+                      const validatorName = conf?.validators?.[0]?.profiles?.[0]?.display_name ?? 'Your validator'
                       const qualityMap: Record<string, string> = {
                         showed_up: 'Showed up and did the work',
                         pushed_further: 'Pushed past comfort',
