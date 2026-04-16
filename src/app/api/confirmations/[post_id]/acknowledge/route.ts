@@ -34,7 +34,7 @@ export async function POST(
     return NextResponse.json({ error: 'Confirmation not found.' }, { status: 404 })
   }
 
-  const postOwner = (confirmation.commitment_posts as { user_id: string } | null)?.user_id
+  const postOwner = (confirmation.commitment_posts as unknown as { user_id: string } | null)?.user_id
   if (postOwner !== user.id) {
     return NextResponse.json({ error: 'Not authorized.' }, { status: 403 })
   }
