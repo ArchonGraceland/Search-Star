@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { SignOutButton } from '@/components/sign-out-button'
 import { AccountForm } from './account-form'
+import AccountManagement from './account-management'
 
 export default async function AccountPage() {
   const supabase = await createClient()
@@ -39,17 +39,19 @@ export default async function AccountPage() {
         trustStage={profile?.trust_stage ?? 'seedling'}
       />
 
-      {/* Danger zone */}
-      <div style={{
-        background: '#fff',
-        border: '1px solid #d4d4d4',
-        borderRadius: '3px',
-        padding: '28px',
-      }}>
-        <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '22px', fontWeight: 700, marginBottom: '16px' }}>
-          Session
-        </h2>
-        <SignOutButton />
+      <div style={{ marginTop: '32px' }}>
+        <p style={{
+          fontFamily: 'Roboto, sans-serif',
+          fontSize: '11px',
+          letterSpacing: '0.2em',
+          color: '#767676',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          marginBottom: '20px',
+        }}>
+          Account Management
+        </p>
+        <AccountManagement email={user.email ?? ''} />
       </div>
     </div>
   )
