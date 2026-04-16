@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 interface ValidatorInfo {
   validator_user_id: string | null
-  profiles: { display_name: string | null } | null
+  profiles: { display_name: string | null }[] | null
 }
 
 interface AckInfo {
@@ -454,7 +454,7 @@ export default function LogClient({
                       const conf = post.post_confirmations?.[0] ?? null
                       const isAcked = conf && (conf.confirmation_acknowledgments?.length > 0 || ackDone[conf.id])
                       const isExpanded = expandedPostId === post.id
-                      const validatorName = conf?.validators?.profiles?.display_name ?? 'Your validator'
+                      const validatorName = conf?.validators?.profiles?.[0]?.display_name ?? 'Your validator'
                       const qualityMap: Record<string, string> = {
                         showed_up: 'Showed up and did the work',
                         pushed_further: 'Pushed past comfort',
@@ -647,11 +647,7 @@ export default function LogClient({
                 </div>
               </div>
 
-              {/* Footer links */}
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', marginTop: '20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                <Link href="/dashboard" style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Dashboard →</Link>
-                <Link href={`/start/launch/${commitmentId}`} style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Sponsors & validators →</Link>
-              </div>
+              {/* Footer — rendered via root layout below the navy shell */}
             </div>
 
           </div>{/* end grid */}
