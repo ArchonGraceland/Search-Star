@@ -219,8 +219,8 @@ export default function WitnessClient({
                 }}
               />
               {witnessNote.trim().length > 0 && witnessNote.trim().length < 20 && (
-                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#b8b8b8', margin: '4px 0 0' }}>
-                  {20 - witnessNote.trim().length} more characters needed
+                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '3px', padding: '6px 10px', margin: '6px 0 0', fontWeight: 500 }}>
+                  {20 - witnessNote.trim().length} more characters needed in your witness note
                 </p>
               )}
             </div>
@@ -290,6 +290,14 @@ export default function WitnessClient({
             {error && (
               <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', marginBottom: '12px' }}>
                 {error}
+              </p>
+            )}
+
+            {!isReady && !submitting && (witnessNote.trim().length > 0 || qualityChoice) && (
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '3px', padding: '8px 12px', marginBottom: '12px' }}>
+                {witnessNote.trim().length < 20
+                  ? `Witness note needs ${20 - witnessNote.trim().length} more characters`
+                  : 'Choose how you would characterise this session'}
               </p>
             )}
 
