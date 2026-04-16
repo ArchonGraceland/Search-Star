@@ -70,7 +70,7 @@ export async function POST(
   try {
     const { data: validators } = await db
       .from('validators')
-      .select('validator_email, invite_token')
+      .select('validator_email, invite_token, id')
       .eq('commitment_id', id)
       .eq('status', 'active')
       .not('validator_email', 'is', null)
@@ -95,6 +95,7 @@ export async function POST(
       const resend = getResend()
       await Promise.all(validators.map(v => {
         const validateUrl = `https://searchstar.com/validate/${id}/${v.invite_token}`
+        const witnessUrl = `https://searchstar.com/validate/${id}/session/${post.id}?token=${v.invite_token}`
         return resend.emails.send({
           from: 'noreply@searchstar.com',
           to: v.validator_email!,
@@ -117,8 +118,8 @@ export async function POST(
                     "${postBody.trim()}"
                   </p>
                 </div>` : ''}
-                <a href="${validateUrl}" style="display: inline-block; background: #1a3a6b; color: #ffffff; font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 12px 24px; border-radius: 3px; text-decoration: none;">
-                  Confirm this session →
+                <a href="${witnessUrl}" style="display: inline-block; background: #1a3a6b; color: #ffffff; font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 12px 24px; border-radius: 3px; text-decoration: none;">
+                  Witness this session →
                 </a>
                 <p style="font-family: Arial, sans-serif; font-size: 12px; color: #b8b8b8; margin: 20px 0 0;">
                   You're receiving this because you're a validator for this commitment.
@@ -126,7 +127,7 @@ export async function POST(
               </div>
             </div>
           `,
-          text: `${practitionerName} logged session ${newSessionsLogged} on "${commitmentTitle}".${postBody?.trim() ? `\n\n"${postBody.trim()}"` : ''}\n\nConfirm this session: ${validateUrl}`,
+          text: `${practitionerName} logged session ${newSessionsLogged} on "${commitmentTitle}".${postBody?.trim() ? `\n\n"${postBody.trim()}"` : ''}\n\nWitness this session: ${witnessUrl}`,
         })
       }))
     }

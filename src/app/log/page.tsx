@@ -61,7 +61,14 @@ export default async function LogPage() {
 
   const { data: recentPosts } = await db
     .from('commitment_posts')
-    .select('id, body, session_number, posted_at, media_urls')
+    .select(`
+      id, body, session_number, posted_at, media_urls,
+      post_confirmations (
+        id, quality_choice, witness_note, private_message, confirmed_at,
+        validators ( validator_user_id, profiles ( display_name ) ),
+        confirmation_acknowledgments ( id )
+      )
+    `)
     .eq('commitment_id', commitment.id)
     .order('posted_at', { ascending: false })
     .limit(10)

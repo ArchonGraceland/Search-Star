@@ -3,12 +3,32 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
+interface ValidatorInfo {
+  validator_user_id: string | null
+  profiles: { display_name: string | null } | null
+}
+
+interface AckInfo {
+  id: string
+}
+
+interface Confirmation {
+  id: string
+  quality_choice: string | null
+  witness_note: string | null
+  private_message: string | null
+  confirmed_at: string
+  validators: ValidatorInfo | null
+  confirmation_acknowledgments: AckInfo[]
+}
+
 interface Post {
   id: string
   body: string | null
   session_number: number
   posted_at: string
   media_urls: string[] | null
+  post_confirmations: Confirmation[]
 }
 
 interface Props {
@@ -68,6 +88,11 @@ export default function LogClient({
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
   const [mediaIsVideo, setMediaIsVideo] = useState(false)
   const [posts, setPosts] = useState<Post[]>(recentPosts)
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null)
+  const [ackNote, setAckNote] = useState('')
+  const [ackSubmitting, setAckSubmitting] = useState(false)
+  const [ackDone, setAckDone] = useState<Record<string, boolean>>({})
+  const [ackError, setAckError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -136,6 +161,7 @@ export default function LogClient({
           session_number: sessionCount + 1,
           posted_at: new Date().toISOString(),
           media_urls: mediaUrl ? [mediaUrl] : null,
+          post_confirmations: [],
         }
         setPosts(prev => [newPost, ...prev].slice(0, 10))
         setSessionCount(c => c + 1)
@@ -164,6 +190,41 @@ export default function LogClient({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleLog() }
+  }
+
+  const handleAcknowledge = async (postId: string, confirmationId: string) => {
+    if (ackNote.trim().length < 10 || ackSubmitting) return
+    setAckSubmitting(true)
+    setAckError(null)
+    try {
+      const res = await fetch(`/api/confirmations/${postId}/acknowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation_id: confirmationId, acknowledgment_note: ackNote.trim() }),
+      })
+      if (res.ok) {
+        setAckDone(prev => ({ ...prev, [confirmationId]: true }))
+        setAckNote('')
+        setExpandedPostId(null)
+        // Update local state to mark acknowledgment done
+        setPosts(prev => prev.map(p => {
+          if (p.id !== postId) return p
+          return {
+            ...p,
+            post_confirmations: p.post_confirmations.map(c => {
+              if (c.id !== confirmationId) return c
+              return { ...c, confirmation_acknowledgments: [{ id: 'done' }] }
+            }),
+          }
+        }))
+      } else {
+        const data = await res.json()
+        setAckError(data.error || 'Failed to send.')
+      }
+    } catch {
+      setAckError('Network error. Try again.')
+    }
+    setAckSubmitting(false)
   }
 
   const pct = Math.min(100, Math.round((dayNumber / 90) * 100))
@@ -389,41 +450,175 @@ export default function LogClient({
                 <div style={{ marginBottom: '28px' }}>
                   <p style={{ ...label, marginBottom: '12px' }}>Recent sessions</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {posts.map(post => (
-                      <div key={post.id} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '3px', padding: '10px 12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        {post.media_urls?.[0] && (
-                          <div style={{ flexShrink: 0 }}>
-                            {isVideoUrl(post.media_urls[0]) ? (
-                              <div style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                    {posts.map(post => {
+                      const conf = post.post_confirmations?.[0] ?? null
+                      const isAcked = conf && (conf.confirmation_acknowledgments?.length > 0 || ackDone[conf.id])
+                      const isExpanded = expandedPostId === post.id
+                      const validatorName = conf?.validators?.profiles?.display_name ?? 'Your validator'
+                      const qualityMap: Record<string, string> = {
+                        showed_up: 'Showed up and did the work',
+                        pushed_further: 'Pushed past comfort',
+                        breakthrough: 'Breakthrough',
+                      }
+                      const qualityText = conf?.quality_choice ? qualityMap[conf.quality_choice] ?? conf.quality_choice : null
+
+                      return (
+                        <div
+                          key={post.id}
+                          style={{
+                            background: conf && !isAcked ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.06)',
+                            border: conf && !isAcked
+                              ? '1px solid rgba(74,222,128,0.4)'
+                              : '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '3px',
+                            padding: '10px 12px',
+                            cursor: conf && !isAcked ? 'pointer' : 'default',
+                            transition: 'border-color 0.2s',
+                          }}
+                          onClick={() => {
+                            if (conf && !isAcked) {
+                              setExpandedPostId(isExpanded ? null : post.id)
+                              setAckNote('')
+                              setAckError(null)
+                            }
+                          }}
+                        >
+                          {/* Card header */}
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                            {post.media_urls?.[0] && (
+                              <div style={{ flexShrink: 0 }}>
+                                {isVideoUrl(post.media_urls[0]) ? (
+                                  <div style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                                  </div>
+                                ) : (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={post.media_urls[0]} alt="" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '2px', display: 'block' }} />
+                                )}
                               </div>
-                            ) : (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={post.media_urls[0]} alt="" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '2px', display: 'block' }} />
                             )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', gap: '8px' }}>
+                                <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
+                                  {post.session_number > 0 ? `Session ${post.session_number}` : 'Start ritual'}
+                                </span>
+                                <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>
+                                  {formatDate(post.posted_at)}
+                                </span>
+                              </div>
+                              {post.body ? (
+                                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4, margin: '0 0 6px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: isExpanded ? undefined : 2, WebkitBoxOrient: 'vertical' }}>
+                                  {post.body}
+                                </p>
+                              ) : (
+                                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.25)', margin: '0 0 4px', fontStyle: 'italic' }}>
+                                  {post.media_urls?.[0] ? (isVideoUrl(post.media_urls[0]) ? 'Video' : 'Photo') : 'Session logged'}
+                                </p>
+                              )}
+
+                              {/* Witness state indicator */}
+                              {!conf && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
+                                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: 'rgba(255,255,255,0.25)' }}>Awaiting witness</span>
+                                </div>
+                              )}
+                              {conf && !isAcked && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginTop: '4px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(74,222,128,0.8)' }} />
+                                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', fontWeight: 700, color: 'rgba(74,222,128,0.9)' }}>
+                                      {validatorName} witnessed this
+                                    </span>
+                                    {qualityText && (
+                                      <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
+                                        · {qualityText}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
+                                    {isExpanded ? 'Close' : 'Tap to read'}
+                                  </span>
+                                </div>
+                              )}
+                              {conf && isAcked && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="6" fill="rgba(74,222,128,0.25)"/><path d="M3 6l2 2 4-4" stroke="rgba(74,222,128,0.8)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
+                                    {validatorName} witnessed · You acknowledged
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', gap: '8px' }}>
-                            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
-                              {post.session_number > 0 ? `Session ${post.session_number}` : 'Start ritual'}
-                            </span>
-                            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>
-                              {formatDate(post.posted_at)}
-                            </span>
-                          </div>
-                          {post.body ? (
-                            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                              {post.body}
-                            </p>
-                          ) : (
-                            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.25)', margin: 0, fontStyle: 'italic' }}>
-                              {post.media_urls?.[0] ? (isVideoUrl(post.media_urls[0]) ? 'Video' : 'Photo') : 'Session logged'}
-                            </p>
+
+                          {/* Expanded witness detail */}
+                          {isExpanded && conf && !isAcked && (
+                            <div
+                              style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              {conf.witness_note && (
+                                <div style={{ marginBottom: '10px' }}>
+                                  <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', margin: '0 0 4px' }}>
+                                    Witness note
+                                  </p>
+                                  <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.55, margin: 0 }}>
+                                    {conf.witness_note}
+                                  </p>
+                                </div>
+                              )}
+                              {conf.private_message && (
+                                <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '3px', padding: '10px 12px', marginBottom: '10px' }}>
+                                  <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', margin: '0 0 4px' }}>
+                                    A note just for you
+                                  </p>
+                                  <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.55, margin: 0 }}>
+                                    {conf.private_message}
+                                  </p>
+                                </div>
+                              )}
+                              {/* Acknowledgment form */}
+                              <div style={{ marginTop: '10px' }}>
+                                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', margin: '0 0 6px' }}>
+                                  Say something back to {validatorName}
+                                </p>
+                                <textarea
+                                  value={ackNote}
+                                  onChange={e => setAckNote(e.target.value)}
+                                  placeholder="Let them know you saw this..."
+                                  rows={2}
+                                  style={{
+                                    width: '100%', boxSizing: 'border-box',
+                                    background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                                    borderRadius: '3px', padding: '8px 10px', resize: 'vertical',
+                                    fontFamily: '"Crimson Text", Georgia, serif', fontSize: '15px',
+                                    color: '#ffffff', outline: 'none',
+                                  }}
+                                />
+                                {ackError && <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: 'rgba(255,120,120,0.9)', margin: '4px 0 0' }}>{ackError}</p>}
+                                <button
+                                  onClick={() => handleAcknowledge(post.id, conf.id)}
+                                  disabled={ackNote.trim().length < 10 || ackSubmitting}
+                                  style={{
+                                    marginTop: '8px',
+                                    padding: '8px 16px',
+                                    background: ackNote.trim().length >= 10 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: '3px', color: ackNote.trim().length >= 10 ? '#ffffff' : 'rgba(255,255,255,0.3)',
+                                    fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700,
+                                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                                    cursor: ackNote.trim().length >= 10 ? 'pointer' : 'not-allowed',
+                                  }}
+                                >
+                                  {ackSubmitting ? 'Sending...' : 'Send acknowledgment'}
+                                </button>
+                              </div>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
