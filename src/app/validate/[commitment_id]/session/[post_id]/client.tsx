@@ -86,7 +86,11 @@ export default function WitnessClient({
         setSubmitted(true)
       } else {
         const data = await res.json()
-        setError(data.error || 'Something went wrong. Try again.')
+        if (data.error === 'already_confirmed') {
+          setSubmitted(true) // show the confirmed state
+        } else {
+          setError(data.error || 'Something went wrong. Try again.')
+        }
       }
     } catch {
       setError('Network error. Try again.')

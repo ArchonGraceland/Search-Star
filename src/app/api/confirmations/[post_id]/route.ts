@@ -45,18 +45,28 @@ export async function POST(
     return NextResponse.json({ error: 'Not authorized to confirm this post.' }, { status: 403 })
   }
 
-  // Upsert confirmation (one per validator per post)
+  // Check for existing confirmation — one witness per validator per post
+  const { data: existing } = await db
+    .from('post_confirmations')
+    .select('id')
+    .eq('post_id', post_id)
+    .eq('validator_id', validator_id)
+    .maybeSingle()
+
+  if (existing) {
+    return NextResponse.json({ error: 'already_confirmed' }, { status: 409 })
+  }
+
+  // Insert confirmation
   const { data: confirmation, error: confirmError } = await db
     .from('post_confirmations')
-    .upsert({
+    .insert({
       post_id,
       validator_id,
       quality_choice,
       witness_note: witness_note.trim(),
       private_message: private_message?.trim() || null,
       confirmed_at: new Date().toISOString(),
-    }, {
-      onConflict: 'post_id,validator_id',
     })
     .select('id')
     .single()
