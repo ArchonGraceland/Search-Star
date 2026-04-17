@@ -66,7 +66,7 @@ export default function PracticePage() {
     })
 
     if (res.ok) {
-      router.push('/onboarding/validator')
+      router.push('/onboarding/profile')
     } else {
       const body = await res.json()
       setError(body.error || 'Something went wrong. Please try again.')

@@ -34,7 +34,7 @@ export default function StageCommitment() {
 
     const data = await res.json()
     if (res.ok && data.id) {
-      router.push(`/start/validator/${data.id}`)
+      router.push('/start')
     } else {
       setError(data.error || data.detail || 'Something went wrong. Please try again.')
       setLoading(false)
@@ -56,7 +56,7 @@ export default function StageCommitment() {
         Declare your 90-day commitment.
       </h1>
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '15px', color: '#5a5a5a', lineHeight: 1.65, marginBottom: '36px' }}>
-        Write what you'll do and how often. This is the statement your validators will hold you to. Make it specific enough that anyone reading it knows exactly what counts as showing up.
+        Write what you&apos;ll do and how often. This is the statement your sponsors will hold you to. Make it specific enough that anyone reading it knows exactly what counts as showing up.
       </p>
 
       <form onSubmit={handleSubmit}>

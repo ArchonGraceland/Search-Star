@@ -68,7 +68,7 @@ export default function Signup() {
               Create your profile
             </h1>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', marginBottom: '36px' }}>
-              Name your practice. Invite your first validator. Build your Trust record.
+              Name your practice. Invite your first sponsor. Build your Trust record.
             </p>
 
             <form onSubmit={handleSignup}>

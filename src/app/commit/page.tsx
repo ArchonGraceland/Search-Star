@@ -89,7 +89,7 @@ export default function CommitPage() {
         <div className="bg-white border border-[#d4d4d4] rounded-[3px] shadow-sm p-12 w-full max-w-[560px]">
           <h1 className="font-heading text-[32px] font-bold mb-3">Declare a commitment.</h1>
           <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '15px', color: '#5a5a5a', marginBottom: '36px', lineHeight: '1.6' }}>
-            A commitment is a promise to practice for 90 days. You'll log each session here. Your validator circle will see your posts.
+            A commitment is a promise to practice for 90 days. You&apos;ll log each session here. Your sponsors will see your posts.
           </p>
 
           <form onSubmit={handleSubmit}>

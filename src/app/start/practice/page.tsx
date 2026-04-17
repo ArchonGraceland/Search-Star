@@ -43,7 +43,7 @@ export default function StagePractice() {
     })
 
     if (res.ok) {
-      router.push('/start/validator')
+      router.push('/start')
     } else {
       const data = await res.json()
       setError(data.error || 'Something went wrong.')
