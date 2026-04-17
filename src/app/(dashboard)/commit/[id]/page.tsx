@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import CompanionPanel from '@/components/companion-panel'
 
 interface Practice {
   id: string
@@ -535,6 +536,12 @@ export default function CommitDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Companion — active status only. See src/components/companion-panel.tsx
+          for voice and interaction design. */}
+      {commitment.status === 'active' && (
+        <CompanionPanel commitmentId={commitment.id} />
+      )}
 
       {/* Mark as complete — active status only */}
       {commitment.status === 'active' && (
