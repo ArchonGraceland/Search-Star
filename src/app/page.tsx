@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata = {
   title: 'Search Star — What do you want to practice?',
-  description: '90-day practice commitments. A private validator circle. Sponsors who believe in what you\'re building. Trust earned through action, not performance.',
+  description: '90-day practice commitments. Private by default. Sponsors who believe in what you\'re building. Trust earned through action, not performance.',
 }
 
 export default function HomePage() {
@@ -81,12 +81,12 @@ export default function HomePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {[
                 { n: '01', title: 'Name your practice.', body: 'A skill, craft, or pursuit. Something real you want to build over time. This is the first thing you do on Search Star — before any profile, any feed, any discovery.' },
-                { n: '02', title: 'Invite your validator circle.', body: 'Validators are people who know you well enough to verify the work is real. They see your session posts. They confirm your effort with a note. Their attestation is the foundation of your Trust record.' },
-                { n: '03', title: 'Declare a 90-day commitment.', body: 'The sponsorable unit of practice. Write what you\'re committing to and what a successful streak looks like. This opens the 14-day launch window.' },
-                { n: '04', title: 'Gather sponsors.', body: 'During the 14-day launch period, share your commitment with friends, family, and anyone who believes in what you\'re building. Sponsors pledge an amount against your completion.' },
+                { n: '02', title: 'Declare a 90-day commitment.', body: 'The sponsorable unit of practice. Write what you\'re committing to and what a successful streak looks like. This opens the 14-day launch window.' },
+                { n: '03', title: 'Invite sponsors.', body: 'Sponsors are people who put something behind their belief in you. They pledge money against your 90 days. They can veto at any time during the streak. They can release the pledge at day 90. Continued presence is their attestation.' },
+                { n: '04', title: 'Gather more sponsors during launch.', body: 'During the 14-day launch period, share your commitment with friends, family, and anyone who believes in what you\'re building. Additional sponsors can join mid-streak too — but once in, they\'re bound by the same veto-or-release mechanic.' },
                 { n: '05', title: 'Perform the start ritual.', body: 'A written statement of intent, timestamped. This is the moment the streak begins. Day 1 of 90.' },
-                { n: '06', title: 'Log sessions. Post to your circle.', body: 'Each session becomes a post visible only to your validators. No public feed. No likes. No follower counts. Just the record of work witnessed by the people you invited.' },
-                { n: '07', title: 'Complete the streak. Sponsors pay out.', body: 'When validators have confirmed enough sessions and 90 days are up, the pledge triggers. Sponsors pay. You receive the funds. A voluntary contribution prompt asks if you\'d like to share a portion with the mentor economy.' },
+                { n: '06', title: 'Log sessions. Post to your sponsors.', body: 'Each session becomes a post visible only to your sponsors. No public feed. No likes. No follower counts. Just the record of work witnessed by the people who backed you.' },
+                { n: '07', title: 'Complete the streak. Sponsors release.', body: 'At day 90, each sponsor chooses to release their pledge. You receive the funds in full. A voluntary 5% contribution prompt asks if you\'d like to support Search Star — it\'s optional and removable in one click.' },
               ].map((step) => (
                 <div key={step.n} style={{ display: 'flex', gap: '24px', background: '#ffffff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '28px 32px' }}>
                   <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, color: '#1a3a6b', opacity: 0.45, letterSpacing: '0.08em', flexShrink: 0, paddingTop: '4px', minWidth: '28px' }}>
@@ -127,11 +127,11 @@ export default function HomePage() {
                 },
                 {
                   principle: 'Private by default.',
-                  body: 'Your session posts are visible only to your validator circle. There is no public feed, no like count, no follower metric. Visibility is something you extend deliberately — to a specific person, to your network, to the public — and you can retract it. The default assumption is that practice is private, witnessed by people who know you, not performed for an audience of strangers.',
+                  body: 'Your session posts are visible only to your sponsors. There is no public feed, no like count, no follower metric. Visibility is something you extend deliberately — to a specific person, to your network, to the public — and you can retract it. The default assumption is that practice is private, witnessed by people who know you, not performed for an audience of strangers.',
                 },
                 {
                   principle: 'Recognition flows through others.',
-                  body: 'You cannot vouch for yourself on Search Star. Your Trust record exists because validators confirmed your sessions, because sponsors pledged real money against your commitment, because a mentor\'s reputation is staked to yours. Every signal in the system is someone else\'s assertion about you — which means it means something. Gaming the metric produces the virtue.',
+                  body: 'You cannot vouch for yourself on Search Star. Your Trust record exists because sponsors pledged real money against your commitment and stayed present through the 90 days. Every signal in the system is someone else\'s assertion about you — which means it means something. Gaming the metric produces the virtue.',
                 },
               ].map((p) => (
                 <div key={p.principle} style={{ background: '#f5f5f5', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '32px' }}>
@@ -153,7 +153,7 @@ export default function HomePage() {
               A credential you can't perform into existence.
             </h2>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '28px' }}>
-              Your Trust record is a portable credential built from validated practice over time. It tracks three things: depth (the quality and volume of sessions, as confirmed by validators), breadth (the range of practices you've committed to across categories), and durability (how long your track record extends). These combine into a growth stage — Seedling, Rooting, Growing, Established, Mature — that describes where you are in your formation as a practitioner.
+              Your Trust record is a portable credential built from sponsored practice over time. It tracks three things: depth (the quality and volume of sessions across completed sponsored streaks), breadth (the range of practices you&apos;ve committed to across categories), and durability (how long your track record extends). These combine into a growth stage — Seedling, Rooting, Growing, Established, Mature — that describes where you are in your formation as a practitioner.
             </p>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '32px' }}>
               The stage is never a number and it's never a score. It can't be bought, boosted, or gamed. The only way to advance is to actually do the work, over time, witnessed by real people. That's the design. An institution that sees a Mature Trust record knows something specific and verifiable about the person behind it — not what they say about themselves, but what others have confirmed about them across multiple completed streaks.
@@ -189,7 +189,7 @@ export default function HomePage() {
                 },
                 {
                   label: 'Institutions',
-                  body: 'Schools, programs, employers, and communities that want a way to evaluate genuine formation rather than self-reported credentials. A verified Trust record from Search Star is not a résumé line. It is a third-party-confirmed record of sustained practice, across real time, witnessed by a real validator circle. The growth stage gives you a signal that is hard to manufacture and impossible to fake.',
+                  body: 'Schools, programs, employers, and communities that want a way to evaluate genuine formation rather than self-reported credentials. A verified Trust record from Search Star is not a résumé line. It is a third-party-attested record of sustained practice, across real time, backed by real sponsors who stayed present through the 90 days. The growth stage gives you a signal that is hard to manufacture and impossible to fake.',
                 },
               ].map((role) => (
                 <div key={role.label} style={{ display: 'flex', gap: '28px', background: '#f5f5f5', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '28px 32px', alignItems: 'flex-start' }}>
@@ -221,13 +221,13 @@ export default function HomePage() {
                   slug: 'video-01-90-day-commitment',
                   title: 'What Is a 90-Day Commitment?',
                   duration: '3:00',
-                  description: 'The commitment mechanic, the 14-day launch period, the start ritual, how validators work, and why 90 days.',
+                  description: 'The commitment mechanic, the 14-day launch period, the start ritual, how sponsors work, and why 90 days.',
                 },
                 {
                   slug: 'video-02-sponsorship-model',
                   title: 'How the Sponsorship Model Works',
                   duration: '3:12',
-                  description: 'Sponsors pledge during the launch window. You keep 100% of what you earn. Voluntary contributions fund the mentor economy.',
+                  description: 'Sponsors pledge during the launch window. You keep 100% of what you earn. A single optional 5% contribution at release supports Search Star.',
                 },
                 {
                   slug: 'video-03-why-search-star',
@@ -269,7 +269,7 @@ export default function HomePage() {
               Ready to begin?
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '18px', marginBottom: '36px', lineHeight: 1.65 }}>
-              Name your practice. Invite your first validator. Declare your first commitment.
+              Name your practice. Invite your first sponsor. Declare your first commitment.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link
