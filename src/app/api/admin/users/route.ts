@@ -27,9 +27,8 @@ async function checkAdmin(supabase: ReturnType<typeof createServerClient>) {
 }
 
 const VALID_STAGES = ['seedling', 'rooting', 'growing', 'established', 'mature']
-const VALID_ROLES = ['mentor', 'coach', 'community_builder', 'practice_leader', null]
 
-// PATCH — update trust_stage and/or mentor_role
+// PATCH — update trust_stage (mentor_role was retired in v4; profiles.mentor_role column is dormant)
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await getAdminClient()
@@ -37,7 +36,7 @@ export async function PATCH(request: NextRequest) {
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
     const body = await request.json()
-    const { user_id, trust_stage, mentor_role } = body
+    const { user_id, trust_stage } = body
 
     if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
 
@@ -48,13 +47,6 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid trust_stage' }, { status: 400 })
       }
       updates.trust_stage = trust_stage
-    }
-
-    if (mentor_role !== undefined) {
-      if (mentor_role !== null && !VALID_ROLES.includes(mentor_role)) {
-        return NextResponse.json({ error: 'Invalid mentor_role' }, { status: 400 })
-      }
-      updates.mentor_role = mentor_role
     }
 
     if (Object.keys(updates).length === 0) {

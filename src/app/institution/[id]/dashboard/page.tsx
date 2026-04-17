@@ -67,14 +67,8 @@ export default async function InstitutionDashboardPage({
 
   if (!institution) redirect('/login')
 
-  // Verify access: contact_email must match or admin
-  const { data: callerProfile } = await supabase
-    .from('profiles')
-    .select('mentor_role')
-    .eq('user_id', user.id)
-    .single()
-
-  const isAdmin = callerProfile?.mentor_role === 'practice_leader'
+  // Verify access: contact_email must match or platform admin
+  const isAdmin = user.user_metadata?.role === 'admin'
   if (institution.contact_email !== user.email && !isAdmin) redirect('/dashboard')
 
   // Member count

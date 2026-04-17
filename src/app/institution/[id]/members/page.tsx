@@ -45,13 +45,7 @@ export default async function InstitutionMembersPage({
 
   if (!institution) redirect('/login')
 
-  const { data: callerProfile } = await supabase
-    .from('profiles')
-    .select('mentor_role')
-    .eq('user_id', user.id)
-    .single()
-
-  const isAdmin = callerProfile?.mentor_role === 'practice_leader'
+  const isAdmin = user.user_metadata?.role === 'admin'
   if (institution.contact_email !== user.email && !isAdmin) redirect('/dashboard')
 
   // Paginated memberships

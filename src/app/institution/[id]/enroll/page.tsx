@@ -198,11 +198,11 @@ export default function InstitutionEnrollPage() {
           </p>
           <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#3a5a8a', lineHeight: '1.65', margin: 0 }}>
             Enrolled members earn from your institution&apos;s budget when they complete
-            validated 90-day practice commitments in eligible skill categories. Your
+            sponsored 90-day practice commitments in eligible skill categories. Your
             institution appears as a sponsor alongside their personal supporters — but
-            institutional sponsorship is kept separate from the validator feed, so it
-            never creates performance incentives. Members practice because they want to
-            grow, not to impress you.
+            institutional sponsorship is kept separate from the private practice feed, so
+            it never creates performance incentives. Members practice because they want
+            to grow, not to impress you.
           </p>
         </div>
       </div>

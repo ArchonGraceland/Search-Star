@@ -3,8 +3,8 @@
 const STAGES = [
   { n: 1, label: 'Practice' },
   { n: 2, label: 'Commitment' },
-  { n: 3, label: 'Validator' },
-  { n: 4, label: 'Mentor' },
+  { n: 3, label: 'Sponsor' },
+  { n: 4, label: 'Companion' },
   { n: 5, label: 'Launch' },
   { n: 6, label: 'Active' },
 ]
