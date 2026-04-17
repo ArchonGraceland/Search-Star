@@ -1,13 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
+// v4 earnings view. Columns: Commitment / Pledged / Released.
+// The retired v3 contributions table (mentor/coach/cb/pl four-way split) is gone.
+// Voluntary donations to Search Star are separate from the practitioner's
+// earnings and are paid by the sponsor, never deducted from what was promised.
 interface CommitmentEarning {
   id: string
   title: string
-  completed_at: string
+  completed_at: string | null
+  status: string
   total_pledged: number
-  contribution_amount: number | null
-  net_kept: number
+  total_released: number
 }
 
 export default async function EarningsPage() {
@@ -15,54 +19,56 @@ export default async function EarningsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Fetch all completed commitments for this user
+  // All commitments the user has ever started. We include launch/active/
+  // completed/abandoned so the practitioner can see the full arc of their
+  // sponsorship activity — not just commitments that reached day 90.
   const { data: commitments } = await supabase
     .from('commitments')
-    .select('id, title, completed_at')
+    .select('id, title, completed_at, status, created_at')
     .eq('user_id', user.id)
-    .eq('status', 'completed')
-    .order('completed_at', { ascending: false })
+    .order('created_at', { ascending: false })
 
   const earnings: CommitmentEarning[] = []
   let grandTotalPledged = 0
-  let grandTotalContributed = 0
-  let grandTotalKept = 0
+  let grandTotalReleased = 0
+  let completedCount = 0
 
   for (const c of commitments ?? []) {
-    // Get pledges
-    const { data: pledges } = await supabase
+    const { data: sponsorships } = await supabase
       .from('sponsorships')
-      .select('pledge_amount')
+      .select('pledge_amount, status')
       .eq('commitment_id', c.id)
-      .in('status', ['pledged', 'paid'])
 
-    const total_pledged = (pledges ?? []).reduce((sum, p) => sum + (p.pledge_amount ?? 0), 0)
-
-    // Get contribution if any
-    const { data: contribution } = await supabase
-      .from('contributions')
-      .select('gross_amount')
-      .eq('commitment_id', c.id)
-      .maybeSingle()
-
-    const contribution_amount = contribution?.gross_amount ?? null
-    const net_kept = total_pledged // practitioner always keeps 100% of pledges; contribution is separate
+    let pledged = 0
+    let released = 0
+    for (const s of sponsorships ?? []) {
+      const amount = s.pledge_amount ?? 0
+      // Pledged bucket: anything not vetoed/refunded counts as currently
+      // pledged against this commitment. Released + paid are realised
+      // earnings the practitioner has actually received or will receive.
+      if (s.status === 'pledged' || s.status === 'released' || s.status === 'paid') {
+        pledged += amount
+      }
+      if (s.status === 'released' || s.status === 'paid') {
+        released += amount
+      }
+    }
 
     earnings.push({
       id: c.id,
       title: c.title,
-      completed_at: c.completed_at ?? '',
-      total_pledged,
-      contribution_amount,
-      net_kept,
+      completed_at: c.completed_at,
+      status: c.status,
+      total_pledged: pledged,
+      total_released: released,
     })
 
-    grandTotalPledged += total_pledged
-    if (contribution_amount) grandTotalContributed += contribution_amount
-    grandTotalKept += net_kept
+    grandTotalPledged += pledged
+    grandTotalReleased += released
+    if (c.status === 'completed') completedCount += 1
   }
 
-  function formatDate(iso: string) {
+  function formatDate(iso: string | null) {
     if (!iso) return '—'
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
@@ -77,15 +83,15 @@ export default async function EarningsPage() {
         Your earnings
       </h1>
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', margin: '0 0 32px', lineHeight: '1.5' }}>
-        Payment collection coming soon. All amounts shown are recorded pledges.
+        Pledges are recorded during the launch period and released by sponsors at day 90.
       </p>
 
       {/* Summary cards */}
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
         {[
-          { label: 'Total pledged', value: `$${grandTotalPledged.toFixed(2)}`, color: '#1a3a6b' },
-          { label: 'Total contributed', value: grandTotalContributed > 0 ? `$${grandTotalContributed.toFixed(2)}` : '—', color: '#2d6a6a' },
-          { label: 'Completed commitments', value: String(earnings.length), color: '#7a5c00' },
+          { label: 'Total released', value: `$${grandTotalReleased.toFixed(2)}`, color: '#1a3a6b' },
+          { label: 'Total pledged', value: `$${grandTotalPledged.toFixed(2)}`, color: '#2d6a6a' },
+          { label: 'Completed commitments', value: String(completedCount), color: '#7a5c00' },
         ].map((card) => (
           <div key={card.label} style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '16px 20px', flex: '1', minWidth: '160px' }}>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 4px' }}>
@@ -102,14 +108,14 @@ export default async function EarningsPage() {
       {earnings.length === 0 ? (
         <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '48px 28px', textAlign: 'center' }}>
           <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#b8b8b8', margin: 0 }}>
-            No completed commitments yet. Complete a commitment to see your earnings here.
+            No commitments yet. Declare a commitment to begin your record.
           </p>
         </div>
       ) : (
         <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', overflow: 'hidden' }}>
           {/* Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr auto auto auto', gap: '0', background: '#f5f5f5', borderBottom: '1px solid #d4d4d4', padding: '10px 20px' }}>
-            {['Commitment', 'Pledged', 'Contributed', 'Net kept'].map((h) => (
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr auto auto', gap: '0', background: '#f5f5f5', borderBottom: '1px solid #d4d4d4', padding: '10px 20px' }}>
+            {['Commitment', 'Pledged', 'Released'].map((h) => (
               <span key={h} style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676' }}>
                 {h}
               </span>
@@ -121,7 +127,7 @@ export default async function EarningsPage() {
               key={e.id}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '2fr auto auto auto',
+                gridTemplateColumns: '2fr auto auto',
                 gap: '0',
                 padding: '16px 20px',
                 borderBottom: i < earnings.length - 1 ? '1px solid #f0f0f0' : 'none',
@@ -133,52 +139,43 @@ export default async function EarningsPage() {
                   {e.title}
                 </p>
                 <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8', margin: 0 }}>
-                  Completed {formatDate(e.completed_at)}
+                  {e.status === 'completed'
+                    ? `Completed ${formatDate(e.completed_at)}`
+                    : e.status === 'abandoned'
+                    ? 'Abandoned'
+                    : e.status === 'active'
+                    ? 'Active'
+                    : 'Launch window'}
                 </p>
               </div>
 
-              <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#1a3a6b', margin: 0, paddingRight: '24px', whiteSpace: 'nowrap' }}>
+              <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#2d6a6a', margin: 0, paddingRight: '24px', whiteSpace: 'nowrap' }}>
                 ${e.total_pledged.toFixed(2)}
               </p>
 
-              <div style={{ paddingRight: '24px' }}>
-                {e.contribution_amount !== null ? (
-                  <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#2d6a6a', margin: 0, whiteSpace: 'nowrap' }}>
-                    ${e.contribution_amount.toFixed(2)}
-                  </p>
-                ) : (
-                  <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#b8b8b8', margin: 0 }}>
-                    No contribution
-                  </p>
-                )}
-              </div>
-
               <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#1a3a6b', margin: 0, whiteSpace: 'nowrap' }}>
-                ${e.net_kept.toFixed(2)}
+                ${e.total_released.toFixed(2)}
               </p>
             </div>
           ))}
 
           {/* Total row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr auto auto auto', gap: '0', padding: '12px 20px', background: '#f5f5f5', borderTop: '2px solid #d4d4d4', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr auto auto', gap: '0', padding: '12px 20px', background: '#f5f5f5', borderTop: '2px solid #d4d4d4', alignItems: 'center' }}>
             <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, color: '#5a5a5a' }}>
               Total
             </span>
-            <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#1a3a6b', paddingRight: '24px' }}>
+            <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#2d6a6a', paddingRight: '24px' }}>
               ${grandTotalPledged.toFixed(2)}
             </span>
-            <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#2d6a6a', paddingRight: '24px' }}>
-              {grandTotalContributed > 0 ? `$${grandTotalContributed.toFixed(2)}` : '—'}
-            </span>
             <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#1a3a6b' }}>
-              ${grandTotalKept.toFixed(2)}
+              ${grandTotalReleased.toFixed(2)}
             </span>
           </div>
         </div>
       )}
 
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#b8b8b8', marginTop: '20px', lineHeight: '1.5' }}>
-        Payment collection coming soon. All amounts are recorded pledges. Contributions are voluntary amounts given back to Search Star at completion.
+        Pledges are recorded during the launch period and released by sponsors at day 90. Voluntary donations to Search Star are separate from your earnings and are paid by the sponsor, never deducted from what was promised.
       </p>
     </div>
   )

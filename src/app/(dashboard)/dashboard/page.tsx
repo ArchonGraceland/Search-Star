@@ -141,14 +141,19 @@ export default async function DashboardPage() {
         .limit(3)
     : { data: [] }
 
-  // Lifetime contributions received — sum of gross_amount on contributions for this user's commitments
-  let totalContributions = 0
+  // Lifetime earnings — sum of pledge_amount on released sponsorships for this
+  // user's commitments. The v3 four-way contributions split has been retired
+  // (see docs/v4-decisions.md §5); the practitioner receives the full pledged
+  // amount at release and the voluntary donation is paid by the sponsor
+  // separately, never deducted from what was promised.
+  let totalReleased = 0
   if (userCommitmentIdList.length > 0) {
-    const { data: contribs } = await supabase
-      .from('contributions')
-      .select('gross_amount')
+    const { data: released } = await supabase
+      .from('sponsorships')
+      .select('pledge_amount')
       .in('commitment_id', userCommitmentIdList)
-    totalContributions = (contribs ?? []).reduce((sum, c) => sum + (c.gross_amount ?? 0), 0)
+      .eq('status', 'released')
+    totalReleased = (released ?? []).reduce((sum, r) => sum + (r.pledge_amount ?? 0), 0)
   }
 
   return (
@@ -286,9 +291,9 @@ export default async function DashboardPage() {
       {/* Earnings summary */}
       <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
         <div>
-          <p style={labelStyle}>Lifetime Contributions</p>
+          <p style={labelStyle}>Lifetime Earnings</p>
           <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '24px', fontWeight: 700, color: '#1a1a1a' }}>
-            ${totalContributions.toFixed(2)}
+            ${totalReleased.toFixed(2)}
           </p>
         </div>
         <Link href="/earnings" style={softLink}>View earnings →</Link>

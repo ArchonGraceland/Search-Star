@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getResend } from '@/lib/resend'
+import { getStripe } from '@/lib/stripe'
 
 // POST — sponsor releases or vetoes a pledge. Authentication is the sponsorship's
 // access_token (sponsors don't have Search Star accounts).
@@ -39,7 +40,7 @@ export async function POST(
   // Look up the sponsorship by id + access_token. Both must match.
   const { data: sponsorship, error: lookupErr } = await db
     .from('sponsorships')
-    .select('id, commitment_id, status, sponsor_name, sponsor_email, pledge_amount')
+    .select('id, commitment_id, status, sponsor_name, sponsor_email, pledge_amount, stripe_payment_intent_id')
     .eq('id', id)
     .eq('access_token', token)
     .maybeSingle()
@@ -92,6 +93,28 @@ export async function POST(
       )
     }
 
+    // Capture the held PaymentIntent before recording the release. Pledges
+    // made prior to Stripe wiring have stripe_payment_intent_id = NULL —
+    // those are pre-Stripe rows and the release is a pure DB transition
+    // with no money movement. For Stripe-backed rows, the capture must
+    // succeed before we transition the row; a failed capture means the
+    // funds are not moving and the release has not occurred.
+    if (sponsorship.stripe_payment_intent_id) {
+      try {
+        await getStripe().paymentIntents.capture(sponsorship.stripe_payment_intent_id)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Stripe capture failed'
+        console.error(
+          `Stripe capture failed for sponsorship ${id} (pi=${sponsorship.stripe_payment_intent_id}):`,
+          message
+        )
+        return NextResponse.json(
+          { error: `Payment capture failed: ${message}` },
+          { status: 502 }
+        )
+      }
+    }
+
     const { error: updateErr } = await db
       .from('sponsorships')
       .update({
@@ -131,6 +154,25 @@ export async function POST(
       { error: 'This commitment is not currently active.' },
       { status: 409 }
     )
+  }
+
+  // Cancel the held PaymentIntent. Unlike capture-on-release, a failed
+  // cancel is non-fatal: we want veto to be forgiving and we still want
+  // to record the sponsor's stated intent in the DB. A stranded PI can
+  // be cleaned up manually from the Stripe dashboard if needed.
+  if (sponsorship.stripe_payment_intent_id) {
+    try {
+      await getStripe().paymentIntents.cancel(sponsorship.stripe_payment_intent_id, {
+        cancellation_reason: 'requested_by_customer',
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Stripe cancel failed'
+      console.error(
+        `Stripe cancel failed for sponsorship ${id} (pi=${sponsorship.stripe_payment_intent_id}):`,
+        message,
+        '— continuing with DB veto anyway'
+      )
+    }
   }
 
   const { error: vetoErr } = await db
