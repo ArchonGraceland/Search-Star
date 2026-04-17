@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getResend } from '@/lib/resend'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -46,13 +47,184 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case 'payment_intent.amount_capturable_updated': {
-        // Funds are authorized and held. The sponsorship row is already
-        // 'pledged' at this point from the POST /api/sponsorships flow.
-        // Phase 4b may promote the row here; for now, log only.
+        // Funds are authorized and held. This event is Stripe's honest signal
+        // that the sponsor's card actually cleared authorization — before
+        // this point the sponsorship row exists but the money isn't yet
+        // committed.
+        //
+        // Phase 5.1: this is where the two pledge-confirmation emails fire
+        // (sponsor "your pledge was recorded" and practitioner "new sponsor
+        // pledge"). Previously they went out from POST /api/sponsorships,
+        // which fired them before the card was authorized — so an abandoned
+        // Elements step produced a confirmation email for a pledge that
+        // never landed. The webhook is the correct trigger.
         const pi = event.data.object as Stripe.PaymentIntent
         console.log(
           `[stripe] amount_capturable_updated pi=${pi.id} amount=${pi.amount} capturable=${pi.amount_capturable}`
         )
+
+        // Only the pledge PI fires these emails. Donation PIs use the
+        // off-session Customer from release and don't need confirmation
+        // emails.
+        const intentType = (pi.metadata?.intent_type ?? 'pledge') as string
+        if (intentType !== 'pledge') break
+
+        const { data: sponsorship } = await db
+          .from('sponsorships')
+          .select(
+            'id, commitment_id, sponsor_email, sponsor_name, pledge_amount, access_token, message, pledged_notified_at',
+          )
+          .eq('stripe_payment_intent_id', pi.id)
+          .maybeSingle()
+
+        if (!sponsorship) {
+          console.warn(
+            `[stripe] amount_capturable_updated for pi=${pi.id} but no sponsorship row found`
+          )
+          break
+        }
+
+        // Replay guard: this event can refire (Stripe retries, dashboard
+        // resends, etc). Once pledged_notified_at is set, don't re-email.
+        if (sponsorship.pledged_notified_at) {
+          console.log(
+            `[stripe] amount_capturable_updated for pi=${pi.id} replayed; emails already sent at ${sponsorship.pledged_notified_at}`
+          )
+          break
+        }
+
+        // Look up commitment + practitioner display info for email bodies.
+        const { data: commitment } = await db
+          .from('commitments')
+          .select('id, title, user_id')
+          .eq('id', sponsorship.commitment_id)
+          .maybeSingle()
+
+        if (!commitment) {
+          console.error(
+            `[stripe] amount_capturable_updated pi=${pi.id} sponsorship ${sponsorship.id} references missing commitment ${sponsorship.commitment_id}`
+          )
+          break
+        }
+
+        const { data: profile } = await db
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', commitment.user_id)
+          .maybeSingle()
+        const practitionerName = profile?.display_name ?? 'the practitioner'
+
+        const { data: authUser } = await db.auth.admin.getUserById(commitment.user_id)
+        const practitionerEmail = authUser?.user?.email
+
+        const pledgeAmount = Number(sponsorship.pledge_amount ?? 0)
+        const sponsorFeedUrl = `https://www.searchstar.com/sponsor/${commitment.id}/${sponsorship.access_token}`
+        const sponsorEmail = sponsorship.sponsor_email
+        const sponsorName = sponsorship.sponsor_name ?? 'A sponsor'
+        const commitmentTitle = commitment.title ?? 'their commitment'
+        const sponsorMessage = sponsorship.message
+
+        // Sponsor confirmation email — copied verbatim (minus template
+        // variables) from what used to live in POST /api/sponsorships.
+        if (sponsorEmail) {
+          try {
+            await getResend().emails.send({
+              from: 'noreply@searchstar.com',
+              to: sponsorEmail,
+              subject: `Your pledge to support ${practitionerName} has been recorded`,
+              html: `
+                <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a1a;">
+                  <div style="background: #1a3a6b; padding: 20px 24px; margin-bottom: 32px;">
+                    <span style="font-family: Georgia, serif; font-size: 20px; font-weight: 700; color: #ffffff;">Search Star</span>
+                  </div>
+                  <div style="padding: 0 24px 32px;">
+                    <h2 style="font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: #1a1a1a; margin: 0 0 16px;">
+                      Your pledge has been recorded
+                    </h2>
+                    <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #3a3a3a; margin: 0 0 12px;">
+                      Thank you for supporting <strong>${practitionerName}</strong> on their commitment:
+                    </p>
+                    <div style="background: #f5f5f5; border-left: 3px solid #1a3a6b; padding: 16px 20px; margin: 0 0 24px; border-radius: 2px;">
+                      <p style="font-family: Georgia, serif; font-size: 18px; font-weight: 700; margin: 0 0 8px; color: #1a1a1a;">${commitmentTitle}</p>
+                      <p style="font-family: Arial, sans-serif; font-size: 15px; color: #1a3a6b; font-weight: 700; margin: 0;">
+                        Pledge amount: $${pledgeAmount.toFixed(2)}
+                      </p>
+                    </div>
+                    <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #3a3a3a; margin: 0 0 20px;">
+                      Follow along as ${practitionerName} works through their 90 days. The link below is yours &mdash; keep it private; it gives you read-only access to the practice feed.
+                    </p>
+                    <a href="${sponsorFeedUrl}" style="display: inline-block; background: #1a3a6b; color: #ffffff; font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 12px 24px; border-radius: 3px; text-decoration: none; margin-bottom: 24px;">
+                      Follow the practice &rarr;
+                    </a>
+                    <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #767676; margin: 0;">
+                      Your pledge is recorded now. Funds are collected when ${practitionerName} completes their 90-day commitment. If they don&rsquo;t complete it, no payment is collected.
+                    </p>
+                  </div>
+                </div>
+              `,
+              text: `Your pledge of $${pledgeAmount.toFixed(2)} to support ${practitionerName}'s commitment "${commitmentTitle}" has been recorded.\n\nFollow the practice: ${sponsorFeedUrl}\n\nFunds are collected when they complete their 90-day commitment.`,
+            })
+          } catch (err) {
+            console.error(
+              `[stripe] failed to send sponsor confirmation email for sponsorship ${sponsorship.id}:`,
+              err instanceof Error ? err.message : err
+            )
+          }
+        }
+
+        // Practitioner notification email.
+        if (practitionerEmail) {
+          try {
+            await getResend().emails.send({
+              from: 'noreply@searchstar.com',
+              to: practitionerEmail,
+              subject: `${sponsorName} pledged $${pledgeAmount.toFixed(2)} to your commitment`,
+              html: `
+                <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; color: #1a1a1a;">
+                  <div style="background: #1a3a6b; padding: 20px 24px; margin-bottom: 32px;">
+                    <span style="font-family: Georgia, serif; font-size: 20px; font-weight: 700; color: #ffffff;">Search Star</span>
+                  </div>
+                  <div style="padding: 0 24px 32px;">
+                    <h2 style="font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: #1a1a1a; margin: 0 0 16px;">
+                      New sponsor pledge
+                    </h2>
+                    <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #3a3a3a; margin: 0 0 12px;">
+                      <strong>${sponsorName}</strong> has pledged <strong>$${pledgeAmount.toFixed(2)}</strong> to your commitment:
+                    </p>
+                    <div style="background: #f5f5f5; border-left: 3px solid #2d6a2d; padding: 16px 20px; margin: 0 0 24px; border-radius: 2px;">
+                      <p style="font-family: Georgia, serif; font-size: 18px; font-weight: 700; margin: 0 0 8px; color: #1a1a1a;">${commitmentTitle}</p>
+                      ${sponsorMessage ? `<p style="font-family: Arial, sans-serif; font-size: 14px; color: #3a3a3a; margin: 0; font-style: italic;">&ldquo;${sponsorMessage}&rdquo;</p>` : ''}
+                    </div>
+                    <a href="https://www.searchstar.com/commit/${commitment.id}/sponsors" style="display: inline-block; background: #1a3a6b; color: #ffffff; font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 12px 24px; border-radius: 3px; text-decoration: none;">
+                      View all sponsors &rarr;
+                    </a>
+                  </div>
+                </div>
+              `,
+              text: `${sponsorName} pledged $${pledgeAmount.toFixed(2)} to your commitment "${commitmentTitle}". View sponsors: https://www.searchstar.com/commit/${commitment.id}/sponsors`,
+            })
+          } catch (err) {
+            console.error(
+              `[stripe] failed to send practitioner notification email for sponsorship ${sponsorship.id}:`,
+              err instanceof Error ? err.message : err
+            )
+          }
+        }
+
+        // Mark as notified so a replay of this event doesn't re-send. A
+        // failure of this update is not fatal — the emails already went
+        // out; the worst case is a duplicate set on replay, which is
+        // preferable to blocking Stripe's retry on a transient DB error.
+        const { error: notifyErr } = await db
+          .from('sponsorships')
+          .update({ pledged_notified_at: new Date().toISOString() })
+          .eq('id', sponsorship.id)
+        if (notifyErr) {
+          console.error(
+            `[stripe] failed to set pledged_notified_at for sponsorship ${sponsorship.id}:`,
+            notifyErr
+          )
+        }
         break
       }
 
