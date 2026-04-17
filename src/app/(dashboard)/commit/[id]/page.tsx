@@ -51,13 +51,6 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-function dayOfCommitment(launchStartsAt: string): number {
-  const start = new Date(launchStartsAt)
-  const now = new Date()
-  const diff = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  return Math.max(1, Math.min(90, diff + 1))
-}
-
 function TimelineBar({ commitment }: { commitment: Commitment }) {
   const launchStart = new Date(commitment.launch_starts_at)
   const streakEnd = new Date(commitment.streak_ends_at)
@@ -65,14 +58,32 @@ function TimelineBar({ commitment }: { commitment: Commitment }) {
   const now = new Date()
   const elapsedMs = Math.max(0, Math.min(now.getTime() - launchStart.getTime(), totalMs))
   const todayPct = (elapsedMs / totalMs) * 100
-  const launchPct = (7 / 90) * 100
-  const day = dayOfCommitment(commitment.launch_starts_at)
+  // Total span is 14-day launch + 90-day streak = 104 days.
+  const launchPct = (14 / 104) * 100
+
+  // Day label depends on phase. During launch show "Launch day X of 14"; once
+  // active, show "Day X of 90" computed from streak_starts_at, not launch_starts_at.
+  let dayLabel: string
+  if (commitment.status === 'launch' && commitment.launch_ends_at) {
+    const launchEnd = new Date(commitment.launch_ends_at)
+    const elapsed = Math.floor((now.getTime() - launchStart.getTime()) / (1000 * 60 * 60 * 24))
+    const launchDay = Math.max(1, Math.min(14, elapsed + 1))
+    const daysLeft = Math.max(0, Math.ceil((launchEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+    dayLabel = `Launch day ${launchDay} of 14 · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} until start`
+  } else if (commitment.streak_starts_at) {
+    const streakStart = new Date(commitment.streak_starts_at)
+    const elapsed = Math.floor((now.getTime() - streakStart.getTime()) / (1000 * 60 * 60 * 24))
+    const streakDay = Math.max(1, Math.min(90, elapsed + 1))
+    dayLabel = `Day ${streakDay} of 90`
+  } else {
+    dayLabel = 'Day 1 of 90'
+  }
 
   return (
     <div style={{ marginBottom: '28px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
         <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676', fontWeight: 600 }}>
-          Day {day} of 90
+          {dayLabel}
         </span>
         <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8' }}>
           {commitment.frequency === 'weekly'
@@ -95,8 +106,8 @@ function TimelineBar({ commitment }: { commitment: Commitment }) {
         }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: '#b8b8b8' }}>Launch (7 days)</span>
-        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: '#b8b8b8' }}>Streak (83 days)</span>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: '#b8b8b8' }}>Launch (14 days)</span>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '10px', color: '#b8b8b8' }}>Streak (90 days)</span>
       </div>
     </div>
   )

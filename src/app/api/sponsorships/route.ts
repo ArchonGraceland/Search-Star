@@ -65,7 +65,7 @@ export async function GET(request: Request) {
 // POST — record a sponsorship pledge (no auth required)
 export async function POST(request: Request) {
   const body = await request.json()
-  const { commitment_id, sponsor_email, sponsor_name, pledge_amount, message } = body
+  const { commitment_id, sponsor_email, sponsor_name, pledge_amount, message, invite_token } = body
 
   if (!commitment_id || !sponsor_email || !sponsor_name || !pledge_amount) {
     return NextResponse.json({ error: 'commitment_id, sponsor_email, sponsor_name, and pledge_amount are required.' }, { status: 400 })
@@ -80,6 +80,29 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceClient()
+
+  // If an invite_token was supplied, resolve the invitation and enforce single-use.
+  // This is the branch used by /sponsor/invited/[invite_token]; the original
+  // /sponsor/[id] flow does not send invite_token and continues to work unchanged.
+  let invitationId: string | null = null
+  if (invite_token && typeof invite_token === 'string') {
+    const { data: invitation } = await supabase
+      .from('sponsor_invitations')
+      .select('id, commitment_id, invitee_email, status')
+      .eq('invite_token', invite_token)
+      .maybeSingle()
+
+    if (!invitation) {
+      return NextResponse.json({ error: 'Invitation not found.' }, { status: 404 })
+    }
+    if (invitation.status !== 'pending') {
+      return NextResponse.json({ error: 'This invitation has already been used.' }, { status: 409 })
+    }
+    if (invitation.commitment_id !== commitment_id) {
+      return NextResponse.json({ error: 'Invitation does not match this commitment.' }, { status: 409 })
+    }
+    invitationId = invitation.id
+  }
 
   // Fetch commitment and verify launch status
   const { data: commitment, error: commError } = await supabase
@@ -128,6 +151,18 @@ export async function POST(request: Request) {
   if (insertError || !sponsorship) {
     console.error('Error inserting sponsorship:', insertError)
     return NextResponse.json({ error: 'Failed to record pledge.' }, { status: 500 })
+  }
+
+  // If this pledge resolved an invitation, mark it accepted. Non-fatal on failure.
+  if (invitationId) {
+    try {
+      await supabase
+        .from('sponsor_invitations')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', invitationId)
+    } catch (err) {
+      console.error('Failed to mark invitation accepted:', err)
+    }
   }
 
   // Get practitioner email for notification

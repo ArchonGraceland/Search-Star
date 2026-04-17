@@ -44,14 +44,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No practice found. Please complete onboarding first.' }, { status: 400 })
   }
 
-  // Date calculations
+  // Date calculations — v4 spec §4.2: 14-day launch period + 90-day streak.
+  // Initial projection here must match what /api/commitments/[id]/start does at
+  // start ritual (streak_ends_at = now + 90) so the launch page shows accurate dates.
   const launchStartsAt = new Date(start_date + 'T00:00:00Z')
   const launchEndsAt = new Date(launchStartsAt)
-  launchEndsAt.setUTCDate(launchEndsAt.getUTCDate() + 7)
+  launchEndsAt.setUTCDate(launchEndsAt.getUTCDate() + 14)
 
   const streakStartsAt = new Date(launchEndsAt)
   const streakEndsAt = new Date(streakStartsAt)
-  streakEndsAt.setUTCDate(streakEndsAt.getUTCDate() + 83)
+  streakEndsAt.setUTCDate(streakEndsAt.getUTCDate() + 90)
 
   const { data, error } = await db
     .from('commitments')

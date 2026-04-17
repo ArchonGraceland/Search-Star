@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import SponsorActions from './sponsor-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +42,7 @@ export default async function SponsorFeed({
   // Look up the sponsorship by token + commitment. Both must match.
   const { data: sponsorship } = await supabase
     .from('sponsorships')
-    .select('id, sponsor_name, pledge_amount, status, commitment_id')
+    .select('id, sponsor_name, pledge_amount, status, commitment_id, released_at, vetoed_at, veto_reason')
     .eq('access_token', token)
     .eq('commitment_id', commitment_id)
     .maybeSingle()
@@ -119,6 +120,41 @@ export default async function SponsorFeed({
             ${Number(sponsorship.pledge_amount).toFixed(2)}
           </p>
         </div>
+
+        {/* Prior-action state or active sponsor actions */}
+        {sponsorship.status === 'released' ? (
+          <div style={{ background: '#edf7ed', border: '1px solid #d4d4d4', borderLeft: '3px solid #2d6a2d', borderRadius: '3px', padding: '18px 22px', marginBottom: '32px' }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#2d6a2d', margin: '0 0 6px' }}>
+              You released this pledge
+            </p>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#3a3a3a', lineHeight: 1.6, margin: 0 }}>
+              Thank you for witnessing {practitionerName}&rsquo;s 90 days.
+              {sponsorship.released_at && (
+                <> Released {new Date(sponsorship.released_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.</>
+              )}
+            </p>
+          </div>
+        ) : sponsorship.status === 'vetoed' ? (
+          <div style={{ background: '#fef2f2', border: '1px solid #d4d4d4', borderLeft: '3px solid #991b1b', borderRadius: '3px', padding: '18px 22px', marginBottom: '32px' }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#991b1b', margin: '0 0 6px' }}>
+              You vetoed this commitment
+            </p>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#3a3a3a', lineHeight: 1.6, margin: 0 }}>
+              The streak has ended. No payment was taken.
+              {sponsorship.vetoed_at && (
+                <> Vetoed {new Date(sponsorship.vetoed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.</>
+              )}
+            </p>
+          </div>
+        ) : sponsorship.status === 'pledged' && commitment.status === 'active' ? (
+          <SponsorActions
+            sponsorshipId={sponsorship.id}
+            token={token}
+            canRelease={!!commitment.streak_ends_at && new Date(commitment.streak_ends_at) <= new Date()}
+            canVeto={true}
+            practitionerName={practitionerName}
+          />
+        ) : null}
 
         {/* Session stream */}
         <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '16px' }}>
