@@ -35,13 +35,6 @@ interface Post {
   posted_at: string
 }
 
-interface Validator {
-  id: string
-  validator_email: string
-  status: 'invited' | 'active' | 'declined'
-  invited_at: string
-}
-
 interface SponsorStats {
   total_pledged: number
   pledge_count: number
@@ -112,46 +105,12 @@ function TimelineBar({ commitment }: { commitment: Commitment }) {
 function ContributionModal({
   commitment,
   totalPledged,
-  onContribute,
   onDismiss,
 }: {
   commitment: Commitment
   totalPledged: number
-  onContribute: (amount: number) => Promise<void>
   onDismiss: () => void
 }) {
-  const suggested = Math.round(totalPledged * 0.5 * 100) / 100
-  const [amount, setAmount] = useState(suggested > 0 ? String(suggested) : '')
-  const [contributing, setContributing] = useState(false)
-  const [contributed, setContributed] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const amountNum = parseFloat(amount)
-  const validAmount = !isNaN(amountNum) && amountNum > 0
-
-  const splits = validAmount
-    ? {
-        ss: amountNum * 0.05,
-        mentor: amountNum * 0.2375,
-        coach: amountNum * 0.2375,
-        cb: amountNum * 0.2375,
-        pl: amountNum * 0.2375,
-      }
-    : null
-
-  async function handleContribute() {
-    if (!validAmount) return
-    setContributing(true)
-    setError(null)
-    try {
-      await onContribute(amountNum)
-      setContributed(true)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to record contribution.')
-    }
-    setContributing(false)
-  }
-
   return (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
@@ -163,129 +122,33 @@ function ContributionModal({
         maxWidth: '540px', width: '100%', maxHeight: '90vh', overflowY: 'auto',
         padding: '36px 40px',
       }}>
-        {contributed ? (
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '40px', marginBottom: '16px' }}>🙏</p>
-            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '26px', fontWeight: 700, margin: '0 0 12px' }}>
-              Thank you
-            </h2>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#5a5a5a', lineHeight: '1.6', margin: '0 0 24px' }}>
-              Your contribution has been recorded. The mentor community that supports practitioners like you receives 95% of it.
-            </p>
-            <button
-              onClick={onDismiss}
-              style={{ background: '#1a3a6b', color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em', padding: '10px 24px', borderRadius: '3px', border: 'none', cursor: 'pointer' }}
-            >
-              Done
-            </button>
-          </div>
-        ) : (
-          <>
-            <p style={{ fontSize: '36px', textAlign: 'center', marginBottom: '12px' }}>🎉</p>
-            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '26px', fontWeight: 700, margin: '0 0 8px', textAlign: 'center' }}>
-              You completed {commitment.title}!
-            </h2>
+        <p style={{ fontSize: '36px', textAlign: 'center', marginBottom: '12px' }}>🎉</p>
+        <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '26px', fontWeight: 700, margin: '0 0 8px', textAlign: 'center' }}>
+          You completed {commitment.title}!
+        </h2>
 
-            <div style={{ background: '#eef2f8', borderRadius: '3px', padding: '12px 16px', margin: '16px 0 20px', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 2px' }}>
-                Total pledged by sponsors
-              </p>
-              <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '32px', fontWeight: 700, color: '#1a3a6b', margin: 0 }}>
-                ${totalPledged.toFixed(2)}
-              </p>
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676', margin: '4px 0 0' }}>
-                This is yours — 100%, regardless of what you choose below.
-              </p>
-            </div>
+        <div style={{ background: '#eef2f8', borderRadius: '3px', padding: '12px 16px', margin: '16px 0 20px', textAlign: 'center' }}>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 2px' }}>
+            Total pledged by sponsors
+          </p>
+          <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '32px', fontWeight: 700, color: '#1a3a6b', margin: 0 }}>
+            ${totalPledged.toFixed(2)}
+          </p>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676', margin: '4px 0 0' }}>
+            This is yours — 100%.
+          </p>
+        </div>
 
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#3a3a3a', lineHeight: '1.6', margin: '0 0 20px' }}>
-              Would you like to contribute a portion of your earnings to the mentor community that supports practitioners like you? This is entirely voluntary.
-            </p>
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#3a3a3a', lineHeight: '1.6', margin: '0 0 24px' }}>
+          A voluntary-contribution prompt is coming soon. In the meantime, your completed commitment is recorded and the pledges are yours in full.
+        </p>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
-                Contribution amount{' '}
-                {totalPledged > 0 && (
-                  <span style={{ color: '#b8b8b8', fontWeight: 400 }}>
-                    (suggested: ${suggested.toFixed(2)} = 50% of pledges)
-                  </span>
-                )}
-              </label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#5a5a5a' }}>$</span>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  min="0.01"
-                  step="0.01"
-                  placeholder="0.00"
-                  style={{ width: '100%', padding: '9px 12px 9px 24px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
-                  onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
-                />
-              </div>
-            </div>
-
-            {splits && (
-              <div style={{ background: '#f5f5f5', borderRadius: '3px', padding: '14px 16px', marginBottom: '20px' }}>
-                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 10px' }}>
-                  How it&apos;s distributed
-                </p>
-                {[
-                  { label: 'Search Star', pct: '5%', amount: splits.ss, color: '#1a3a6b' },
-                  { label: 'Your mentor', pct: '23.75%', amount: splits.mentor, color: '#2d6a6a' },
-                  { label: 'Coach pool', pct: '23.75%', amount: splits.coach, color: '#c8922a' },
-                  { label: 'Community builders', pct: '23.75%', amount: splits.cb, color: '#4a6fa5' },
-                  { label: 'Practice leaders', pct: '23.75%', amount: splits.pl, color: '#5a4a8a' },
-                ].map((row) => (
-                  <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: row.color, flexShrink: 0 }} />
-                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#3a3a3a', flex: 1 }}>{row.label}</span>
-                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#767676' }}>{row.pct}</span>
-                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, color: row.color, minWidth: '52px', textAlign: 'right' }}>
-                      ${row.amount.toFixed(2)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {error && (
-              <div style={{ marginBottom: '14px', padding: '10px 14px', background: '#fef2f2', borderLeft: '3px solid #991b1b', borderRadius: '3px' }}>
-                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', margin: 0 }}>{error}</p>
-              </div>
-            )}
-
-            <button
-              onClick={handleContribute}
-              disabled={contributing || !validAmount}
-              style={{
-                width: '100%',
-                background: contributing || !validAmount ? '#8a9fc0' : '#1a3a6b',
-                color: '#fff',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '14px',
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                padding: '12px 20px',
-                borderRadius: '3px',
-                border: 'none',
-                cursor: contributing || !validAmount ? 'not-allowed' : 'pointer',
-                marginBottom: '12px',
-              }}
-            >
-              {contributing ? 'Recording...' : `Contribute $${validAmount ? amountNum.toFixed(2) : '0.00'} \u2192`}
-            </button>
-
-            <button
-              onClick={onDismiss}
-              style={{ width: '100%', background: 'transparent', color: '#767676', fontFamily: 'Roboto, sans-serif', fontSize: '13px', padding: '8px', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              No thanks, keep 100% of my pledges
-            </button>
-          </>
-        )}
+        <button
+          onClick={onDismiss}
+          style={{ width: '100%', background: '#1a3a6b', color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '14px', fontWeight: 700, letterSpacing: '0.04em', padding: '12px 20px', borderRadius: '3px', border: 'none', cursor: 'pointer' }}
+        >
+          Done
+        </button>
       </div>
     </div>
   )
@@ -302,11 +165,6 @@ export default function CommitDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [loggedToday, setLoggedToday] = useState(false)
-  const [validators, setValidators] = useState<Validator[]>([])
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviting, setInviting] = useState(false)
-  const [inviteError, setInviteError] = useState<string | null>(null)
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
 
   const [sponsorStats, setSponsorStats] = useState<SponsorStats>({ total_pledged: 0, pledge_count: 0 })
   const [copied, setCopied] = useState(false)
@@ -315,7 +173,6 @@ export default function CommitDetailPage() {
   const [completing, setCompleting] = useState(false)
   const [showContributionModal, setShowContributionModal] = useState(false)
   const [totalPledgedAtCompletion, setTotalPledgedAtCompletion] = useState(0)
-  const [contributionDone, setContributionDone] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/commitments/${id}`)
@@ -326,12 +183,6 @@ export default function CommitDetailPage() {
       const todayStr = new Date().toISOString().slice(0, 10)
       const todayPost = data.posts.find((p: Post) => p.posted_at.slice(0, 10) === todayStr)
       setLoggedToday(!!todayPost)
-    }
-
-    const vRes = await fetch(`/api/commitments/${id}/validators`)
-    if (vRes.ok) {
-      const vData = await vRes.json()
-      setValidators(vData.validators ?? [])
     }
 
     const sRes = await fetch(`/api/sponsorships/${id}`)
@@ -348,38 +199,17 @@ export default function CommitDetailPage() {
 
   useEffect(() => { load() }, [load])
 
-  // After load: if completed and not dismissed and no contribution yet, show modal
+  // After load: if completed and not dismissed, show the completion modal
   useEffect(() => {
     if (!commitment) return
     if (commitment.status !== 'completed') return
     const declined = typeof window !== 'undefined'
       ? localStorage.getItem(`contribution_declined_${id}`)
       : null
-    if (declined || contributionDone) return
+    if (declined) return
     setTotalPledgedAtCompletion(sponsorStats.total_pledged)
     setShowContributionModal(true)
-  }, [commitment, contributionDone, id, sponsorStats.total_pledged])
-
-  const handleInviteValidator = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setInviting(true)
-    setInviteError(null)
-    setInviteSuccess(null)
-    const res = await fetch(`/api/commitments/${id}/validators`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: inviteEmail }),
-    })
-    const data = await res.json()
-    if (res.ok) {
-      setInviteSuccess(`Invite sent to ${inviteEmail}`)
-      setInviteEmail('')
-      await load()
-    } else {
-      setInviteError(data.error || 'Failed to send invite.')
-    }
-    setInviting(false)
-  }
+  }, [commitment, id, sponsorStats.total_pledged])
 
   const handleLogSession = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -413,17 +243,6 @@ export default function CommitDetailPage() {
       await load()
       setShowContributionModal(true)
     }
-  }
-
-  const handleContribute = async (amount: number) => {
-    const res = await fetch('/api/contributions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commitment_id: id, gross_amount: amount }),
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Failed to record contribution.')
-    setContributionDone(true)
   }
 
   const handleDismissContribution = () => {
@@ -475,11 +294,10 @@ export default function CommitDetailPage() {
   return (
     <div style={{ maxWidth: '720px' }}>
       {/* Contribution modal */}
-      {showContributionModal && commitment.status === 'completed' && !contributionDone && (
+      {showContributionModal && commitment.status === 'completed' && (
         <ContributionModal
           commitment={commitment}
           totalPledged={totalPledgedAtCompletion}
-          onContribute={handleContribute}
           onDismiss={handleDismissContribution}
         />
       )}
@@ -725,70 +543,21 @@ export default function CommitDetailPage() {
         </div>
       )}
 
-      {/* Validators section */}
+      {/* Sponsors section — Phase 2 builds the invitation flow and the release/veto actions */}
       <div>
         <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '16px' }}>
-          Validators
+          Sponsors
         </p>
-        {validators.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-            {validators.map((v) => {
-              const vBadge =
-                v.status === 'active' ? { bg: '#edf7ed', color: '#2d6a2d', label: 'Active' }
-                : v.status === 'declined' ? { bg: '#fef2f2', color: '#991b1b', label: 'Declined' }
-                : { bg: '#f5f5f5', color: '#767676', label: 'Invited' }
-              return (
-                <div key={v.id} style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#3a3a3a' }}>{v.validator_email}</span>
-                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: vBadge.bg, color: vBadge.color, borderRadius: '2px', padding: '3px 8px' }}>
-                    {vBadge.label}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-        {validators.length >= 3 ? (
-          <div style={{ padding: '14px 16px', background: '#f5f5f5', border: '1px solid #d4d4d4', borderRadius: '3px' }}>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#767676', margin: 0 }}>Validator limit reached (3/3)</p>
-          </div>
-        ) : (
-          <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #4a6fa5', borderRadius: '3px', padding: '20px 24px' }}>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676', marginBottom: '14px', margin: '0 0 14px' }}>
-              Invite someone to verify your sessions. They don&#39;t need a Search Star account.
-              {validators.length > 0 && ` (${validators.length}/3 validators)`}
-            </p>
-            <form onSubmit={handleInviteValidator} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="validator@example.com"
-                required
-                style={{ flex: 1, minWidth: '200px', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none' }}
-                onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
-                onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
-              />
-              <button
-                type="submit"
-                disabled={inviting}
-                style={{ background: inviting ? '#8a9fc0' : '#1a3a6b', color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em', padding: '9px 18px', borderRadius: '3px', border: 'none', cursor: inviting ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
-              >
-                {inviting ? 'Sending...' : 'Send invite \u2192'}
-              </button>
-            </form>
-            {inviteSuccess && (
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#2d6a2d', marginTop: '10px', marginBottom: 0 }}>
-                ✓ {inviteSuccess}
-              </p>
-            )}
-            {inviteError && (
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', marginTop: '10px', marginBottom: 0 }}>
-                {inviteError}
-              </p>
-            )}
-          </div>
-        )}
+        <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #4a6fa5', borderRadius: '3px', padding: '20px 24px' }}>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#3a3a3a', margin: '0 0 8px', lineHeight: '1.6' }}>
+            {sponsorStats.pledge_count > 0
+              ? `${sponsorStats.pledge_count} ${sponsorStats.pledge_count === 1 ? 'sponsor has' : 'sponsors have'} pledged $${sponsorStats.total_pledged.toFixed(2)} so far.`
+              : 'No sponsors yet. Share your pledge link above to invite someone who will back your commitment.'}
+          </p>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676', margin: 0, lineHeight: '1.6' }}>
+            Sponsor invitations and release/veto actions are coming in the next update.
+          </p>
+        </div>
       </div>
     </div>
   )

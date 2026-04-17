@@ -211,8 +211,8 @@ export function AccountForm({ displayName, location, bio, visibility, trustStage
         </h2>
         <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#5a5a5a', marginBottom: '20px', lineHeight: '1.6' }}>
           {vis === 'private'
-            ? 'Your profile is private. Only your validator circle can see your practice and Trust record. Switch to public when you are ready to share your record with employers, schools, or sponsors.'
-            : 'Your profile is public. Anyone can view your Trust stage and practice record. Switch to private at any time to restrict visibility to your validator circle only.'}
+            ? 'Your profile is private. Only your sponsors can see your practice and Trust record. Switch to public when you are ready to share your record with employers, schools, or sponsors.'
+            : 'Your profile is public. Anyone can view your Trust stage and practice record. Switch to private at any time to restrict visibility to your sponsors only.'}
         </p>
 
         <div style={{ display: 'flex', gap: '12px' }}>

@@ -98,8 +98,6 @@ export default function AccountManagement({ email }: Props) {
   const [pwMsg, setPwMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
   // Notifications
-  const [notifyValidator, setNotifyValidator] = useState(true)
-  const [notifyAck, setNotifyAck] = useState(true)
   const [notifySponsor, setNotifySponsor] = useState(true)
   const [notifySaving, setNotifySaving] = useState(false)
   const [notifyMsg, setNotifyMsg] = useState<string | null>(null)
@@ -160,8 +158,6 @@ export default function AccountManagement({ email }: Props) {
     // Stored in user metadata for now
     const { error } = await supabase.auth.updateUser({
       data: {
-        notify_validator_witness: notifyValidator,
-        notify_acknowledgment: notifyAck,
         notify_sponsor: notifySponsor,
       }
     })
@@ -302,11 +298,9 @@ export default function AccountManagement({ email }: Props) {
           Email notifications
         </h2>
         {[
-          { id: 'notify-validator', checked: notifyValidator, onChange: setNotifyValidator, label: 'Validator witnessed your session', sub: 'Email when someone witnesses a session you logged' },
-          { id: 'notify-ack', checked: notifyAck, onChange: setNotifyAck, label: 'Practitioner acknowledged your witness', sub: 'Email when someone responds to your attestation' },
           { id: 'notify-sponsor', checked: notifySponsor, onChange: setNotifySponsor, label: 'New sponsor pledge', sub: 'Email when someone pledges to your commitment' },
-        ].map((item, i) => (
-          <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', paddingBottom: i < 2 ? '16px' : '0', marginBottom: i < 2 ? '16px' : '0', borderBottom: i < 2 ? '1px solid #f0f0f0' : 'none' }}>
+        ].map((item, i, arr) => (
+          <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', paddingBottom: i < arr.length - 1 ? '16px' : '0', marginBottom: i < arr.length - 1 ? '16px' : '0', borderBottom: i < arr.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
             <div>
               <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', margin: '0 0 2px' }}>{item.label}</p>
               <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676', margin: 0 }}>{item.sub}</p>
@@ -352,7 +346,7 @@ export default function AccountManagement({ email }: Props) {
               Delete your account?
             </h3>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a', lineHeight: 1.6, marginBottom: '20px' }}>
-              This will permanently delete your profile, all practice sessions, validator relationships, and sponsorship history. This cannot be undone.
+              This will permanently delete your profile, all practice sessions, and sponsorship history. This cannot be undone.
             </p>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ ...label, color: '#991b1b' }} htmlFor="delete-confirm">Type DELETE to confirm</label>
