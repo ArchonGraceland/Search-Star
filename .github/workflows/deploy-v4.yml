@@ -12,7 +12,7 @@ jobs:
       - name: Trigger Vercel deploy hook
         id: trigger
         run: |
-          RESPONSE=$(curl -s "https://api.vercel.com/v1/integrations/deploy/prj_4naGexGhfiklNAPntvurIkFWH5Nh/18KXg8wIGM")
+          RESPONSE=$(curl -s "https://api.vercel.com/v1/integrations/deploy/prj_4naGexGhfiklNAPntvurIkFWH5Nh/2WmoFtjZRm")
           JOB_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('job',{}).get('id',''))")
           echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
           echo "Triggered deploy job: $JOB_ID"
