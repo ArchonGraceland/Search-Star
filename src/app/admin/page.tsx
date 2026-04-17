@@ -46,7 +46,7 @@ export default async function AdminDashboard() {
         <div className="mb-8">
           <p className="font-body text-[11px] font-bold tracking-[0.2em] uppercase text-[#767676] mb-2">Admin</p>
           <h1 className="font-heading text-[32px] font-bold mb-1">Platform Overview</h1>
-          <p className="font-body text-sm text-[#767676]">Search Star v3.0</p>
+          <p className="font-body text-sm text-[#767676]">Search Star v4.0</p>
         </div>
 
         {/* Stats */}

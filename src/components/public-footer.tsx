@@ -18,7 +18,7 @@ export default function PublicFooter() {
         }}
       >
         <span>
-          <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Search Star</strong> — v3.0
+          <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Search Star</strong> — v4.0
         </span>
         <div style={{ display: 'flex', gap: '24px' }}>
           <Link

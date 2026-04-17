@@ -28,7 +28,7 @@ export default function HomePage() {
           }} />
           <div className="max-w-3xl mx-auto text-center" style={{ position: 'relative', zIndex: 1 }}>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '20px' }}>
-              Search Star — v3.0
+              Search Star — v4.0
             </p>
             <h1 style={{ fontFamily: '"Crimson Text", Georgia, serif', color: '#ffffff', lineHeight: 1.1, fontSize: 'clamp(40px, 6vw, 64px)', fontWeight: 700, marginBottom: '24px' }}>
               What do you want to practice?
