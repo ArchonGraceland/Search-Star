@@ -144,7 +144,7 @@ export default function ManifestoPage() {
               &ldquo;The only way to advance your Trust is to actually be the kind of person your Trust record describes. Gaming the metric produces the virtue.&rdquo;
             </p>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: '40px' }}>
-              The Convergence Principle — Search Star Spec v3.0, §2.4
+              The Convergence Principle — Search Star Spec v4.0, §2.4
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link

@@ -48,10 +48,12 @@
   .milestone.expanded { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
   .milestone.next { border-color: rgba(201,169,78,0.2); }
   .milestone.next.expanded { background: rgba(201,169,78,0.08); border-color: rgba(201,169,78,0.3); }
+  .milestone.deferred { border-color: rgba(255,255,255,0.04); opacity: 0.75; }
   .milestone-header { padding: 16px 20px; display: flex; align-items: center; gap: 16px; }
   .version-badge { font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; padding: 4px 10px; border-radius: 2px; min-width: 52px; text-align: center; }
   .version-badge.next { background: var(--gold); color: var(--deep); }
   .version-badge.planned { background: var(--navy); color: var(--white); }
+  .version-badge.deferred { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
   .milestone-title { font-size: 20px; font-weight: 700; color: var(--white); flex: 1; }
   .milestone-target { font-family: 'Roboto', sans-serif; font-size: 12px; color: rgba(255,255,255,0.4); }
   .effort-badge { font-family: 'Roboto', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
@@ -110,13 +112,12 @@
       </a>
       <div class="nav-links">
         <a href="/">Home</a>
-        <a href="profile.html">Sample Profile</a>
         <a href="spec.html">Specification</a>
         <a href="roadmap.html" class="active">Roadmap</a>
       </div>
     </div>
-    <h1>What's Left to Build</h1>
-    <p class="header-sub">From trust score engine to full release — the path from working MVP to a complete sovereign data platform with trust-based affiliate growth.</p>
+    <h1>The v4 Build</h1>
+    <p class="header-sub">Phases 0–7 have shipped the structural surgery from v3 to v4: sponsors are the witnesses, the AI Companion accompanies without authority, and a single 5% voluntary donation funds the platform. What remains is narrative and content.</p>
   </div>
 </header>
 
@@ -134,7 +135,7 @@
   <!-- Timeline -->
   <div class="label" style="color: rgba(255,255,255,0.3); margin-top: 48px; margin-bottom: 16px;">TIMELINE</div>
   <div class="timeline-bar" id="timeline"></div>
-  <div class="timeline-labels"><span>Q2 2026</span><span>Q4 2026</span></div>
+  <div class="timeline-labels"><span>Q2 2026</span><span>Deferred</span></div>
 
   <!-- Stats -->
   <div class="stats" id="stats"></div>
@@ -142,7 +143,7 @@
 
 <footer class="site-footer">
   <div class="footer-inner">
-    <div><strong>Search Star</strong> — Specification v1.4.0-draft · MIT License</div>
+    <div><strong>Search Star</strong> — Specification v4.0</div>
     <div class="footer-links">
       <a href="/">Home</a>
       <a href="spec.html">Spec</a>
@@ -153,43 +154,53 @@
 
 <script>
 const completed = [
-  { v: "Phase 0", t: "Foundation", d: "Next.js + Supabase, auth, 9 tables, RLS, Graceland design, Vercel deploy" },
-  { v: "Phase 1", t: "Onboarding & Profiles", d: "Walkthrough, earnings estimator, AI profile builder, self-hosting registration" },
-  { v: "Phase 2", t: "Messaging Feed", d: "Unified feed, marketing/feed/system messages, real-time delivery, 90/10 split" },
-  { v: "Phase 3", t: "Dashboard", d: "Earnings, revenue breakdown, settlement tracking, endpoint management" },
-  { v: "Phase 4", t: "Admin Panel", d: "Financial dashboard, user management, trust adjustment, support tickets" },
-  { v: "Phase 5", t: "Platform Portal", d: "Platform signup, credits, directory browser, paid queries, marketing composer, analytics" },
-  { v: "v1.3.0", t: "Activate v1", d: "Six-source discovery (GitHub, Scholar, LinkedIn, professional, athletic, social), provenance schema, photo discovery, unclaimed freeze, JSON-LD export, registration desk integration" },
+  { v: "Phase 0", t: "v4 Branch & Deploy Pipeline", d: "Branch rename v3 → v4, deploy workflow updated, production deploys cleanly off v4 with unchanged code" },
+  { v: "Phase 1", t: "Atomic Role Excision", d: "Validator and mentor roles retired end-to-end — tables dropped, RLS rewritten, routes and pages deleted, sponsor-feed scaffold in place" },
+  { v: "Phase 2", t: "Sponsor State Machine", d: "Invite / pledge / release / veto lifecycle live. Mid-streak pledging supported. 14-day launch period restored" },
+  { v: "Phase 3", t: "Stage Resolver + Onboarding", d: "5-step onboarding: practice → commitment → sponsor invitation → Companion intro → launch. Stage resolver rewired to v4 roles" },
+  { v: "Phase 4", t: "Stripe Holds & Release", d: "Manual-capture PaymentIntents on pledge, capture at day-90 release, cancel on veto. Webhook handler live" },
+  { v: "Phase 5", t: "Voluntary 5% Donation", d: "Single-prompt donation ask at release — 5% default, editable, removable in one click. Separate charge, never deducted from practitioner payout" },
+  { v: "Phase 6", t: "Trust Record Rebuild", d: "Depth / Breadth / Durability computed from completed sponsored streaks, weighted by sponsor count, diversity, and reliability" },
+  { v: "Phase 7", t: "Companion v1", d: "AI Companion present in every active commitment. Day-90 summary generated for sponsors at release. No authority, no Trust writes" },
 ];
 
 const phases = [
-  { v: "v0.9", t: "Trust Architecture", target: "Q2 2026", status: "next", effort: "Large",
-    depends: "Foundation for trust scoring and validation",
-    items: ["Trust-as-validation philosophy", "Trust layers (Depth/Breadth/Durability)", "Affiliate engine spec", "Anti-gaming protections", "Network value model"] },
-  { v: "v1.0", t: "Validator Cooperative", target: "Q2 2026", status: "planned", effort: "Large",
-    depends: "Requires v0.9 (trust architecture defines validator roles)",
-    items: ["LLC membership class", "Stake-weighted revenue participation (20% of marketplace fees)", "Quarterly distributions", "Scoped governance over trust-layer policy", "Qualification & termination rules"] },
-  { v: "v1.1", t: "Live Payments", target: "Q2 2026", status: "planned", effort: "Medium",
-    depends: "Foundation for all revenue flows",
-    items: ["Stripe Connect integration", "Per-query metering (real money)", "Platform API keys with rate limiting", "Settlement engine (weekly payouts)"] },
-  { v: "v1.2", t: "Trust Score Engine", target: "Q2 2026", status: "planned", effort: "Large",
-    depends: "Requires v1.1 (staking needs payments)",
-    items: ["Depth / Breadth / Durability calculation", "Trust layer classification system", "Validator relationship types (10 types)", "Validation decay scheduler (18-month half-life)", "Minimum 90-day relationship period", "Trust Score display on profiles"] },
-  { v: "v1.4", t: "Activate Synthesis Architecture", target: "Q2 2026", status: "next", effort: "Large",
-    depends: "Replaces v1.3.0 scraper pipeline. Foundation for machine-verified provenance in trust system.",
-    items: ["Phase 11: Identity lock (Stage 1) + corrections logging table (Stage 5)", "Phase 12: Standard-mode synthesis pipeline — broad search + Grok + dual Claude/Grok synthesis + machine verification (Stages 2-4)", "Phase 13: Deep mode background research agent with web_search + web_fetch tools", "Phase 14: Learned per-source-per-field-type confidence priors from corrections data", "Deprecates v1.3.0 six-source scrapers", "Machine-verified provenance becomes a trust system primitive"] },
-  { v: "v1.4 (Affiliate)", t: "Affiliate Portal", target: "Q3 2026", status: "planned", effort: "Large",
-    depends: "Requires v1.2 (trust density needs scores)",
-    items: ["Organization signup flow", "Member onboarding tools & referral links", "Trust density dashboard (per affiliate)", "Cross-network verification bonus tracking", "Affiliate payout management", "School / church / club pitch materials"] },
-  { v: "v1.5", t: "Network Value", target: "Q3 2026", status: "planned", effort: "Medium",
-    depends: "Requires v1.4 (needs affiliate network data)",
-    items: ["Family & community cluster detection", "Network multiplier pricing engine", "Cross-network verification bonus", "Aggregate trust display for platforms", "Extended family linking (mutual opt-in)"] },
-  { v: "v2.0", t: "Full Release", target: "Q4 2026", status: "planned", effort: "Very Large",
-    depends: "All prior versions complete",
-    items: ["Open-source SDK & documentation", "Self-hosting toolkit", "ZK proof integration (financial verification)", "OAuth 2.0 endpoint authentication", "Anti-gaming enforcement (all protections live)", "Response likelihood scoring", "Public launch & marketing"] },
-  { v: "v2.1", t: "Validator Cooperative Launch", target: "Q1 2027", status: "planned", effort: "Large",
-    depends: "Requires v2.0 (needs live payments and trust scores at scale)",
-    items: ["LLC operating agreement finalized", "Automated qualification engine (monthly evaluation)", "First quarterly distribution", "Governance voting portal", "Cooperative member dashboard", "1099-NEC tax reporting integration"] },
+  { v: "Phase 8", t: "Public Narrative Rewrite", target: "In progress", status: "next", effort: "Medium",
+    depends: "Homepage, manifesto, onboarding, spec, and roadmap all reflect v4. Retired terminology swept from every public surface.",
+    items: [
+      "Homepage rewritten: practice-first hero, 14-day launch, sponsors as witnesses, Trust as growth stage",
+      "Manifesto rewritten: beauty/grace/truth, garbage culture, sponsor-as-witness answers 'who has standing'",
+      "Onboarding explainer page rewritten",
+      "Header and footer updated; version strings bumped to v4.0",
+      "public/spec.html verified at v4.0",
+      "public/roadmap.html rewritten to v4 state",
+      "Orphan v2-era static pages deleted (profile.html, create.html, setup.html)",
+    ] },
+  { v: "Phase 9", t: "Videos & Content Assets", target: "Next", status: "planned", effort: "Medium",
+    depends: "Follows Phase 8. Video content must match what's shipped rather than what's planned.",
+    items: [
+      "New video: How Search Star works in v4 — 90-day commitment, sponsors as witnesses, Companion, 5% donation",
+      "New video: Why sponsors are the witnesses — validator/sponsor collapse, money as honest attestation, no-escape-hatch principle",
+      "Existing videos recut or retired: seven-feeds-of-death.mp4, SearchStar_Trust_as_Validation.mp4",
+      "Homepage video section updated with v4 assets",
+      "All remaining references to retired roles swept from public/scripts/",
+    ] },
+  { v: "v4.8", t: "Institutional Sponsorship (experimental)", target: "Deferred", status: "deferred", effort: "Large",
+    depends: "Blocked on decisions-doc deferred question #1 (institutional-to-personal sponsor ratios). Will not begin until v4.0–v4.7 have shipped and the platform has real completion data.",
+    items: [
+      "Institutional sponsor account type",
+      "Constraint: institutional pledges cannot stand alone — must ride alongside personal sponsors",
+      "Budget allocation and cohort enrollment",
+      "Reporting surfaces for HR, admissions, or grantee programs",
+    ] },
+  { v: "v4.9", t: "Portable Trust Export", target: "Deferred", status: "deferred", effort: "Medium",
+    depends: "Requires real Trust Record data to attest against. Deferred until the platform has enough completed streaks to make a portable attestation meaningful.",
+    items: [
+      "Signed, portable attestation document format",
+      "Share links and revocation",
+      "Institutional integration API for ongoing record updates",
+      "Verification standard for external parties",
+    ] },
 ];
 
 // Render completed
@@ -209,7 +220,8 @@ function renderMilestones() {
   document.getElementById('milestones').innerHTML = phases.map((p, i) => {
     const isExp = expanded === i;
     const isNext = p.status === 'next';
-    return `<div class="milestone ${isExp ? 'expanded' : ''} ${isNext ? 'next' : ''}" onclick="expanded=${isExp ? -1 : i};renderMilestones()">
+    const isDeferred = p.status === 'deferred';
+    return `<div class="milestone ${isExp ? 'expanded' : ''} ${isNext ? 'next' : ''} ${isDeferred ? 'deferred' : ''}" onclick="expanded=${isExp ? -1 : i};renderMilestones()">
       <div class="milestone-header">
         <span class="version-badge ${p.status}">${p.v}</span>
         <span class="milestone-title">${p.t}</span>
@@ -224,11 +236,11 @@ function renderMilestones() {
             ${p.items.map(item => `<div class="task-item"><span class="task-checkbox"></span><span class="task-text">${item}</span></div>`).join('')}
           </div>
           <div class="meta-box">
-            <div class="meta-label">DEPENDENCY</div>
+            <div class="meta-label">NOTES</div>
             <p class="meta-text">${p.depends}</p>
             <div class="meta-label" style="margin-top:16px">ITEMS</div>
             <div class="meta-count">${p.items.length}</div>
-            ${isNext ? '<div class="start-here">→ Start here</div>' : ''}
+            ${isNext ? '<div class="start-here">→ In progress</div>' : ''}
           </div>
         </div>
       </div>
@@ -237,19 +249,25 @@ function renderMilestones() {
 }
 renderMilestones();
 
-// Timeline
-const widths = [15, 22, 22, 18, 23];
-document.getElementById('timeline').innerHTML = phases.map((p, i) =>
-  `<div class="timeline-seg" style="flex:0 0 ${widths[i]}%;background:${p.status === 'next' ? '#C9A94E' : `rgba(26,58,107,${0.9 - i * 0.12})`};color:${p.status === 'next' ? '#0f2340' : 'rgba(255,255,255,0.6)'}">${p.v}</div>`
-).join('');
+// Timeline — 4 phases: Phase 8 (in progress), Phase 9 (next), v4.8 (deferred), v4.9 (deferred)
+const widths = [28, 22, 25, 25];
+document.getElementById('timeline').innerHTML = phases.map((p, i) => {
+  let bg, color;
+  if (p.status === 'next') { bg = '#C9A94E'; color = '#0f2340'; }
+  else if (p.status === 'deferred') { bg = 'rgba(255,255,255,0.06)'; color = 'rgba(255,255,255,0.35)'; }
+  else { bg = `rgba(26,58,107,${0.9 - i * 0.15})`; color = 'rgba(255,255,255,0.6)'; }
+  return `<div class="timeline-seg" style="flex:0 0 ${widths[i]}%;background:${bg};color:${color}">${p.v}</div>`;
+}).join('');
 
 // Stats
 const totalItems = phases.reduce((s, p) => s + p.items.length, 0);
+const phasesShipped = completed.length;
+const phasesRemaining = phases.filter(p => p.status !== 'deferred').length;
 document.getElementById('stats').innerHTML = [
-  { l: "Total deliverables", v: totalItems },
-  { l: "Milestones remaining", v: 5 },
-  { l: "Target completion", v: "Q4 '26" },
-  { l: "Phases shipped", v: "7 / 12" },
+  { l: "Phases shipped", v: `${phasesShipped} / ${phasesShipped + phasesRemaining}` },
+  { l: "Deliverables remaining", v: totalItems },
+  { l: "Milestones remaining", v: phasesRemaining },
+  { l: "Deferred milestones", v: phases.filter(p => p.status === 'deferred').length },
 ].map(s => `<div class="stat"><div class="stat-value">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('');
 </script>
 </body>
