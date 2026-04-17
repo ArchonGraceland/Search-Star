@@ -3,9 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 export type Stage =
   | { step: 1 }                          // no practice
   | { step: 2 }                          // practice, no commitment
-  | { step: 3; commitmentId: string }    // commitment, no sponsor yet
-  | { step: 4; commitmentId: string }    // sponsor present, Companion intro unseen
-  | { step: 5; commitmentId: string }    // launch window (Companion seen)
+  | { step: 3; commitmentId: string }    // commitment exists, sponsor step not yet satisfied
+  | { step: 4; commitmentId: string }    // sponsor step satisfied, Companion intro unseen
+  | { step: 5; commitmentId: string }    // launch window (Companion intro seen)
   | { step: 6; commitmentId: string }    // active streak
 
 export async function resolveStage(): Promise<Stage> {
@@ -32,29 +32,42 @@ export async function resolveStage(): Promise<Stage> {
   // Active streak
   if (c.status === 'active') return { step: 6, commitmentId: c.id }
 
-  // Completed or abandoned — back to step 2 for new commitment
+  // Completed or abandoned — back to step 2 for a new commitment
   if (c.status === 'completed' || c.status === 'abandoned') return { step: 2 }
 
-  // Launch status — check for at least one sponsor pledge on this commitment.
-  // In Phase 1, sponsors are the only signal a "sponsor has been brought in"
-  // because sponsor_invitations doesn't exist until Phase 2. After Phase 2,
-  // switch this query to sponsor_invitations so pending invites also count.
-  const { data: sponsors } = await supabase
-    .from('sponsorships').select('id').eq('commitment_id', c.id).limit(1)
-  if (!sponsors?.length) return { step: 3, commitmentId: c.id }
+  // Commitment is in 'launch' status. Step 3 is satisfied by ANY of:
+  //   - a sponsor_invitation sent by this user (the invite flow), OR
+  //   - a sponsorship on this commitment (the direct-pledge-link flow), OR
+  //   - profiles.sponsor_step_seen = true (user clicked "I'll invite later").
+  // All three are honest paths through the sponsor step.
+  const [{ data: invites }, { data: sponsors }, { data: profile }] = await Promise.all([
+    supabase
+      .from('sponsor_invitations')
+      .select('id')
+      .eq('inviter_user_id', user.id)
+      .limit(1),
+    supabase
+      .from('sponsorships')
+      .select('id')
+      .eq('commitment_id', c.id)
+      .limit(1),
+    supabase
+      .from('profiles')
+      .select('sponsor_step_seen, companion_step_seen')
+      .eq('user_id', user.id)
+      .single(),
+  ])
 
-  // Has at least one sponsor — Companion intro step.
-  // Phase 1: no Companion intro page exists yet (Phase 3 builds it). Auto-flip
-  // companion_step_seen=true the first time we pass through here so users
-  // don't get stuck on a dead step-4 route. When Phase 3 ships, remove the
-  // auto-flip and let users land on /start/companion/[id] until they read it.
-  const { data: profile } = await supabase
-    .from('profiles').select('companion_step_seen').eq('user_id', user.id).single()
-  if (!profile?.companion_step_seen) {
-    await supabase.from('profiles').update({ companion_step_seen: true }).eq('user_id', user.id)
-    return { step: 5, commitmentId: c.id }
-  }
+  const sponsorStepSatisfied =
+    (invites?.length ?? 0) > 0 ||
+    (sponsors?.length ?? 0) > 0 ||
+    profile?.sponsor_step_seen === true
 
-  // Launch window (post-Companion intro)
+  if (!sponsorStepSatisfied) return { step: 3, commitmentId: c.id }
+
+  // Step 4: Companion intro must be seen. No auto-skip — the page is live now.
+  if (!profile?.companion_step_seen) return { step: 4, commitmentId: c.id }
+
+  // Step 5: launch window, both onboarding steps complete.
   return { step: 5, commitmentId: c.id }
 }
