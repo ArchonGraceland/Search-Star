@@ -25,14 +25,11 @@ export default async function StageLaunch({ params }: { params: Promise<{ id: st
 
   if (!commitment) redirect('/start')
 
-  const { data: validators } = await supabase
-    .from('validators').select('id, status, validator_email').eq('commitment_id', id)
-
   const { data: sponsorships } = await supabase
     .from('sponsorships').select('id, sponsor_name, pledge_amount').eq('commitment_id', id).eq('status', 'pledged')
 
   const totalPledged = (sponsorships ?? []).reduce((s, p) => s + Number(p.pledge_amount), 0)
-  const activeValidators = (validators ?? []).filter(v => v.status === 'active').length
+  const sponsorCount = (sponsorships ?? []).length
   const daysLeft = daysUntil(commitment.streak_starts_at)
   const shareUrl = `https://searchstar.com/sponsor/${id}`
 
@@ -63,8 +60,8 @@ export default async function StageLaunch({ params }: { params: Promise<{ id: st
           <p style={valueStyle}>{daysLeft}</p>
         </div>
         <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '18px 16px' }}>
-          <p style={labelStyle}>Validators</p>
-          <p style={valueStyle}>{activeValidators}</p>
+          <p style={labelStyle}>Sponsors</p>
+          <p style={valueStyle}>{sponsorCount}</p>
         </div>
         <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '18px 16px' }}>
           <p style={labelStyle}>Pledged</p>
@@ -82,31 +79,6 @@ export default async function StageLaunch({ params }: { params: Promise<{ id: st
           {shareUrl}
         </div>
       </div>
-
-      {/* Validators */}
-      {(validators ?? []).length > 0 && (
-        <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '20px 24px', marginBottom: '28px' }}>
-          <p style={{ ...labelStyle, marginBottom: '12px' }}>Validators</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {(validators ?? []).map(v => (
-              <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#1a1a1a' }}>{v.validator_email}</span>
-                <span style={{
-                  fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700,
-                  padding: '3px 8px', borderRadius: '2px',
-                  background: v.status === 'active' ? '#edf7ed' : '#f5f5f5',
-                  color: v.status === 'active' ? '#2d6a2d' : '#767676',
-                }}>
-                  {v.status === 'active' ? 'Confirmed' : 'Invited'}
-                </span>
-              </div>
-            ))}
-          </div>
-          <Link href={`/start/validator/${id}`} style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#1a3a6b', textDecoration: 'none', display: 'inline-block', marginTop: '14px', borderBottom: '1px solid #1a3a6b' }}>
-            + Invite another validator
-          </Link>
-        </div>
-      )}
 
       {/* Sponsors */}
       {(sponsorships ?? []).length > 0 && (

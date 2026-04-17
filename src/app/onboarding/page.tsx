@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata = {
   title: 'How It Works — Search Star',
-  description: 'The 90-day commitment, the validator circle, the sponsorship model, the Trust record. How Search Star actually works.',
+  description: 'The 90-day commitment, the sponsor relationship, the sponsorship model, the Trust record. How Search Star actually works.',
 }
 
 export default function OnboardingPage() {
@@ -34,8 +34,8 @@ export default function OnboardingPage() {
             </h1>
             <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: '18px', lineHeight: 1.65 }}>
               You arrive as a practitioner. Identity emerges from what you do.
-              This page explains the system in full — what a commitment is, how validators work,
-              why sponsors pay out, and what a Trust record means.
+              This page explains the system in full — what a commitment is, how sponsors work,
+              why they pay out, and what a Trust record means.
             </p>
           </div>
         </section>
@@ -50,7 +50,7 @@ export default function OnboardingPage() {
               The 90-day commitment.
             </h2>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '20px' }}>
-              The commitment is the atomic unit of Search Star. Everything else — validators, sponsors, Trust records, mentor income — is built around it. A commitment is a declaration that you will practice a specific thing for 90 consecutive days, with a defined minimum session frequency, confirmed by people who know you.
+              The commitment is the atomic unit of Search Star. Everything else — sponsors, Trust records, institutional deployments — is built around it. A commitment is a declaration that you will practice a specific thing for 90 consecutive days, with a defined minimum session frequency, backed by people who know you.
             </p>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '20px' }}>
               Why 90 days? Because it's long enough to show that something real is happening — that this isn't a burst of motivation that dissolves after three weeks — but short enough to be sponsorable. Two streaks fit in a year. That's the cadence: two serious, witnessed, sponsored periods of sustained practice, with space between them for reflection and recovery.
@@ -73,37 +73,37 @@ export default function OnboardingPage() {
                 The Start Ritual
               </p>
               <p style={{ fontSize: '15px', color: '#3a3a3a', lineHeight: 1.7 }}>
-                The start ritual is a written statement of intent, timestamped. You write what you are committing to, what you expect the work to require, and what completing this streak will mean to you. This statement becomes the first post in your validator feed. It is the moment the 90-day clock begins. The ritual matters because it creates a clear before and after — an act of declaration that is public to your validator circle and permanent in your record.
+                The start ritual is a written statement of intent, timestamped. You write what you are committing to, what you expect the work to require, and what completing this streak will mean to you. This statement becomes the first post in your sponsor feed. It is the moment the 90-day clock begins. The ritual matters because it creates a clear before and after — an act of declaration that is visible to your sponsors and permanent in your record.
               </p>
             </div>
           </div>
         </section>
 
-        {/* ── Validators ── */}
+        {/* ── Sponsors as witnesses ── */}
         <section className="py-20 px-6" style={{ background: '#ffffff' }}>
           <div className="max-w-2xl mx-auto">
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#1a3a6b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
               Section 02
             </p>
             <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '38px', fontWeight: 700, color: '#1a1a1a', marginBottom: '24px', lineHeight: 1.2 }}>
-              The validator relationship.
+              The sponsor relationship.
             </h2>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '20px' }}>
-              A validator is someone who knows you well enough to verify that your sessions are real. Not to grade your work, not to judge your progress — to confirm that you showed up, did the thing, and the effort was genuine. Validators are invited, not discovered. You choose them, they accept, and they gain access to a private feed of your session posts for that commitment.
+              A sponsor is someone who puts something behind their belief in you. They pledge money against your 90-day commitment, and during those ninety days they have two options and only two: release the payment at day 90, or end the streak at any point with a veto. There is no partial credit, no negotiation, no arbitration body. Continued presence is the attestation.
             </p>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '20px' }}>
-              After each session, you log a post to your validator feed: what you worked on, how the session went, any evidence. Validators can confirm the session with a quality note — a brief qualitative attestation. Confirmed sessions accumulate into your Trust record's depth score. Unconfirmed sessions still count toward the streak, but confirmed sessions carry more weight.
+              Sponsors are invited — not discovered. You choose them, they pledge, and they gain access to a private feed of your session posts for that commitment. The feed is not social. There are no likes, no comments from strangers, no follower counts. It is a private channel between you and the people you brought in.
             </p>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75 }}>
-              The validator feed is not a social feed. There are no likes, no comments from strangers, no follower counts. It is a private channel between you and the people you invited. The only people who can see it are the validators you chose.
+              Any sponsor can veto at any time during the 90 days. One doubt, honestly held by one person who put money on the line, is enough to end a streak. That is the right default: it means you have to earn continued belief from every sponsor across the whole window, which is closer to what genuine character actually requires than a mechanical session count.
             </p>
 
             <div style={{ background: '#f5f5f5', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '28px 32px', marginTop: '32px' }}>
               <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '19px', fontWeight: 700, color: '#1a1a1a', marginBottom: '10px' }}>
-                Why their attestation matters.
+                Why this works.
               </p>
               <p style={{ fontSize: '15px', color: '#3a3a3a', lineHeight: 1.7 }}>
-                The validator confirmation is a social act, not a technical one. When a validator confirms your session, they are staking their own credibility — their relationship with you, their reputation in the system — on the claim that your work was real. This is different from an automated check. It is a person saying: I know this individual, I have seen this work, and I am willing to confirm it. The weight of the attestation comes from the relationship, not the algorithm.
+                A sponsor&apos;s confidence is not a click or a rating. It is money staked on a person, held through the 90 days, and released at the end — or withdrawn when belief breaks. The weight of the attestation comes from the fact that real stakes are on the line. A grandmother backing her grandson&apos;s 90-day woodworking streak is participating in the same mechanism as a foundation sponsoring a reading cohort. The scale differs; the structure is identical.
               </p>
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function OnboardingPage() {
               The sponsorship model.
             </h2>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '20px' }}>
-              Sponsoring on Search Star is a wager on a person. During the 14-day launch period, sponsors pledge an amount against the practitioner's completion of the 90-day streak. If the practitioner completes the streak — confirmed by validators, with sessions logged — the pledge pays out. If not, nothing is charged.
+              Sponsoring on Search Star is a wager on a person. During the 14-day launch period — and at any point during the active streak — sponsors pledge an amount against the practitioner&apos;s completion of the 90-day commitment. At day 90, every sponsor can release the pledged amount. Any single sponsor can also veto at any point during the 90 days, which ends the streak. If the streak ends, nothing is charged.
             </p>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '20px' }}>
               Sponsors don't need a Search Star account. They follow a link, enter their name, email, and pledge amount, and pledge. They receive updates during the streak. When the streak completes, they're notified and charged. The target payout per streak is $2,500 — spread across however many sponsors the practitioner has gathered during launch. Some practitioners will gather that in five pledges. Some in twenty. The launch period is the time to do the work of sharing.
@@ -204,7 +204,7 @@ export default function OnboardingPage() {
               {[
                 {
                   dim: 'Depth',
-                  body: 'The quality and volume of your validated sessions across all commitments. Depth is the product of how many sessions you\'ve logged and how consistently validators have confirmed them. A high-depth practitioner has shown up repeatedly, had their work witnessed, and earned genuine attestation from their circle.',
+                  body: 'The quality and volume of your sponsored practice across all commitments. Depth is the product of how many sessions you\'ve logged and how many sponsored streaks you\'ve completed. A high-depth practitioner has shown up repeatedly, had their work witnessed by sponsors who stayed through to day 90, and earned genuine attestation through the release of their pledges.',
                 },
                 {
                   dim: 'Breadth',

@@ -10,7 +10,7 @@ const OPTIONS: { value: Visibility; title: string; description: string; badge?: 
   {
     value: 'private',
     title: 'Private',
-    description: 'Only your validator circle can see your session posts. Your profile is not publicly searchable.',
+    description: 'Only your sponsors can see your session posts. Your profile is not publicly searchable.',
     badge: 'Recommended',
   },
   {

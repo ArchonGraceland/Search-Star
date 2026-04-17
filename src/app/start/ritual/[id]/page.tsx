@@ -49,7 +49,7 @@ export default function StageRitual() {
         The start ritual.
       </h1>
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '15px', color: '#5a5a5a', lineHeight: 1.65, marginBottom: '36px' }}>
-        This is the moment you step from declaring to doing. Write what you're beginning and what it means to you. This statement is timestamped and shared with your validator circle.
+        This is the moment you step from declaring to doing. Write what you&apos;re beginning and what it means to you. This statement is timestamped and shared with your sponsors.
       </p>
 
       {/* Commitment title */}
