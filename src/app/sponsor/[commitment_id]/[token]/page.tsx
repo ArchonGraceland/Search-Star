@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import SponsorActions from './sponsor-actions'
+import { summarizeCommitment, isDay90Reached } from '@/lib/companion/day90'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,6 +82,14 @@ export default async function SponsorFeed({
 
   const postList: Post[] = (posts as Post[] | null) ?? []
 
+  // Companion day-90 summary. Only generate when the commitment has
+  // reached day 90 or is explicitly completed — we don't want to pay
+  // for an Anthropic call every time a sponsor visits during the
+  // active streak. summarizeCommitment never throws; it returns
+  // {ok:false,...} on failure so the page renders cleanly either way.
+  const summaryEligible = isDay90Reached(commitment.status, commitment.streak_ends_at)
+  const summaryResult = summaryEligible ? await summarizeCommitment(commitment_id) : null
+
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       {/* Header */}
@@ -120,6 +129,42 @@ export default async function SponsorFeed({
             ${Number(sponsorship.pledge_amount).toFixed(2)}
           </p>
         </div>
+
+        {/* Companion's 90-day summary — three states. Panel frame is always
+            visible so sponsors see what's coming from day one. */}
+        {summaryEligible && summaryResult?.ok === true ? (
+          <div style={{ background: '#ffffff', border: '1px solid #d4d4d4', borderLeft: '3px solid #1a3a6b', borderRadius: '3px', padding: '18px 22px', marginBottom: '32px' }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 10px' }}>
+              Companion&rsquo;s summary
+            </p>
+            <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '17px', color: '#1a1a1a', lineHeight: 1.65, margin: 0, whiteSpace: 'pre-wrap' }}>
+              {summaryResult.summary}
+            </p>
+            {summaryResult.truncated && (
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676', margin: '14px 0 0' }}>
+                Earlier sessions omitted for length.
+              </p>
+            )}
+          </div>
+        ) : summaryEligible && summaryResult?.ok === false ? (
+          <div style={{ background: '#ffffff', border: '1px solid #d4d4d4', borderLeft: '3px solid #1a3a6b', borderRadius: '3px', padding: '18px 22px', marginBottom: '32px' }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 10px' }}>
+              Companion&rsquo;s summary
+            </p>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', margin: 0, lineHeight: 1.6 }}>
+              The summary is temporarily unavailable.
+            </p>
+          </div>
+        ) : (
+          <div style={{ background: '#fafafa', border: '1px solid #d4d4d4', borderLeft: '3px solid #1a3a6b', borderRadius: '3px', padding: '18px 22px', marginBottom: '32px' }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#767676', margin: '0 0 10px' }}>
+              Companion&rsquo;s summary
+            </p>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', margin: 0, lineHeight: 1.6 }}>
+              The Companion&rsquo;s 90-day summary will appear here once the commitment reaches day 90.
+            </p>
+          </div>
+        )}
 
         {/* Prior-action state or active sponsor actions */}
         {sponsorship.status === 'released' ? (
