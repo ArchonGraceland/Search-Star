@@ -7,6 +7,7 @@ import {
   donationDollarsToCents,
   DEFAULT_DONATION_RATE,
 } from '@/lib/stripe'
+import { computeAndPersistTrust } from '@/lib/trust-compute'
 
 // POST — sponsor releases or vetoes a pledge. Authentication is the sponsorship's
 // access_token (sponsors don't have Search Star accounts).
@@ -151,6 +152,27 @@ export async function POST(
           completed_at: now.toISOString(),
         })
         .eq('id', commitment.id)
+
+      // Trust Record recompute — v4 Phase 6 hook. When the final pledged
+      // sponsorship on a commitment flips to released, the commitment
+      // itself flips to completed. That's the ONLY moment a practitioner's
+      // Trust inputs change meaningfully, so this is where we recompute.
+      //
+      // Wrapped so a compute failure never rolls back the release. The
+      // release is load-bearing; Trust is derived and can always be
+      // reconstructed from the release + sponsorship state. A practitioner
+      // can also trigger a recompute themselves via /api/trust/compute if
+      // they notice a stale stage.
+      try {
+        await computeAndPersistTrust(db, commitment.user_id)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Trust recompute failed'
+        console.error(
+          `[trust/recompute] post-release failure for user ${commitment.user_id} (commitment ${commitment.id}):`,
+          message,
+          '— release is preserved; practitioner can recompute from the dashboard',
+        )
+      }
     }
 
     // Optional voluntary donation — per v4-decisions §5 and spec §7.7, this

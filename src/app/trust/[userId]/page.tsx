@@ -1,5 +1,27 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { computeTrustForUser } from '@/lib/trust-compute'
+
+// Public Trust Record view — v4 Phase 6.
+//
+// Visibility rules:
+//   - Private profile           → 404 (calm, no surface)
+//   - Network profile           → treated as Public for v1 (Network-gating
+//                                 flagged in TODO below; comes later)
+//   - Public profile            → visible
+//   - share_enabled also required (practitioner must have explicitly
+//                                  toggled sharing on via /api/trust/share)
+//
+// We intentionally omit the completed-streaks list in v1 — showing
+// individual streak dates on a public page leaks more than the practitioner
+// has opted into. A future revision can add a practitioner-controlled toggle
+// for streak visibility (TODO below).
+//
+// We compute fresh from the source data rather than reading trust_records so
+// the public view always reflects reality. Uses the service client because
+// the viewer is unauthenticated; the service client bypasses RLS and reads
+// exactly the columns needed.
 
 const STAGE_LABELS: Record<string, string> = {
   seedling: 'Seedling',
@@ -10,11 +32,16 @@ const STAGE_LABELS: Record<string, string> = {
 }
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
-  seedling: 'Beginning a practice — the first sponsored commitment is underway.',
-  rooting: 'Consistent effort backed by sponsors across multiple commitments.',
-  growing: 'A documented record of genuine, sustained practice is building.',
-  established: 'A substantial credential of sponsored practice over time.',
-  mature: 'A rare, deep record of sustained and witnessed practice across years.',
+  seedling:
+    'At the beginning. The practice has started; no sponsored streak has yet been completed under a full roster of witnesses.',
+  rooting:
+    'One sponsored streak completed. Real sponsors stayed present through ninety days of practice.',
+  growing:
+    'A pattern of completed sponsored streaks is forming. A documented record of genuine effort across practices.',
+  established:
+    'A substantial record: multiple completed streaks across more than one skill category, sustained across more than a year and a half.',
+  mature:
+    'A rare, deep record of completed sponsored practice across three or more years and three or more domains.',
 }
 
 const STAGE_COLORS: Record<string, string> = {
@@ -25,27 +52,73 @@ const STAGE_COLORS: Record<string, string> = {
   mature: '#4a1a6b',
 }
 
-function formatDepth(score: number): string {
-  const sessions = Math.round(score)
-  if (sessions === 0) return 'No sponsored sessions yet'
-  if (sessions === 1) return '1 sponsored session'
-  return `${sessions} sponsored sessions`
+function formatBreadthValue(n: number): string {
+  if (n === 0) return 'No categories yet'
+  if (n === 1) return '1 skill category'
+  return `${n} distinct skill categories`
 }
 
-function formatBreadth(score: number): string {
-  if (score === 0) return 'No skill categories recorded'
-  if (score === 1) return 'Across 1 skill category'
-  return `Across ${score} distinct skill categories`
+function formatDurabilityValue(days: number): string {
+  const d = Math.round(days)
+  if (d === 0) return 'Not yet established'
+  if (d < 30) return `${d} day${d === 1 ? '' : 's'}`
+  if (d < 365) {
+    const months = Math.floor(d / 30)
+    return `${months} month${months === 1 ? '' : 's'}`
+  }
+  const years = Math.floor(d / 365)
+  const remMonths = Math.floor((d % 365) / 30)
+  if (remMonths === 0) return `${years} year${years === 1 ? '' : 's'}`
+  return `${years} year${years === 1 ? '' : 's'}, ${remMonths} month${remMonths === 1 ? '' : 's'}`
 }
 
-function formatDurability(score: number): string {
-  const days = Math.round(score)
-  if (days === 0) return 'Practice underway'
-  if (days < 30) return `${days} days of sustained practice`
-  const months = Math.floor(days / 30)
-  const remainder = days % 30
-  if (remainder === 0) return `${months} month${months > 1 ? 's' : ''} of sustained practice`
-  return `${months} month${months > 1 ? 's' : ''} and ${remainder} day${remainder > 1 ? 's' : ''} of sustained practice`
+function LockedState() {
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#f5f5f5',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <div style={{ textAlign: 'center', maxWidth: '400px', padding: '40px 24px' }}>
+        <p
+          style={{
+            fontFamily: '"Crimson Text", Georgia, serif',
+            fontSize: '22px',
+            color: '#1a3a6b',
+            margin: '0 0 12px',
+          }}
+        >
+          This record is private.
+        </p>
+        <p
+          style={{
+            fontFamily: 'Roboto, sans-serif',
+            fontSize: '14px',
+            color: '#888',
+            margin: '0 0 24px',
+            lineHeight: '1.6',
+          }}
+        >
+          The owner of this Trust Record has chosen to keep it private.
+        </p>
+        <Link
+          href="/"
+          style={{
+            fontFamily: 'Roboto, sans-serif',
+            fontSize: '13px',
+            color: '#1a3a6b',
+            textDecoration: 'underline',
+          }}
+        >
+          Return to Search Star
+        </Link>
+      </div>
+    </div>
+  )
 }
 
 export default async function PublicTrustPage({
@@ -54,105 +127,51 @@ export default async function PublicTrustPage({
   params: Promise<{ userId: string }>
 }) {
   const { userId } = await params
-  const supabase = await createClient()
 
-  const { data: profile } = await supabase
+  // Read profile with the regular (anon/RLS) client so we honor row-level
+  // security on profiles. If the profile isn't visible to unauthenticated
+  // callers, we treat that the same as private.
+  const publicClient = await createClient()
+  const { data: profile } = await publicClient
     .from('profiles')
     .select('display_name, visibility')
     .eq('user_id', userId)
     .single()
 
-  // Private or missing profile — calm locked state
-  if (!profile || profile.visibility === 'private') {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: '#f5f5f5',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <div style={{ textAlign: 'center', maxWidth: '400px', padding: '40px 24px' }}>
-          <p
-            style={{
-              fontFamily: '"Crimson Text", Georgia, serif',
-              fontSize: '22px',
-              color: '#1a3a6b',
-              margin: '0 0 12px',
-            }}
-          >
-            This record is private.
-          </p>
-          <p
-            style={{
-              fontFamily: 'Roboto, sans-serif',
-              fontSize: '14px',
-              color: '#888',
-              margin: '0 0 24px',
-              lineHeight: '1.6',
-            }}
-          >
-            The owner of this Trust record has chosen to keep it private.
-          </p>
-          <Link
-            href="/"
-            style={{
-              fontFamily: 'Roboto, sans-serif',
-              fontSize: '13px',
-              color: '#1a3a6b',
-              textDecoration: 'underline',
-            }}
-          >
-            Return to Search Star
-          </Link>
-        </div>
-      </div>
-    )
+  if (!profile) notFound()
+
+  // Private profile -> calm locked state.
+  // TODO(Phase 6.x): implement Network visibility gating. For now, Network is
+  // treated as Public. The gating needs a concept of "the viewer's network",
+  // which we don't have yet because most viewers won't be authenticated.
+  if (profile.visibility === 'private') {
+    return <LockedState />
   }
 
-  const { data: trust } = await supabase
+  // Additionally require that share_enabled is true — even Public profiles
+  // must explicitly toggle sharing on via the dashboard to expose the URL.
+  // Read trust_records with the service client since the viewer is
+  // unauthenticated and RLS would otherwise block the read.
+  const svc = createServiceClient()
+  const { data: trustRow } = await svc
     .from('trust_records')
-    .select('stage, depth_score, breadth_score, durability_score, completed_streaks, updated_at, share_enabled')
+    .select('share_enabled')
     .eq('user_id', userId)
     .single()
 
-  // No trust record yet
-  if (!trust) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: '#f5f5f5',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <div style={{ textAlign: 'center', maxWidth: '400px', padding: '40px 24px' }}>
-          <p
-            style={{
-              fontFamily: '"Crimson Text", Georgia, serif',
-              fontSize: '22px',
-              color: '#1a3a6b',
-              margin: '0 0 12px',
-            }}
-          >
-            No Trust record found.
-          </p>
-          <Link href="/" style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#1a3a6b', textDecoration: 'underline' }}>
-            Return to Search Star
-          </Link>
-        </div>
-      </div>
-    )
+  if (!trustRow?.share_enabled) {
+    return <LockedState />
   }
 
-  const stage = trust.stage ?? 'seedling'
-  const stageLabel = STAGE_LABELS[stage] ?? 'Seedling'
-  const stageColor = STAGE_COLORS[stage] ?? '#5a8a5a'
-  const stageDescription = STAGE_DESCRIPTIONS[stage] ?? ''
+  // Compute fresh from completed sponsored streaks. Use the service client
+  // since we're serving an unauthenticated viewer; RLS would otherwise
+  // return nothing.
+  const result = await computeTrustForUser(svc, userId)
+
+  const stage = result.stage
+  const stageLabel = STAGE_LABELS[stage]
+  const stageColor = STAGE_COLORS[stage]
+  const stageDescription = STAGE_DESCRIPTIONS[stage]
 
   return (
     <div
@@ -265,9 +284,18 @@ export default async function PublicTrustPage({
           }}
         >
           {[
-            { label: 'Depth', value: formatDepth(trust.depth_score ?? 0) },
-            { label: 'Breadth', value: formatBreadth(trust.breadth_score ?? 0) },
-            { label: 'Durability', value: formatDurability(trust.durability_score ?? 0) },
+            {
+              label: 'Depth',
+              value: `${result.completed_streaks} completed streak${result.completed_streaks === 1 ? '' : 's'}`,
+            },
+            {
+              label: 'Breadth',
+              value: formatBreadthValue(result.breadth_score),
+            },
+            {
+              label: 'Durability',
+              value: formatDurabilityValue(result.durability_score),
+            },
           ].map(({ label, value }) => (
             <div
               key={label}
@@ -306,56 +334,6 @@ export default async function PublicTrustPage({
           ))}
         </div>
 
-        {/* Completed commitments */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e0e0e0',
-            borderRadius: '3px',
-            padding: '16px 20px',
-            marginBottom: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: '"Crimson Text", Georgia, serif',
-              fontSize: '24px',
-              fontWeight: 700,
-              color: '#1a3a6b',
-            }}
-          >
-            {trust.completed_streaks ?? 0}
-          </span>
-          <span
-            style={{
-              fontFamily: 'Roboto, sans-serif',
-              fontSize: '13px',
-              color: '#666',
-            }}
-          >
-            completed commitment{(trust.completed_streaks ?? 0) !== 1 ? 's' : ''}
-          </span>
-          {trust.updated_at && (
-            <span
-              style={{
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '11px',
-                color: '#bbb',
-                marginLeft: 'auto',
-              }}
-            >
-              Updated{' '}
-              {new Date(trust.updated_at).toLocaleDateString('en-US', {
-                month: 'short',
-                year: 'numeric',
-              })}
-            </span>
-          )}
-        </div>
-
         {/* Footer */}
         <p
           style={{
@@ -363,7 +341,7 @@ export default async function PublicTrustPage({
             fontSize: '12px',
             color: '#bbb',
             textAlign: 'center',
-            margin: '0',
+            margin: '40px 0 0',
             lineHeight: '1.6',
           }}
         >
@@ -371,7 +349,8 @@ export default async function PublicTrustPage({
           <Link href="/" style={{ color: '#1a3a6b', textDecoration: 'none' }}>
             Search Star
           </Link>
-          . It cannot be self-reported — it is built entirely from confirmed practice witnessed by real people.
+          . It is built entirely from sponsored ninety-day streaks that reached completion with every
+          sponsor still present.
         </p>
       </div>
     </div>
