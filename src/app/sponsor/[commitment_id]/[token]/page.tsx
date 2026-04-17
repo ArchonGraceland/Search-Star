@@ -153,6 +153,7 @@ export default async function SponsorFeed({
             canRelease={!!commitment.streak_ends_at && new Date(commitment.streak_ends_at) <= new Date()}
             canVeto={true}
             practitionerName={practitionerName}
+            pledgeAmount={Number(sponsorship.pledge_amount)}
           />
         ) : null}
 

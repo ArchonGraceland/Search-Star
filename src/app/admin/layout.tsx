@@ -65,6 +65,7 @@ export default async function AdminLayout({
             Administration
           </div>
           <AdminNavLink href="/admin" label="Financial Dashboard" icon="💰" />
+          <AdminNavLink href="/admin/donations" label="Donations" icon="💵" />
           <AdminNavLink href="/admin/users" label="User Management" icon="👥" />
           <AdminNavLink
             href="/admin/tickets"

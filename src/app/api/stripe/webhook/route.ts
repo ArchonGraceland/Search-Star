@@ -61,9 +61,40 @@ export async function POST(request: Request) {
         const intentType = (pi.metadata?.intent_type ?? 'pledge') as string
 
         if (intentType === 'donation') {
-          // Phase 5 will handle donation capture completions here. For now,
-          // log — no donation rows are being created in Phase 4a.
-          console.log(`[stripe] donation succeeded pi=${pi.id} amount=${pi.amount}`)
+          // Advance the donations row pending → succeeded. The row is
+          // already inserted synchronously in the release action route;
+          // this webhook is the async confirmation that the off-session
+          // charge actually cleared. If no row is found, we log and move
+          // on — could be a manual test charge or an admin reconciliation
+          // of a row that didn't persist at release time.
+          const { data: donation } = await db
+            .from('donations')
+            .select('id, status')
+            .eq('stripe_payment_intent_id', pi.id)
+            .maybeSingle()
+
+          if (!donation) {
+            console.warn(
+              `[stripe] donation succeeded for pi=${pi.id} but no donations row found`
+            )
+            break
+          }
+
+          if (donation.status === 'succeeded') {
+            // Replay — no-op.
+            break
+          }
+
+          const { error: donationUpdateErr } = await db
+            .from('donations')
+            .update({ status: 'succeeded' })
+            .eq('id', donation.id)
+          if (donationUpdateErr) {
+            console.error(
+              `[stripe] failed to mark donation ${donation.id} succeeded:`,
+              donationUpdateErr
+            )
+          }
           break
         }
 
@@ -103,6 +134,29 @@ export async function POST(request: Request) {
 
       case 'payment_intent.canceled': {
         const pi = event.data.object as Stripe.PaymentIntent
+        const intentType = (pi.metadata?.intent_type ?? 'pledge') as string
+
+        if (intentType === 'donation') {
+          const { data: donation } = await db
+            .from('donations')
+            .select('id, status')
+            .eq('stripe_payment_intent_id', pi.id)
+            .maybeSingle()
+          if (donation && donation.status !== 'canceled' && donation.status !== 'succeeded') {
+            const { error: donationUpdateErr } = await db
+              .from('donations')
+              .update({ status: 'canceled' })
+              .eq('id', donation.id)
+            if (donationUpdateErr) {
+              console.error(
+                `[stripe] failed to mark donation ${donation.id} canceled:`,
+                donationUpdateErr
+              )
+            }
+          }
+          break
+        }
+
         const { data: sponsorship } = await db
           .from('sponsorships')
           .select('id, status')
@@ -136,7 +190,31 @@ export async function POST(request: Request) {
 
       case 'payment_intent.payment_failed': {
         const pi = event.data.object as Stripe.PaymentIntent
+        const intentType = (pi.metadata?.intent_type ?? 'pledge') as string
         const lastError = pi.last_payment_error?.message ?? 'unknown'
+
+        if (intentType === 'donation') {
+          console.warn(`[stripe] donation payment_failed pi=${pi.id} error=${lastError}`)
+          const { data: donation } = await db
+            .from('donations')
+            .select('id, status')
+            .eq('stripe_payment_intent_id', pi.id)
+            .maybeSingle()
+          if (donation && donation.status === 'pending') {
+            const { error: donationUpdateErr } = await db
+              .from('donations')
+              .update({ status: 'failed' })
+              .eq('id', donation.id)
+            if (donationUpdateErr) {
+              console.error(
+                `[stripe] failed to mark donation ${donation.id} failed:`,
+                donationUpdateErr
+              )
+            }
+          }
+          break
+        }
+
         console.warn(`[stripe] payment_failed pi=${pi.id} error=${lastError}`)
         // Phase 4b may surface this to the sponsor pledge UI. No DB change now.
         break

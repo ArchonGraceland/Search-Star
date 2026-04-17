@@ -133,19 +133,38 @@ export async function POST(request: Request) {
   // at /sponsor/[commitment_id]/[token] without needing a Search Star account.
   const accessToken = randomBytes(24).toString('base64url')
 
-  // Create the Stripe PaymentIntent BEFORE inserting the sponsorship row.
-  // capture_method: 'manual' authorizes the card and holds the funds without
-  // charging — the day-90 release action route captures; veto cancels. If
-  // Stripe errors here we return 502 and do NOT insert anything, so failed
-  // pledges leave no DB artefact. Metadata.intent_type lets the webhook
-  // distinguish pledges from donations when Phase 5 adds donation flows.
+  // Create a Stripe Customer first so the payment method attached to the
+  // pledge PI can be reused at release time to charge the optional Search
+  // Star donation off-session — no card re-entry. Customer creation is
+  // cheap and idempotent-ish (a fresh Customer per sponsorship is fine;
+  // we're not trying to unify sponsors across multiple pledges).
+  //
+  // Then create the PaymentIntent. capture_method: 'manual' authorizes and
+  // holds funds without charging — release captures; veto cancels. Setting
+  // setup_future_usage: 'off_session' saves the payment method to the
+  // Customer on authorization, enabling the donation reuse at Phase 5
+  // release time. If Stripe errors here we return 502 and do NOT insert
+  // anything, so failed pledges leave no DB artefact.
   let paymentIntentId: string
   let clientSecret: string
+  let stripeCustomerId: string
   try {
+    const customer = await getStripe().customers.create({
+      email: sponsor_email.trim().toLowerCase(),
+      name: sponsor_name.trim(),
+      metadata: {
+        commitment_id,
+        source: 'searchstar_pledge',
+      },
+    })
+    stripeCustomerId = customer.id
+
     const pi = await getStripe().paymentIntents.create({
       amount: pledgeDollarsToCents(pledge_amount),
       currency: 'usd',
       capture_method: 'manual',
+      customer: stripeCustomerId,
+      setup_future_usage: 'off_session',
       automatic_payment_methods: { enabled: true },
       metadata: {
         commitment_id,
@@ -181,6 +200,7 @@ export async function POST(request: Request) {
       pledged_at: new Date().toISOString(),
       access_token: accessToken,
       stripe_payment_intent_id: paymentIntentId,
+      stripe_customer_id: stripeCustomerId,
     })
     .select('id')
     .single()

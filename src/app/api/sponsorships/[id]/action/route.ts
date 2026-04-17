@@ -1,17 +1,24 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getResend } from '@/lib/resend'
-import { getStripe } from '@/lib/stripe'
+import {
+  getStripe,
+  coerceDonationRate,
+  donationDollarsToCents,
+  DEFAULT_DONATION_RATE,
+} from '@/lib/stripe'
 
 // POST — sponsor releases or vetoes a pledge. Authentication is the sponsorship's
 // access_token (sponsors don't have Search Star accounts).
 //
-// Body: { action: 'release' | 'veto', token: string, note?: string }
+// Body: { action: 'release' | 'veto', token: string, note?: string, donation_rate?: number }
 //
 // Release: permitted only when the commitment has reached day 90 (now >= streak_ends_at)
 // and status is still 'active'. Marks sponsorship.status = 'released'. When all
 // remaining sponsorships on the commitment are released, flips the commitment to
-// 'completed' with completed_at = now().
+// 'completed' with completed_at = now(). If donation_rate > 0, additionally
+// creates an off-session donation PaymentIntent and a donations row. The
+// donation is best-effort: a donation failure does NOT roll back the release.
 //
 // Veto: permitted any time during 'active' status. Marks sponsorship.status = 'vetoed'
 // and flips the commitment to 'abandoned'. Notifies practitioner and other sponsors.
@@ -21,10 +28,11 @@ export async function POST(
 ) {
   const { id } = await params
   const body = await request.json()
-  const { action, token, note } = body as {
+  const { action, token, note, donation_rate } = body as {
     action?: 'release' | 'veto'
     token?: string
     note?: string
+    donation_rate?: number
   }
 
   if (!action || !['release', 'veto'].includes(action)) {
@@ -40,7 +48,7 @@ export async function POST(
   // Look up the sponsorship by id + access_token. Both must match.
   const { data: sponsorship, error: lookupErr } = await db
     .from('sponsorships')
-    .select('id, commitment_id, status, sponsor_name, sponsor_email, pledge_amount, stripe_payment_intent_id')
+    .select('id, commitment_id, status, sponsor_name, sponsor_email, pledge_amount, stripe_payment_intent_id, stripe_customer_id')
     .eq('id', id)
     .eq('access_token', token)
     .maybeSingle()
@@ -145,7 +153,113 @@ export async function POST(
         .eq('id', commitment.id)
     }
 
-    return NextResponse.json({ ok: true, action: 'release' })
+    // Optional voluntary donation — per v4-decisions §5 and spec §7.7, this
+    // is a single-recipient GoFundMe-style tip ask with a 5% default, fully
+    // editable, removable in one action, paid by the sponsor on top of the
+    // pledge (never deducted from the practitioner's payout).
+    //
+    // Best-effort by design: a donation failure must NOT roll back the
+    // release. The practitioner's money is the load-bearing transaction.
+    // Donation is gravy. We log loudly on failure and surface the outcome
+    // in the response so the UI can show an honest confirmation.
+    const rate = coerceDonationRate(donation_rate ?? DEFAULT_DONATION_RATE)
+    const pledgeDollars = Number(sponsorship.pledge_amount ?? 0)
+    let donated = false
+    let donationAmount = 0
+
+    if (
+      rate > 0 &&
+      pledgeDollars > 0 &&
+      sponsorship.stripe_customer_id &&
+      sponsorship.stripe_payment_intent_id
+    ) {
+      try {
+        // Find the payment method that was attached to the pledge PI when
+        // it was authorized. We saved it to the Customer via
+        // setup_future_usage: 'off_session' at pledge creation.
+        const pledgePi = await getStripe().paymentIntents.retrieve(
+          sponsorship.stripe_payment_intent_id
+        )
+        const paymentMethodId =
+          typeof pledgePi.payment_method === 'string'
+            ? pledgePi.payment_method
+            : pledgePi.payment_method?.id ?? null
+
+        if (!paymentMethodId) {
+          throw new Error(
+            'Pledge PaymentIntent has no payment_method attached; off-session donation not possible.'
+          )
+        }
+
+        const amountCents = donationDollarsToCents(pledgeDollars, rate)
+        if (amountCents <= 0) {
+          throw new Error(`Donation amount rounded to ${amountCents} cents; skipping.`)
+        }
+        donationAmount = amountCents / 100
+
+        const donationPi = await getStripe().paymentIntents.create({
+          amount: amountCents,
+          currency: 'usd',
+          customer: sponsorship.stripe_customer_id,
+          payment_method: paymentMethodId,
+          off_session: true,
+          confirm: true,
+          description: 'Search Star voluntary donation',
+          metadata: {
+            commitment_id: commitment.id,
+            sponsorship_id: sponsorship.id,
+            parent_sponsorship_id: sponsorship.id,
+            intent_type: 'donation',
+          },
+        })
+
+        // Persist the donation row. Status transitions to 'succeeded' via
+        // the webhook on payment_intent.succeeded; if the charge succeeded
+        // synchronously we could mark it here, but we let the webhook be
+        // the single source of truth for async outcomes (3DS, etc).
+        const { error: donationInsertErr } = await db.from('donations').insert({
+          commitment_id: commitment.id,
+          sponsor_id: sponsorship.id,
+          pledge_amount: pledgeDollars,
+          donation_amount: donationAmount,
+          donation_rate: rate,
+          stripe_payment_intent_id: donationPi.id,
+          status: donationPi.status === 'succeeded' ? 'succeeded' : 'pending',
+        })
+
+        if (donationInsertErr) {
+          console.error(
+            `[donation] DB insert failed for sponsorship ${sponsorship.id} (donation pi=${donationPi.id}):`,
+            donationInsertErr
+          )
+          // The Stripe charge went through but our row didn't persist. We
+          // log and move on — the webhook will still receive succeeded and
+          // will no-op because there's no row to update. The money is in
+          // the Stripe account; the admin page will show an under-count.
+          // Manual reconciliation is possible from the Stripe dashboard.
+        } else {
+          donated = true
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Donation charge failed'
+        console.error(
+          `[donation] failed for sponsorship ${sponsorship.id}:`,
+          message,
+          '— release is preserved, donation skipped'
+        )
+        // donated stays false; donationAmount stays 0. Pledge release is
+        // unaffected — the sponsor sees a tasteful confirmation that the
+        // pledge was released even though the donation did not go through.
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      action: 'release',
+      released: true,
+      donated,
+      donation_amount: donated ? donationAmount : 0,
+    })
   }
 
   // Veto branch — any time during 'active' status.
