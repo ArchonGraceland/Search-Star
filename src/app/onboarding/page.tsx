@@ -153,32 +153,22 @@ export default function OnboardingPage() {
               The voluntary contribution.
             </h2>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '20px' }}>
-              When a streak pays out, Search Star presents a voluntary contribution prompt. The suggested contribution is 50% of the payout — but it is genuinely optional. You can reduce it to any amount, or remove it entirely with a single click. There is no pressure, no dark pattern, no penalty for removing it.
+              When a streak completes and sponsors release their pledges, Search Star presents a voluntary contribution prompt. The suggested contribution is 5% of the payout and it is genuinely optional. You can reduce it to any amount, or remove it entirely with a single click. There is no pressure, no dark pattern, no penalty for removing it.
             </p>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '28px' }}>
-              Roughly 90% of practitioners contribute at the suggested rate. That number comes from opt-in behavior, not obligation — which is why it means something.
+              The contribution is the whole business model. It&apos;s how the platform is funded — at a rate that covers operations without turning the product into something that needs to extract value from practitioners to survive.
             </p>
 
             <div style={{ background: '#1a3a6b', borderRadius: '3px', padding: '32px' }}>
               <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: '16px' }}>
-                How the contribution splits
+                Where the contribution goes
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {[
-                  { role: 'Search Star', pct: '5%', note: 'Platform operations' },
-                  { role: 'Mentor', pct: '23.75%', note: 'Your direct mentor' },
-                  { role: 'Coach Pool', pct: '23.75%', note: 'Coaches in your practice area' },
-                  { role: 'Community Builder Pool', pct: '23.75%', note: 'Community builders in your area' },
-                  { role: 'Practice Leader Pool', pct: '23.75%', note: 'Practice leaders in your category' },
-                ].map((row) => (
-                  <div key={row.role} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
-                    <div>
-                      <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>{row.role}</span>
-                      <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginLeft: '10px' }}>{row.note}</span>
-                    </div>
-                    <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '20px', fontWeight: 700, color: '#ffffff' }}>{row.pct}</span>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>Search Star</span>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginLeft: '10px' }}>Platform operations</span>
+                </div>
+                <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '24px', fontWeight: 700, color: '#ffffff' }}>5%</span>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getResend } from '@/lib/resend'
+import { randomBytes } from 'crypto'
 
 // GET — fetch public commitment data for the sponsor page (no auth)
 export async function GET(request: Request) {
@@ -104,6 +105,10 @@ export async function POST(request: Request) {
 
   const practitionerName = profile?.display_name ?? 'the practitioner'
 
+  // Generate a URL-safe access token. The sponsor uses this to follow the practice
+  // at /sponsor/[commitment_id]/[token] without needing a Search Star account.
+  const accessToken = randomBytes(24).toString('base64url')
+
   // Insert sponsorship
   const { data: sponsorship, error: insertError } = await supabase
     .from('sponsorships')
@@ -115,6 +120,7 @@ export async function POST(request: Request) {
       pledge_amount,
       status: 'pledged',
       pledged_at: new Date().toISOString(),
+      access_token: accessToken,
     })
     .select('id')
     .single()
@@ -129,6 +135,7 @@ export async function POST(request: Request) {
   const practitionerEmail = authUser?.user?.email
 
   // Send confirmation email to sponsor
+  const sponsorFeedUrl = `https://www.searchstar.com/sponsor/${commitment_id}/${accessToken}`
   try {
     await getResend().emails.send({
       from: 'noreply@searchstar.com',
@@ -152,13 +159,19 @@ export async function POST(request: Request) {
                 Pledge amount: $${pledge_amount.toFixed(2)}
               </p>
             </div>
+            <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #3a3a3a; margin: 0 0 20px;">
+              Follow along as ${practitionerName} works through their 90 days. The link below is yours — keep it private; it gives you read-only access to the practice feed.
+            </p>
+            <a href="${sponsorFeedUrl}" style="display: inline-block; background: #1a3a6b; color: #ffffff; font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 12px 24px; border-radius: 3px; text-decoration: none; margin-bottom: 24px;">
+              Follow the practice →
+            </a>
             <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #767676; margin: 0;">
-              Your pledge is recorded now. Funds are collected when ${practitionerName} completes their 90-day commitment. If they don't complete it, no payment is collected.
+              Your pledge is recorded now. Funds are collected when ${practitionerName} completes their 90-day commitment. If they don&rsquo;t complete it, no payment is collected.
             </p>
           </div>
         </div>
       `,
-      text: `Your pledge of $${pledge_amount.toFixed(2)} to support ${practitionerName}'s commitment "${commitment.title}" has been recorded. Funds are collected when they complete their 90-day commitment.`,
+      text: `Your pledge of $${pledge_amount.toFixed(2)} to support ${practitionerName}'s commitment "${commitment.title}" has been recorded.\n\nFollow the practice: ${sponsorFeedUrl}\n\nFunds are collected when they complete their 90-day commitment.`,
     })
   } catch (err) {
     console.error('Failed to send sponsor confirmation email:', err)
