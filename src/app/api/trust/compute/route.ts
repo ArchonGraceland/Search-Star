@@ -1,6 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+// v4 Phase 1 — minimum-viable trust compute.
+//
+// v3 computed Depth from post_confirmations (table dropped) and included
+// active_validators and mentees_formed (columns dropped). Phase 6 rebuilds
+// Depth from completed sponsored streaks weighted by sponsor count / diversity
+// / reliability. Until then this endpoint computes what is still computable
+// (breadth, durability, completed_streaks) and leaves depth at zero.
+//
+// Single-user-is-the-founder situation makes it fine for trust_records to
+// read low or stale for a few phases; the row is disposable per decisions #6.
+
 function assignStage(depth: number): string {
   if (depth < 10) return 'seedling'
   if (depth < 30) return 'rooting'
@@ -16,27 +27,10 @@ export async function POST() {
 
   const userId = user.id
 
-  // --- depth_score ---
-  // Count confirmed post_confirmations for this user's commitment_posts
-  // quality_note present = 1.2 multiplier per post
-  const { data: confirmations } = await supabase
-    .from('post_confirmations')
-    .select('quality_note, commitment_posts!inner(user_id)')
-    .eq('commitment_posts.user_id', userId)
+  // Depth: deferred to Phase 6 (was driven by post_confirmations).
+  const depth_score = 0
 
-  let depth = 0
-  if (confirmations && confirmations.length > 0) {
-    // Group by post_id to apply per-post multiplier
-    // Each confirmation row = 1 base; quality_note on ANY confirmation for that post = 1.2
-    // Simplest: treat each confirmation row as 1.0 or 1.2
-    for (const c of confirmations) {
-      depth += c.quality_note ? 1.2 : 1.0
-    }
-  }
-  const depth_score = Math.round(depth * 10) / 10
-
-  // --- breadth_score ---
-  // COUNT of distinct skill_categories across active/completed practices linked via commitments
+  // Breadth: distinct skill_categories across active/completed practices.
   const { data: commitmentRows } = await supabase
     .from('commitments')
     .select('practice_id')
@@ -58,9 +52,7 @@ export async function POST() {
     }
   }
 
-  // --- durability_score ---
-  // SUM of (completed_at - streak_starts_at) in days for completed commitments
-  // + partial credit for active commitments: sessions_logged / 90 * 90 days = sessions_logged days
+  // Durability: completed streak days + partial credit for active.
   const { data: allCommitments } = await supabase
     .from('commitments')
     .select('status, streak_starts_at, completed_at, sessions_logged')
@@ -78,34 +70,14 @@ export async function POST() {
           durability += Math.max(0, days)
         }
       } else if (c.status === 'active') {
-        // partial: sessions_logged / 90 * 90 = sessions_logged days
         durability += Math.min(90, c.sessions_logged ?? 0)
       }
     }
   }
   const durability_score = Math.round(durability * 10) / 10
 
-  // --- active_validators ---
-  const { data: validatorRows } = await supabase
-    .from('validators')
-    .select('validator_user_id, commitment_id, commitments!inner(user_id)')
-    .eq('status', 'active')
-    .eq('commitments.user_id', userId)
-
-  const activeValidators = validatorRows
-    ? new Set(validatorRows.map((v: { validator_user_id: string }) => v.validator_user_id).filter(Boolean)).size
-    : 0
-
-  // --- mentees_formed ---
-  const { count: menteesFormed } = await supabase
-    .from('mentor_relationships')
-    .select('*', { count: 'exact', head: true })
-    .eq('mentor_user_id', userId)
-    .eq('status', 'active')
-
   const stage = assignStage(depth_score)
 
-  // Upsert trust_records
   const { error: upsertError } = await supabase
     .from('trust_records')
     .upsert({
@@ -115,8 +87,6 @@ export async function POST() {
       breadth_score,
       durability_score,
       completed_streaks,
-      active_validators: activeValidators,
-      mentees_formed: menteesFormed ?? 0,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
@@ -136,7 +106,5 @@ export async function POST() {
     breadth_score,
     durability_score,
     completed_streaks,
-    active_validators: activeValidators,
-    mentees_formed: menteesFormed ?? 0,
   })
 }

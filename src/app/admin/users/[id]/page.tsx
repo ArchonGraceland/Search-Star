@@ -17,7 +17,7 @@ export default async function AdminUserDetail({
   // id is user_id in v3
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('user_id, display_name, location, bio, trust_stage, mentor_role, created_at')
+    .select('user_id, display_name, location, bio, trust_stage, created_at')
     .eq('user_id', id)
     .single()
 
@@ -36,7 +36,7 @@ export default async function AdminUserDetail({
   // Trust record
   const { data: trust } = await supabase
     .from('trust_records')
-    .select('stage, depth_score, breadth_score, durability_score, completed_streaks, active_validators, mentees_formed, updated_at')
+    .select('stage, depth_score, breadth_score, durability_score, completed_streaks, updated_at')
     .eq('user_id', id)
     .single()
 
@@ -72,11 +72,6 @@ export default async function AdminUserDetail({
             <span className="font-body text-[10px] font-bold tracking-[0.1em] uppercase px-3 py-1 rounded-[2px] bg-[#eef2f8] text-[#1a3a6b]">
               {profile.trust_stage}
             </span>
-            {profile.mentor_role && (
-              <span className="font-body text-[10px] font-bold tracking-[0.1em] uppercase px-3 py-1 rounded-[2px] bg-[#f0fdf4] text-[#166534]">
-                {profile.mentor_role.replace('_', ' ')}
-              </span>
-            )}
           </div>
         </div>
 
@@ -87,7 +82,6 @@ export default async function AdminUserDetail({
             <StatRow label="Display Name" value={profile.display_name || '—'} />
             <StatRow label="Location" value={profile.location || '—'} />
             <StatRow label="Trust Stage" value={profile.trust_stage} />
-            <StatRow label="Mentor Role" value={profile.mentor_role?.replace('_', ' ') || 'None'} />
             <StatRow label="Bio" value={profile.bio || '—'} />
           </div>
         </div>
@@ -102,8 +96,6 @@ export default async function AdminUserDetail({
               <StatCard label="Breadth Score" value={trust.breadth_score?.toString() || '0'} />
               <StatCard label="Durability Score" value={trust.durability_score?.toString() || '0'} />
               <StatCard label="Completed Streaks" value={trust.completed_streaks?.toString() || '0'} />
-              <StatCard label="Active Validators" value={trust.active_validators?.toString() || '0'} />
-              <StatCard label="Mentees Formed" value={trust.mentees_formed?.toString() || '0'} />
             </div>
           ) : (
             <p className="font-body text-sm text-[#b8b8b8]">No trust record yet.</p>
@@ -125,7 +117,6 @@ export default async function AdminUserDetail({
           <AdminUserActions
             userId={id}
             currentTrustStage={profile.trust_stage}
-            currentMentorRole={profile.mentor_role}
           />
         </div>
       </div>

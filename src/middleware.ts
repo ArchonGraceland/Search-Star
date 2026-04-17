@@ -40,9 +40,9 @@ export async function middleware(request: NextRequest) {
   // Protected routes — redirect to login if not authenticated
   const protectedPrefixes = [
     '/dashboard', '/account', '/admin', '/support',
-    '/commit', '/practice', '/validating', '/mentors', '/mentoring',
+    '/commit', '/practice',
     '/trust', '/earnings', '/log',
-    '/onboarding/practice', '/onboarding/validator', '/onboarding/profile', '/onboarding/visibility',
+    '/onboarding/practice', '/onboarding/profile', '/onboarding/visibility',
     '/start',
   ]
 

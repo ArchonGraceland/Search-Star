@@ -6,7 +6,6 @@ interface Profile {
   display_name: string | null
   location: string | null
   trust_stage: string
-  mentor_role: string | null
   created_at: string
 }
 
@@ -37,7 +36,7 @@ export default async function AdminUsers({
 
   let dbQuery = supabase
     .from('profiles')
-    .select('user_id, display_name, location, trust_stage, mentor_role, created_at', { count: 'exact' })
+    .select('user_id, display_name, location, trust_stage, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + perPage - 1)
 
@@ -89,7 +88,6 @@ export default async function AdminUsers({
                     <th className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] text-left py-3">Name</th>
                     <th className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] text-left py-3">Location</th>
                     <th className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] text-center py-3">Trust Stage</th>
-                    <th className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] text-center py-3">Mentor Role</th>
                     <th className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] text-right py-3">Joined</th>
                     <th className="font-body text-[10px] font-bold tracking-[0.1em] uppercase text-[#767676] text-center py-3">Actions</th>
                   </tr>
@@ -108,15 +106,6 @@ export default async function AdminUsers({
                         >
                           {u.trust_stage}
                         </span>
-                      </td>
-                      <td className="text-center py-3">
-                        {u.mentor_role ? (
-                          <span className="font-body text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-[2px] bg-[#eef2f8] text-[#1a3a6b]">
-                            {u.mentor_role.replace('_', ' ')}
-                          </span>
-                        ) : (
-                          <span className="font-body text-xs text-[#b8b8b8]">—</span>
-                        )}
                       </td>
                       <td className="font-body text-xs text-[#767676] text-right py-3 whitespace-nowrap">
                         {formatDate(u.created_at)}

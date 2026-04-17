@@ -3,9 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 export type Stage =
   | { step: 1 }                          // no practice
   | { step: 2 }                          // practice, no commitment
-  | { step: 3; commitmentId: string }    // commitment, no validator
-  | { step: 4; commitmentId: string }    // commitment + validator, mentor step unseen
-  | { step: 5; commitmentId: string }    // launch window (mentor seen)
+  | { step: 3; commitmentId: string }    // commitment, no sponsor yet
+  | { step: 4; commitmentId: string }    // sponsor present, Companion intro unseen
+  | { step: 5; commitmentId: string }    // launch window (Companion seen)
   | { step: 6; commitmentId: string }    // active streak
 
 export async function resolveStage(): Promise<Stage> {
@@ -35,16 +35,26 @@ export async function resolveStage(): Promise<Stage> {
   // Completed or abandoned — back to step 2 for new commitment
   if (c.status === 'completed' || c.status === 'abandoned') return { step: 2 }
 
-  // Launch status — check for validator
-  const { data: validators } = await supabase
-    .from('validators').select('id').eq('commitment_id', c.id).limit(1)
-  if (!validators?.length) return { step: 3, commitmentId: c.id }
+  // Launch status — check for at least one sponsor pledge on this commitment.
+  // In Phase 1, sponsors are the only signal a "sponsor has been brought in"
+  // because sponsor_invitations doesn't exist until Phase 2. After Phase 2,
+  // switch this query to sponsor_invitations so pending invites also count.
+  const { data: sponsors } = await supabase
+    .from('sponsorships').select('id').eq('commitment_id', c.id).limit(1)
+  if (!sponsors?.length) return { step: 3, commitmentId: c.id }
 
-  // Has validator — check mentor step
+  // Has at least one sponsor — Companion intro step.
+  // Phase 1: no Companion intro page exists yet (Phase 3 builds it). Auto-flip
+  // companion_step_seen=true the first time we pass through here so users
+  // don't get stuck on a dead step-4 route. When Phase 3 ships, remove the
+  // auto-flip and let users land on /start/companion/[id] until they read it.
   const { data: profile } = await supabase
-    .from('profiles').select('mentor_step_seen').eq('user_id', user.id).single()
-  if (!profile?.mentor_step_seen) return { step: 4, commitmentId: c.id }
+    .from('profiles').select('companion_step_seen').eq('user_id', user.id).single()
+  if (!profile?.companion_step_seen) {
+    await supabase.from('profiles').update({ companion_step_seen: true }).eq('user_id', user.id)
+    return { step: 5, commitmentId: c.id }
+  }
 
-  // Launch window (post-mentor)
+  // Launch window (post-Companion intro)
   return { step: 5, commitmentId: c.id }
 }

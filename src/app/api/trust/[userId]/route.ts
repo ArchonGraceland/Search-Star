@@ -21,7 +21,7 @@ export async function GET(
 
   const { data: trust } = await supabase
     .from('trust_records')
-    .select('stage, depth_score, breadth_score, durability_score, completed_streaks, active_validators, mentees_formed, updated_at')
+    .select('stage, depth_score, breadth_score, durability_score, completed_streaks, updated_at')
     .eq('user_id', userId)
     .single()
 
@@ -35,8 +35,6 @@ export async function GET(
     breadth_score: trust.breadth_score,
     durability_score: trust.durability_score,
     completed_streaks: trust.completed_streaks,
-    active_validators: trust.active_validators,
-    mentees_formed: trust.mentees_formed,
     updated_at: trust.updated_at,
     display_name: profile.display_name,
   })
