@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getResend } from '@/lib/resend'
+import { getStripe, pledgeDollarsToCents } from '@/lib/stripe'
 import { randomBytes } from 'crypto'
 
 // GET — fetch public commitment data for the sponsor page (no auth)
@@ -132,7 +133,42 @@ export async function POST(request: Request) {
   // at /sponsor/[commitment_id]/[token] without needing a Search Star account.
   const accessToken = randomBytes(24).toString('base64url')
 
-  // Insert sponsorship
+  // Create the Stripe PaymentIntent BEFORE inserting the sponsorship row.
+  // capture_method: 'manual' authorizes the card and holds the funds without
+  // charging — the day-90 release action route captures; veto cancels. If
+  // Stripe errors here we return 502 and do NOT insert anything, so failed
+  // pledges leave no DB artefact. Metadata.intent_type lets the webhook
+  // distinguish pledges from donations when Phase 5 adds donation flows.
+  let paymentIntentId: string
+  let clientSecret: string
+  try {
+    const pi = await getStripe().paymentIntents.create({
+      amount: pledgeDollarsToCents(pledge_amount),
+      currency: 'usd',
+      capture_method: 'manual',
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        commitment_id,
+        intent_type: 'pledge',
+        sponsor_email: sponsor_email.trim().toLowerCase(),
+      },
+      description: `Search Star pledge: ${commitment.title}`,
+    })
+    if (!pi.client_secret) {
+      throw new Error('Stripe returned a PaymentIntent without a client_secret.')
+    }
+    paymentIntentId = pi.id
+    clientSecret = pi.client_secret
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Stripe PaymentIntent creation failed'
+    console.error('Failed to create Stripe PaymentIntent:', message)
+    return NextResponse.json(
+      { error: `Payment setup failed: ${message}` },
+      { status: 502 }
+    )
+  }
+
+  // Insert sponsorship — now that Stripe has confirmed the PI exists.
   const { data: sponsorship, error: insertError } = await supabase
     .from('sponsorships')
     .insert({
@@ -144,12 +180,20 @@ export async function POST(request: Request) {
       status: 'pledged',
       pledged_at: new Date().toISOString(),
       access_token: accessToken,
+      stripe_payment_intent_id: paymentIntentId,
     })
     .select('id')
     .single()
 
   if (insertError || !sponsorship) {
     console.error('Error inserting sponsorship:', insertError)
+    // Best-effort cancel of the orphaned PaymentIntent so we don't leave
+    // dangling holds in Stripe when our DB write fails.
+    try {
+      await getStripe().paymentIntents.cancel(paymentIntentId)
+    } catch (cancelErr) {
+      console.error('Failed to cancel orphaned PaymentIntent:', cancelErr)
+    }
     return NextResponse.json({ error: 'Failed to record pledge.' }, { status: 500 })
   }
 
@@ -248,5 +292,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ id: sponsorship.id })
+  return NextResponse.json({ id: sponsorship.id, client_secret: clientSecret })
 }

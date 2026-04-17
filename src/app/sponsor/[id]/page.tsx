@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import PublicHeader from '@/components/public-header'
+import StripePaymentForm from '@/components/stripe-payment-form'
 
 interface SponsorPageData {
   commitment_id: string
@@ -16,12 +17,7 @@ interface SponsorPageData {
   status: string
 }
 
-function daysRemaining(endDate: string): number {
-  const end = new Date(endDate)
-  const now = new Date()
-  const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  return Math.max(0, diff)
-}
+type Step = 'details' | 'payment' | 'success'
 
 export default function SponsorPage() {
   const params = useParams()
@@ -38,7 +34,9 @@ export default function SponsorPage() {
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+
+  const [step, setStep] = useState<Step>('details')
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [pledgedAmount, setPledgedAmount] = useState<number>(0)
 
   useEffect(() => {
@@ -59,7 +57,7 @@ export default function SponsorPage() {
     load()
   }, [id])
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleDetailsSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setSubmitting(true)
@@ -84,13 +82,18 @@ export default function SponsorPage() {
     })
 
     const json = await res.json()
-    if (res.ok) {
+    if (res.ok && json.client_secret) {
       setPledgedAmount(amountNum)
-      setSuccess(true)
+      setClientSecret(json.client_secret)
+      setStep('payment')
     } else {
-      setError(json.error || 'Failed to record pledge.')
+      setError(json.error || 'Failed to start the pledge.')
     }
     setSubmitting(false)
+  }
+
+  function handlePaymentSuccess() {
+    setStep('success')
   }
 
   if (loading) {
@@ -110,7 +113,6 @@ export default function SponsorPage() {
         <PublicHeader />
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 70px)', padding: '32px 16px' }}>
           <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '40px 48px', maxWidth: '480px', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '28px', marginBottom: '16px' }}>🔒</p>
             <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '26px', fontWeight: 700, margin: '0 0 12px' }}>
               Commitment closed
             </h2>
@@ -123,23 +125,20 @@ export default function SponsorPage() {
     )
   }
 
-  const days = daysRemaining(data.launch_ends_at)
-
-  if (success) {
+  if (step === 'success') {
     return (
       <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
         <PublicHeader />
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 70px)', padding: '32px 16px' }}>
           <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #2d6a2d', borderRadius: '3px', padding: '48px', maxWidth: '520px', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '32px', marginBottom: '16px' }}>🎉</p>
             <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '28px', fontWeight: 700, margin: '0 0 16px', color: '#1a1a1a' }}>
-              Pledge recorded!
+              Pledge authorized
             </h2>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '15px', color: '#3a3a3a', lineHeight: '1.6', margin: '0 0 8px' }}>
-              Your pledge of <strong>${pledgedAmount.toFixed(2)}</strong> has been recorded.
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '15px', color: '#3a3a3a', lineHeight: '1.6', margin: '0 0 12px' }}>
+              Your pledge of <strong>${pledgedAmount.toFixed(2)}</strong> is held on your card.
             </p>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', lineHeight: '1.6', margin: 0 }}>
-              <strong>{data.practitioner_name}</strong> will be notified. Funds are recorded now and collected when they complete their commitment.
+              <strong>{data.practitioner_name}</strong> has been notified. Your card is charged only at day 90 when you release payment. If the commitment is vetoed or abandoned, the hold is cancelled and nothing is charged.
             </p>
           </div>
         </div>
@@ -196,136 +195,176 @@ export default function SponsorPage() {
           </div>
         </div>
 
-        {/* Pledge form */}
-        <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #1a3a6b', borderRadius: '3px', padding: '28px 32px' }}>
-          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '20px', marginTop: 0 }}>
-            Make a pledge
-          </p>
-
-          <form onSubmit={handleSubmit}>
-            {/* Name row */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
-                  First name
-                </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  placeholder="Jane"
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
-                  onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
-                  Last name
-                </label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  placeholder="Smith"
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
-                  onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="jane@example.com"
-                style={{ width: '100%', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
-                onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
-              />
-            </div>
-
-            {/* Amount */}
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
-                Pledge amount (minimum $5)
-              </label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#5a5a5a' }}>
-                  $
-                </span>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  min="5"
-                  step="1"
-                  placeholder="25"
-                  style={{ width: '100%', padding: '9px 12px 9px 24px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
-                  onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
-                />
-              </div>
-            </div>
-
-            {/* Message (optional) */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
-                Message <span style={{ fontWeight: 400, color: '#b8b8b8' }}>(optional)</span>
-              </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                maxLength={500}
-                rows={3}
-                placeholder="Words of encouragement..."
-                style={{ width: '100%', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: '1.5' }}
-                onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
-                onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
-              />
-            </div>
-
-            {error && (
-              <div style={{ marginBottom: '16px', padding: '10px 14px', background: '#fef2f2', borderLeft: '3px solid #991b1b', borderRadius: '3px' }}>
-                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', margin: 0 }}>{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                width: '100%',
-                background: submitting ? '#8a9fc0' : '#1a3a6b',
-                color: '#fff',
-                fontFamily: 'Roboto, sans-serif',
-                fontSize: '14px',
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                padding: '12px 20px',
-                borderRadius: '3px',
-                border: 'none',
-                cursor: submitting ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {submitting ? 'Recording pledge...' : `Pledge${amount && !isNaN(parseFloat(amount)) ? ` $${parseFloat(amount).toFixed(2)}` : ''} →`}
-            </button>
-
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8', marginTop: '12px', marginBottom: 0, lineHeight: '1.5', textAlign: 'center' }}>
-              Pledges are recorded now. Payment is collected when {data.practitioner_name} completes their commitment. No payment is required today.
-            </p>
-          </form>
+        {/* Step indicator */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+          <span style={{
+            fontFamily: 'Roboto, sans-serif',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: step === 'details' ? '#1a3a6b' : '#b8b8b8',
+          }}>
+            1. Your details
+          </span>
+          <span style={{ color: '#d4d4d4', fontFamily: 'Roboto, sans-serif', fontSize: '11px' }}>·</span>
+          <span style={{
+            fontFamily: 'Roboto, sans-serif',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: step === 'payment' ? '#1a3a6b' : '#b8b8b8',
+          }}>
+            2. Payment
+          </span>
         </div>
+
+        {step === 'details' && (
+          <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #1a3a6b', borderRadius: '3px', padding: '28px 32px' }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '20px', marginTop: 0 }}>
+              Make a pledge
+            </p>
+
+            <form onSubmit={handleDetailsSubmit}>
+              {/* Name row */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
+                    First name
+                  </label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    placeholder="Jane"
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
+                    onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
+                    Last name
+                  </label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    placeholder="Smith"
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
+                    onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="jane@example.com"
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
+                  onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
+                />
+              </div>
+
+              {/* Amount */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
+                  Pledge amount (minimum $5)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#5a5a5a' }}>
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                    min="5"
+                    step="1"
+                    placeholder="25"
+                    style={{ width: '100%', padding: '9px 12px 9px 24px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
+                    onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
+                  />
+                </div>
+              </div>
+
+              {/* Message (optional) */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 600, color: '#5a5a5a', marginBottom: '5px' }}>
+                  Message <span style={{ fontWeight: 400, color: '#b8b8b8' }}>(optional)</span>
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Words of encouragement..."
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', fontFamily: 'Roboto, sans-serif', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: '1.5' }}
+                  onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
+                  onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
+                />
+              </div>
+
+              {error && (
+                <div style={{ marginBottom: '16px', padding: '10px 14px', background: '#fef2f2', borderLeft: '3px solid #991b1b', borderRadius: '3px' }}>
+                  <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', margin: 0 }}>{error}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  width: '100%',
+                  background: submitting ? '#8a9fc0' : '#1a3a6b',
+                  color: '#fff',
+                  fontFamily: 'Roboto, sans-serif',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  padding: '13px 20px',
+                  borderRadius: '3px',
+                  border: 'none',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {submitting ? 'Preparing…' : 'Continue to payment'}
+              </button>
+
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8', marginTop: '12px', marginBottom: 0, lineHeight: '1.5', textAlign: 'center' }}>
+                Your card will be authorized now. Funds are held and only charged when {data.practitioner_name} completes their 90-day commitment.
+              </p>
+            </form>
+          </div>
+        )}
+
+        {step === 'payment' && clientSecret && (
+          <div style={{ background: '#fff', border: '1px solid #d4d4d4', borderLeft: '3px solid #1a3a6b', borderRadius: '3px', padding: '28px 32px' }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '20px', marginTop: 0 }}>
+              Authorize your pledge
+            </p>
+            <StripePaymentForm
+              clientSecret={clientSecret}
+              amount={pledgedAmount}
+              onSuccess={handlePaymentSuccess}
+            />
+          </div>
+        )}
 
       </div>
     </div>
