@@ -11,11 +11,11 @@ const STAGE_LABELS: Record<string, string> = {
 }
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
-  seedling: 'You are at the beginning. The practice has started but validators have not yet confirmed sustained effort.',
-  rooting: 'You have demonstrated real effort. Validators are confirming your sessions and your practice is taking hold.',
+  seedling: 'You are at the beginning. The practice has started but sponsored streaks have not yet accumulated.',
+  rooting: 'You have demonstrated real effort. Sponsors are backing your commitments and your practice is taking hold.',
   growing: 'Your practice is consistent and witnessed. You are building a documented record of genuine effort over time.',
-  established: 'You have a substantial record of confirmed practice. This is a meaningful credential recognized across institutions.',
-  mature: 'Your Trust record reflects deep, sustained, witnessed practice across years. This is rare and significant.',
+  established: 'You have a substantial record of sponsored practice. This is a meaningful credential recognized across institutions.',
+  mature: 'Your Trust record reflects deep, sustained, sponsored practice across years. This is rare and significant.',
 }
 
 const STAGE_COLORS: Record<string, string> = {
@@ -94,7 +94,7 @@ export default async function TrustPage() {
           lineHeight: '1.6',
         }}
       >
-        Your Trust record is a private credential built from confirmed practice over time. It cannot be performed into
+        Your Trust record is a private credential built from sponsored practice over time. It cannot be performed into
         existence — only grown through sustained, witnessed effort.
       </p>
 
@@ -177,7 +177,7 @@ export default async function TrustPage() {
           {
             label: 'Depth',
             value: formatDepth(trust?.depth_score ?? 0),
-            description: 'How consistently your sessions have been confirmed by validators.',
+            description: 'How far your practice has developed across completed sponsored streaks.',
           },
           {
             label: 'Breadth',
@@ -256,14 +256,6 @@ export default async function TrustPage() {
           {
             label: 'Completed commitments',
             value: trust?.completed_streaks ?? 0,
-          },
-          {
-            label: 'Active validators',
-            value: trust?.active_validators ?? 0,
-          },
-          {
-            label: 'Mentees formed',
-            value: trust?.mentees_formed ?? 0,
           },
         ].map(({ label, value }) => (
           <div key={label}>

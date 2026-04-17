@@ -96,8 +96,8 @@ export function TrustControls({ shareEnabled, userId, isPrivate }: TrustControls
             lineHeight: '1.6',
           }}
         >
-          Your Trust record is computed from all confirmed sessions, completed commitments, and active validators.
-          Recompute to reflect your latest activity.
+          Your Trust record is computed from completed sponsored commitments, the breadth of your practice, and how long
+          you have sustained it. Recompute to reflect your latest activity.
         </p>
         <button
           onClick={handleRecompute}

@@ -10,10 +10,10 @@ const STAGE_LABELS: Record<string, string> = {
 }
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
-  seedling: 'Beginning a practice — validators are witnessing early effort.',
-  rooting: 'Consistent effort confirmed by validators across multiple sessions.',
+  seedling: 'Beginning a practice — the first sponsored commitment is underway.',
+  rooting: 'Consistent effort backed by sponsors across multiple commitments.',
   growing: 'A documented record of genuine, sustained practice is building.',
-  established: 'A substantial credential of confirmed practice over time.',
+  established: 'A substantial credential of sponsored practice over time.',
   mature: 'A rare, deep record of sustained and witnessed practice across years.',
 }
 
@@ -27,9 +27,9 @@ const STAGE_COLORS: Record<string, string> = {
 
 function formatDepth(score: number): string {
   const sessions = Math.round(score)
-  if (sessions === 0) return 'No confirmed sessions yet'
-  if (sessions === 1) return '1 confirmed session'
-  return `${sessions} confirmed sessions`
+  if (sessions === 0) return 'No sponsored sessions yet'
+  if (sessions === 1) return '1 sponsored session'
+  return `${sessions} sponsored sessions`
 }
 
 function formatBreadth(score: number): string {

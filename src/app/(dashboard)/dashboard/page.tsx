@@ -116,43 +116,38 @@ export default async function DashboardPage() {
     .limit(1)
   const launchCommitment = launchCommitments?.[0] ?? null
 
-  // Sponsor + validator counts for launch commitment
+  // Sponsor count for launch commitment
   let sponsorCount = 0
-  let validatorCount = 0
   if (launchCommitment) {
-    const [{ count: sc }, { count: vc }] = await Promise.all([
-      supabase.from('sponsorships').select('id', { count: 'exact', head: true }).eq('commitment_id', launchCommitment.id),
-      supabase.from('validators').select('id', { count: 'exact', head: true }).eq('commitment_id', launchCommitment.id).eq('status', 'active'),
-    ])
+    const { count: sc } = await supabase
+      .from('sponsorships').select('id', { count: 'exact', head: true }).eq('commitment_id', launchCommitment.id)
     sponsorCount = sc ?? 0
-    validatorCount = vc ?? 0
   }
 
-  // Recent validator confirmations on this user's posts
-  const { data: recentConfirmations } = await supabase
-    .from('post_confirmations')
-    .select(`
-      confirmed_at,
-      commitment_posts!inner(commitment_id, commitments!inner(user_id)),
-      validators!inner(validator_user_id, profiles!inner(display_name))
-    `)
-    .eq('commitment_posts.commitments.user_id', user.id)
-    .order('confirmed_at', { ascending: false })
-    .limit(3)
-
-  // Lifetime contributions received — sum of gross_amount on contributions for this user's commitments
+  // Recent sponsor pledges on user's commitments — Phase 2 will add richer sponsor-activity surfaces.
   const { data: userCommitmentIds } = await supabase
     .from('commitments')
     .select('id')
     .eq('user_id', user.id)
 
+  const userCommitmentIdList = (userCommitmentIds ?? []).map((c) => c.id)
+
+  const { data: recentPledges } = userCommitmentIdList.length > 0
+    ? await supabase
+        .from('sponsorships')
+        .select('sponsor_name, pledged_at, pledge_amount')
+        .in('commitment_id', userCommitmentIdList)
+        .order('pledged_at', { ascending: false })
+        .limit(3)
+    : { data: [] }
+
+  // Lifetime contributions received — sum of gross_amount on contributions for this user's commitments
   let totalContributions = 0
-  if (userCommitmentIds && userCommitmentIds.length > 0) {
-    const ids = userCommitmentIds.map((c) => c.id)
+  if (userCommitmentIdList.length > 0) {
     const { data: contribs } = await supabase
       .from('contributions')
       .select('gross_amount')
-      .in('commitment_id', ids)
+      .in('commitment_id', userCommitmentIdList)
     totalContributions = (contribs ?? []).reduce((sum, c) => sum + (c.gross_amount ?? 0), 0)
   }
 
@@ -227,9 +222,6 @@ export default async function DashboardPage() {
             <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a' }}>
               {sponsorCount} sponsor{sponsorCount !== 1 ? 's' : ''} pledged
             </span>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a' }}>
-              {validatorCount} validator{validatorCount !== 1 ? 's' : ''} confirmed
-            </span>
           </div>
           <Link href={`/commit/${launchCommitment.id}`} style={ctaLink}>
               Log a session →
@@ -259,27 +251,23 @@ export default async function DashboardPage() {
         <Link href="/trust" style={softLink}>View record →</Link>
       </div>
 
-      {/* Recent validator confirmations */}
+      {/* Recent sponsor pledges */}
       <div style={cardStyle}>
-        <p style={labelStyle}>Recent Confirmations</p>
-        {recentConfirmations && recentConfirmations.length > 0 ? (
+        <p style={labelStyle}>Recent Pledges</p>
+        {recentPledges && recentPledges.length > 0 ? (
           <div>
-            {recentConfirmations.map((c, i) => {
-              const validator = Array.isArray(c.validators)
-                ? (c.validators[0] as { profiles?: { display_name?: string } } | undefined)
-                : (c.validators as { profiles?: { display_name?: string } } | null)
-              const validatorName = validator?.profiles?.display_name ?? 'A validator'
-              const date = new Date(c.confirmed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            {recentPledges.map((p, i) => {
+              const date = new Date(p.pledged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
               return (
                 <div key={i} style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '10px 0',
-                  borderBottom: i < recentConfirmations.length - 1 ? '1px solid #e8e8e8' : 'none',
+                  borderBottom: i < recentPledges.length - 1 ? '1px solid #e8e8e8' : 'none',
                 }}>
                   <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#1a1a1a' }}>
-                    {validatorName} confirmed a session
+                    {p.sponsor_name} pledged ${Number(p.pledge_amount).toFixed(2)}
                   </span>
                   <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676' }}>
                     {date}
@@ -290,7 +278,7 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676' }}>
-            No confirmations yet.
+            No pledges yet.
           </p>
         )}
       </div>
