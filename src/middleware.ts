@@ -37,11 +37,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Protected routes — redirect to login if not authenticated
+  // Protected routes — redirect to login if not authenticated.
+  //
+  // Note: '/trust' is deliberately NOT in this list. The dashboard variant
+  // ('/dashboard/trust') is covered by the '/dashboard' prefix. The public
+  // variant ('/trust/[userId]') must be reachable without auth so that
+  // sponsors, employers, and anyone with a share link can view a
+  // practitioner's record. The page itself handles visibility gating
+  // (private profile or share_enabled=false => locked state).
   const protectedPrefixes = [
     '/dashboard', '/account', '/admin', '/support',
     '/commit', '/practice',
-    '/trust', '/earnings', '/log',
+    '/earnings', '/log',
     '/onboarding/practice', '/onboarding/profile', '/onboarding/visibility',
     '/start',
   ]
