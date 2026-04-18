@@ -45,6 +45,12 @@ export async function middleware(request: NextRequest) {
   // sponsors, employers, and anyone with a share link can view a
   // practitioner's record. The page itself handles visibility gating
   // (private profile or share_enabled=false => locked state).
+  //
+  // IMPORTANT: these are path-boundary prefixes. '/log' protects '/log' and
+  // '/log/anything', but must NOT match '/login' — which is why we check
+  // `pathname === p || pathname.startsWith(p + '/')` rather than a plain
+  // `startsWith(p)`. A naive prefix match caused an infinite redirect loop
+  // from '/login' → '/login' because '/login'.startsWith('/log') is true.
   const protectedPrefixes = [
     '/dashboard', '/account', '/admin', '/support',
     '/commit', '/practice',
@@ -53,8 +59,9 @@ export async function middleware(request: NextRequest) {
     '/start',
   ]
 
-  const isProtected = protectedPrefixes.some(p =>
-    request.nextUrl.pathname.startsWith(p)
+  const pathname = request.nextUrl.pathname
+  const isProtected = protectedPrefixes.some(
+    (p) => pathname === p || pathname.startsWith(p + '/')
   )
 
   if (!user && isProtected) {
