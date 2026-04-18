@@ -2,6 +2,12 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+// The dashboard's output is a function of live database state for a single
+// authenticated user: active commitment, launch-window commitment, recent
+// pledges, lifetime earnings. Nothing on this page should ever be cached at
+// any layer. Same reasoning as /start/page.tsx.
+export const dynamic = 'force-dynamic'
+
 const STAGE_LABELS: Record<string, string> = {
   seedling: 'Seedling',
   rooting: 'Rooting',
@@ -75,9 +81,20 @@ const softLink: React.CSSProperties = {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // getUser() must go through the SSR client — it reads the session cookie.
+  // Once we have the user id, subsequent data reads go through the service
+  // client, per the pattern established in commit 501d976 for the stage
+  // pages. All queries below are filtered by user.id which we've just
+  // verified, so the RLS check is redundant anyway; going through the
+  // service client sidesteps an intermittent issue in which the SSR
+  // client's outbound Postgres queries are running unauthenticated (so
+  // tables without a public-read policy — commitments, sponsorships —
+  // return zero rows even though the row exists and belongs to the user).
+  const ssr = await createClient()
+  const { data: { user } } = await ssr.auth.getUser()
   if (!user) redirect('/login')
+
+  const supabase = createServiceClient()
 
   // Onboarding gate — redirect to practice step if not yet completed
   const { data: practiceCheck } = await supabase
@@ -107,39 +124,14 @@ export default async function DashboardPage() {
   const activeCommitment = activeCommitments?.[0] ?? null
 
   // Launch window commitment
-  const launchResult = await supabase
+  const { data: launchCommitments } = await supabase
     .from('commitments')
     .select('id, title, status, launch_ends_at')
     .eq('user_id', user.id)
     .eq('status', 'launch')
     .order('created_at', { ascending: false })
     .limit(1)
-  // TEMP diagnostic — same query through service client + broader lookup
-  const svc = createServiceClient()
-  const [svcLaunchResult, svcAllResult] = await Promise.all([
-    svc.from('commitments')
-      .select('id, title, status, launch_ends_at')
-      .eq('user_id', user.id)
-      .eq('status', 'launch')
-      .order('created_at', { ascending: false })
-      .limit(1),
-    svc.from('commitments')
-      .select('id, status, user_id')
-      .eq('user_id', user.id),
-  ])
-  console.log('[dashboard-diag] ' + JSON.stringify({
-    userid: user.id,
-    ssr_err: launchResult.error?.message ?? 'none',
-    ssr_count: launchResult.data?.length ?? 0,
-    ssr_rows: launchResult.data ?? [],
-    svc_err: svcLaunchResult.error?.message ?? 'none',
-    svc_count: svcLaunchResult.data?.length ?? 0,
-    svc_rows: svcLaunchResult.data ?? [],
-    svc_all_err: svcAllResult.error?.message ?? 'none',
-    svc_all_count: svcAllResult.data?.length ?? 0,
-    svc_all_rows: svcAllResult.data ?? [],
-  }))
-  const launchCommitment = launchResult.data?.[0] ?? null
+  const launchCommitment = launchCommitments?.[0] ?? null
 
   // Sponsor count for launch commitment
   let sponsorCount = 0
