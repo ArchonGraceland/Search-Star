@@ -1,6 +1,9 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import type Anthropic from '@anthropic-ai/sdk'
 import { getAnthropic, COMPANION_MODEL, COMPANION_SYSTEM_PROMPT } from '@/lib/anthropic'
+import { buildImageBlocks, getOrFetchTranscript } from '@/lib/companion/media'
+import { isVideoUrl } from '@/lib/media'
 
 // POST /api/companion/reflect
 //
@@ -111,41 +114,89 @@ export async function POST(request: Request) {
     )
 
   // Load the most recent sessions, sort chronologically for the model.
+  // `id` and `transcript` pulled so we can cache Whisper output per post.
   const { data: recentPosts } = await db
     .from('commitment_posts')
-    .select('session_number, body, media_urls, posted_at')
+    .select('id, session_number, body, media_urls, posted_at, transcript')
     .eq('commitment_id', commitment_id)
     .order('posted_at', { ascending: false })
     .limit(MAX_SESSIONS_IN_CONTEXT)
 
-  const posts = (recentPosts ?? []).slice().reverse() // oldest → newest
+  const rawPosts = (recentPosts ?? []).slice().reverse() // oldest → newest
+
+  // For any post with a video, resolve a transcript (cached or fresh from
+  // Whisper) and inline it into the body that the formatter sees. The
+  // Companion reads transcripts as part of the session text so its
+  // observations stay grounded in what was actually said on camera.
+  const posts: PostRow[] = await Promise.all(
+    rawPosts.map(async (p) => {
+      const hasVideo = (p.media_urls ?? []).some(
+        (u: string) => typeof u === 'string' && isVideoUrl(u)
+      )
+      if (!hasVideo) return p
+      const transcript = await getOrFetchTranscript(
+        p.id,
+        p.media_urls,
+        p.transcript
+      )
+      if (!transcript) return p
+      const existing = (p.body ?? '').trim()
+      const prefixed = `[video transcript: ${transcript}]`
+      const mergedBody = existing.length === 0 ? prefixed : `${prefixed}\n\n${existing}`
+      return { ...p, body: mergedBody }
+    })
+  )
+
   const recordText = formatSessionRecord(
     commitment.title,
     commitment.description,
     posts
   )
 
+  // Collect image blocks from the most recent post only. Per-reflect image
+  // volume is 1–3 typically — the practitioner just posted, and that's the
+  // session they want reflected on. Older images don't need to be re-shown
+  // every turn; their transcripts and bodies carry the context forward.
+  const latestPost = posts[posts.length - 1]
+  const latestImages = latestPost ? buildImageBlocks(latestPost.media_urls) : []
+
   // Build the messages array. Two modes:
   //   - Opening reflection: no user_message. The first user turn is the
-  //     session record, framed as a request for the Companion's opening.
-  //   - Follow-up: prepend the session record as the first user turn, then
-  //     append the prior in-session history (if any), then the new user
-  //     message. The session record stays at the top so the Companion
-  //     always re-orients on the actual practice.
-  const messages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  //     session record (with any images from the latest post interleaved),
+  //     framed as a request for the Companion's opening.
+  //   - Follow-up: same first user turn, then a terse assistant ack, then
+  //     the prior in-session history (if any), then the new user message.
+  //     The session record stays at the top so the Companion always
+  //     re-orients on the actual practice.
+  //
+  // Note: the first user turn is a content array (text + image blocks); all
+  // subsequent turns remain plain strings — they're conversational follow-ups
+  // that don't carry fresh media.
+  type ContentBlock = Anthropic.Messages.TextBlockParam | Anthropic.Messages.ImageBlockParam
+  type Msg =
+    | { role: 'user' | 'assistant'; content: string }
+    | { role: 'user'; content: ContentBlock[] }
+  const messages: Msg[] = []
+
+  const recordHeader =
+    !user_message || user_message.trim().length === 0
+      ? 'Below is the session record so far for this commitment. Respond as the Companion.'
+      : "Below is the session record for this commitment. I may follow up with questions; stay grounded in what's here."
+
+  // Content array: intro → images from latest session (if any) → record text.
+  // Images sit between the framing sentence and the full record so they read
+  // as "here is what the practitioner most recently shared, alongside the
+  // written history."
+  const firstTurnContent: ContentBlock[] = [
+    { type: 'text', text: recordHeader },
+    ...latestImages,
+    { type: 'text', text: recordText },
+  ]
 
   if (!user_message || user_message.trim().length === 0) {
-    messages.push({
-      role: 'user',
-      content:
-        `Below is the session record so far for this commitment. Respond as the Companion.\n\n${recordText}`,
-    })
+    messages.push({ role: 'user', content: firstTurnContent })
   } else {
-    messages.push({
-      role: 'user',
-      content:
-        `Below is the session record for this commitment. I may follow up with questions; stay grounded in what's here.\n\n${recordText}`,
-    })
+    messages.push({ role: 'user', content: firstTurnContent })
     // Acknowledge the record with an assistant-role placeholder so the
     // history below reads as a coherent multi-turn conversation from the
     // model's perspective. Keep the acknowledgement terse so it doesn't
@@ -205,10 +256,12 @@ export async function POST(request: Request) {
 // ---------------------------------------------------------------------------
 
 type PostRow = {
+  id: string
   session_number: number | null
   body: string | null
   media_urls: string[] | null
   posted_at: string
+  transcript: string | null
 }
 
 function formatSessionRecord(

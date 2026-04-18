@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { isVideoUrl } from '@/lib/media'
 
 interface Post {
   id: string
@@ -47,10 +48,6 @@ function formatTime(iso: string) {
   const d = new Date(iso)
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' +
     d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-}
-
-function isVideoUrl(url: string) {
-  return /\.(mp4|mov|avi|webm|mkv)/i.test(url) || url.includes('/video/upload/')
 }
 
 export default function LogClient({

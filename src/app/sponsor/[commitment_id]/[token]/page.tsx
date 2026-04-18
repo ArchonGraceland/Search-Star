@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import SponsorActions from './sponsor-actions'
 import { summarizeCommitment, isDay90Reached } from '@/lib/companion/day90'
+import { isVideoUrl } from '@/lib/media'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,9 +25,6 @@ function formatRange(startIso: string | null, endIso: string | null): string {
   return `${start} → ${end}`
 }
 
-function isVideoUrl(url: string): boolean {
-  return /\.(mp4|mov|avi|webm|mkv)/i.test(url) || url.includes('/video/upload/')
-}
 
 export default async function SponsorFeed({
   params,

@@ -1,9 +1,12 @@
 import { createServiceClient } from '@/lib/supabase/server'
+import type Anthropic from '@anthropic-ai/sdk'
 import {
   getAnthropic,
   COMPANION_MODEL,
   DAY90_SUMMARY_SYSTEM_PROMPT,
 } from '@/lib/anthropic'
+import { buildImageBlocks, getOrFetchTranscript } from '@/lib/companion/media'
+import { isVideoUrl } from '@/lib/media'
 
 // Shared library used by both POST /api/companion/day90-summary and the
 // server-component sponsor page. Keeping this in a plain TS module means the
@@ -26,11 +29,21 @@ const MAX_RECORD_CHARS = 400_000
 // arc of 90 days without padding.
 const MAX_OUTPUT_TOKENS = 2000
 
+// How many images from the session record to pass to the model as actual
+// image blocks. A single image consumes ~1.5k tokens at Sonnet pricing;
+// six is a comfortable budget that leaves room for the full session text.
+// The sampling strategy (first, last, and four evenly distributed between)
+// aims to let the model see the arc of the practice visually rather than
+// front- or back-loaded.
+const MAX_IMAGES_IN_SUMMARY = 6
+
 type PostRow = {
+  id: string
   session_number: number | null
   body: string | null
   media_urls: string[] | null
   posted_at: string
+  transcript: string | null
 }
 
 type SummarizeResult =
@@ -62,7 +75,7 @@ export async function summarizeCommitment(
 
   const { data: postsData, error: postsErr } = await db
     .from('commitment_posts')
-    .select('session_number, body, media_urls, posted_at')
+    .select('id, session_number, body, media_urls, posted_at, transcript')
     .eq('commitment_id', commitmentId)
     .order('posted_at', { ascending: true })
 
@@ -70,8 +83,8 @@ export async function summarizeCommitment(
     return { ok: false, error: 'Failed to load session record.' }
   }
 
-  const posts: PostRow[] = postsData ?? []
-  if (posts.length === 0) {
+  const rawPosts: PostRow[] = postsData ?? []
+  if (rawPosts.length === 0) {
     // No sessions were logged. Rather than ask the model to describe an
     // absent record, return a plain descriptive note. This is an honest
     // signal to sponsors, not a failure.
@@ -84,6 +97,29 @@ export async function summarizeCommitment(
     }
   }
 
+  // For any post with a video, resolve a transcript (cached or fresh from
+  // Whisper) and inline it into the body that the formatter sees. The
+  // day-90 summary reads the full 90-day arc, so video content surfaces
+  // through its transcript rather than being invisible to the model.
+  const posts: PostRow[] = await Promise.all(
+    rawPosts.map(async (p) => {
+      const hasVideo = (p.media_urls ?? []).some(
+        (u) => typeof u === 'string' && isVideoUrl(u)
+      )
+      if (!hasVideo) return p
+      const transcript = await getOrFetchTranscript(
+        p.id,
+        p.media_urls,
+        p.transcript
+      )
+      if (!transcript) return p
+      const existing = (p.body ?? '').trim()
+      const prefixed = `[video transcript: ${transcript}]`
+      const mergedBody = existing.length === 0 ? prefixed : `${prefixed}\n\n${existing}`
+      return { ...p, body: mergedBody }
+    })
+  )
+
   const { record, truncated } = formatRecord(
     commitment.title,
     commitment.description,
@@ -92,20 +128,33 @@ export async function summarizeCommitment(
     posts
   )
 
+  // Sample up to six images across the arc. The strategy: first image post,
+  // last image post, and up to four evenly distributed between. Only
+  // image-bearing posts are considered — video-only sessions are represented
+  // by their transcripts, already folded into the record text above.
+  const imageBlocks = sampleImageBlocks(posts, MAX_IMAGES_IN_SUMMARY)
+
+  // Build a single-turn content array: intro text → sampled images → record
+  // text. Images sit between the framing and the record so the model reads
+  // them as "here are representative frames from the practice, and here is
+  // the full written history."
+  type ContentBlock = Anthropic.Messages.TextBlockParam | Anthropic.Messages.ImageBlockParam
+  const content: ContentBlock[] = [
+    {
+      type: 'text',
+      text: 'Below is the session record for a 90-day practice commitment that has reached completion. Write the summary for the sponsors.',
+    },
+    ...imageBlocks,
+    { type: 'text', text: record },
+  ]
+
   try {
     const anthropic = getAnthropic()
     const response = await anthropic.messages.create({
       model: COMPANION_MODEL,
       max_tokens: MAX_OUTPUT_TOKENS,
       system: DAY90_SUMMARY_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content:
-            'Below is the session record for a 90-day practice commitment that has reached completion. Write the summary for the sponsors.\n\n' +
-            record,
-        },
-      ],
+      messages: [{ role: 'user', content }],
     })
 
     const textBlock = response.content.find((b) => b.type === 'text')
@@ -237,4 +286,60 @@ function dateOnly(iso: string): string {
   } catch {
     return iso
   }
+}
+
+// ---------------------------------------------------------------------------
+// Image sampling across the 90-day arc
+// ---------------------------------------------------------------------------
+//
+// Strategy: pick up to MAX posts from the subset that actually carries images,
+// evenly distributed by index. Always include the first and last image-post
+// so the summary frames the arc (where it started, where it ended); fill the
+// middle with evenly-spaced picks. For each chosen post, include ALL its
+// image blocks — practitioners typically log one image per session, and if
+// they logged two, both are relevant.
+//
+// "Evenly distributed by index in the image-post subset" rather than by date:
+// a practitioner who posts images densely in week 1 and sparsely afterward
+// should have their dense-week images represented proportionally, not
+// oversampled just because that week occupies more calendar days.
+
+function sampleImageBlocks(
+  posts: PostRow[],
+  maxImages: number
+): Anthropic.Messages.ImageBlockParam[] {
+  if (maxImages <= 0) return []
+
+  // Filter to posts that actually contain at least one image URL.
+  const imagePosts = posts.filter((p) => buildImageBlocks(p.media_urls).length > 0)
+  if (imagePosts.length === 0) return []
+
+  // Pick indices from imagePosts. If we have fewer image-posts than the
+  // budget allows, take them all. Otherwise sample evenly including the
+  // endpoints.
+  let pickedIndices: number[]
+  if (imagePosts.length <= maxImages) {
+    pickedIndices = imagePosts.map((_, i) => i)
+  } else {
+    pickedIndices = []
+    for (let k = 0; k < maxImages; k++) {
+      const idx = Math.round((k * (imagePosts.length - 1)) / (maxImages - 1))
+      pickedIndices.push(idx)
+    }
+    // Dedup in case rounding collides on small sets.
+    pickedIndices = Array.from(new Set(pickedIndices))
+  }
+
+  // Flatten the chosen posts' image blocks; enforce the hard cap in case
+  // a single post contains multiple images and we overshoot.
+  const blocks: Anthropic.Messages.ImageBlockParam[] = []
+  for (const idx of pickedIndices) {
+    const post = imagePosts[idx]
+    if (!post) continue
+    for (const block of buildImageBlocks(post.media_urls)) {
+      if (blocks.length >= maxImages) return blocks
+      blocks.push(block)
+    }
+  }
+  return blocks
 }
