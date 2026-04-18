@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(
@@ -6,13 +6,21 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // getUser() reads the session cookie via the SSR client. Once we have a
+  // verified user id we route the data reads through the service client,
+  // same pattern as commit 0710ce4 — the SSR client's outbound Postgres
+  // queries intermittently run unauthenticated, silently returning zero
+  // rows for RLS-gated tables like commitments. The data query below is
+  // filtered by both id AND user_id, so going through the service client
+  // is safe: we're enforcing ownership at the application layer.
+  const ssr = await createClient()
+  const { data: { user } } = await ssr.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const supabase = createServiceClient()
   const { data: commitment, error } = await supabase
     .from('commitments')
     .select(`
