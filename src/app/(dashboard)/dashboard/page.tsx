@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -114,13 +114,30 @@ export default async function DashboardPage() {
     .eq('status', 'launch')
     .order('created_at', { ascending: false })
     .limit(1)
-  // TEMP diagnostic — remove after root cause is identified.
-  console.log('[dashboard-diag]', JSON.stringify({
-    user_id: user.id,
-    launch_error: launchResult.error?.message ?? null,
-    launch_error_code: launchResult.error?.code ?? null,
-    launch_row_count: launchResult.data?.length ?? 0,
-    launch_rows: launchResult.data ?? [],
+  // TEMP diagnostic — same query through service client + broader lookup
+  const svc = createServiceClient()
+  const [svcLaunchResult, svcAllResult] = await Promise.all([
+    svc.from('commitments')
+      .select('id, title, status, launch_ends_at')
+      .eq('user_id', user.id)
+      .eq('status', 'launch')
+      .order('created_at', { ascending: false })
+      .limit(1),
+    svc.from('commitments')
+      .select('id, status, user_id')
+      .eq('user_id', user.id),
+  ])
+  console.log('[dashboard-diag] ' + JSON.stringify({
+    userid: user.id,
+    ssr_err: launchResult.error?.message ?? 'none',
+    ssr_count: launchResult.data?.length ?? 0,
+    ssr_rows: launchResult.data ?? [],
+    svc_err: svcLaunchResult.error?.message ?? 'none',
+    svc_count: svcLaunchResult.data?.length ?? 0,
+    svc_rows: svcLaunchResult.data ?? [],
+    svc_all_err: svcAllResult.error?.message ?? 'none',
+    svc_all_count: svcAllResult.data?.length ?? 0,
+    svc_all_rows: svcAllResult.data ?? [],
   }))
   const launchCommitment = launchResult.data?.[0] ?? null
 
