@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -30,10 +31,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Logged-in users hitting the homepage go straight to /log
+  // Logged-in users hitting the homepage get routed by commitment state:
+  //   - commitment exists (any status) → /log (launch-window shows the
+  //     "not yet" splash; active shows the session logger)
+  //   - no commitment → /start (stage resolver picks the right onboarding
+  //     step — either /start/practice or /start/commitment)
+  //
+  // We query via a service-role client rather than `supabase` (the SSR
+  // anon client) because the same @supabase/ssr JWT-propagation issue
+  // diagnosed on dashboard/commit pages would silently return count=0
+  // for users who do have a commitment, bouncing them to /start by
+  // mistake. Inline here instead of importing createServiceClient from
+  // src/lib/supabase/server.ts because that file imports `next/headers`
+  // which is not edge-runtime-compatible. The extra lookup is gated on
+  // pathname === '/' so it only runs on homepage hits.
   if (user && request.nextUrl.pathname === '/') {
+    const service = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    const { count } = await service
+      .from('commitments')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .limit(1)
+
     const url = request.nextUrl.clone()
-    url.pathname = '/log'
+    url.pathname = (count ?? 0) > 0 ? '/log' : '/start'
     return NextResponse.redirect(url)
   }
 

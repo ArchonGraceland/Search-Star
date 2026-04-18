@@ -1,7 +1,7 @@
 {
   "name": "Search Star",
-  "short_name": "Log Session",
-  "start_url": "/log",
+  "short_name": "Search Star",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#1a3a6b",
   "theme_color": "#1a3a6b",
