@@ -107,14 +107,22 @@ export default async function DashboardPage() {
   const activeCommitment = activeCommitments?.[0] ?? null
 
   // Launch window commitment
-  const { data: launchCommitments } = await supabase
+  const launchResult = await supabase
     .from('commitments')
     .select('id, title, status, launch_ends_at')
     .eq('user_id', user.id)
     .eq('status', 'launch')
     .order('created_at', { ascending: false })
     .limit(1)
-  const launchCommitment = launchCommitments?.[0] ?? null
+  // TEMP diagnostic — remove after root cause is identified.
+  console.log('[dashboard-diag]', JSON.stringify({
+    user_id: user.id,
+    launch_error: launchResult.error?.message ?? null,
+    launch_error_code: launchResult.error?.code ?? null,
+    launch_row_count: launchResult.data?.length ?? 0,
+    launch_rows: launchResult.data ?? [],
+  }))
+  const launchCommitment = launchResult.data?.[0] ?? null
 
   // Sponsor count for launch commitment
   let sponsorCount = 0
