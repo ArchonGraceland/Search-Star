@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import StageShell from '@/components/stage-shell'
 import CompanionContinueButton from './companion-continue-button'
@@ -8,12 +8,10 @@ export default async function StageCompanion() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Look up the user's active launch commitment so we can hand its id
-  // to the continue button and navigate directly to /start/launch/{id}
-  // after the companion step is acknowledged. Going direct bypasses the
-  // stage resolver and the Router Cache, both of which have caused users
-  // to bounce back to earlier stages in production.
-  const { data: commitment } = await supabase
+  // Service client + user.id filter instead of RLS — see /start/sponsor/page.tsx
+  // for the rationale. Same RLS race condition would apply here.
+  const service = createServiceClient()
+  const { data: commitment } = await service
     .from('commitments')
     .select('id')
     .eq('user_id', user.id)

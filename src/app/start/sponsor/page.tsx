@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import StageShell from '@/components/stage-shell'
 import SponsorStepForm from './sponsor-step-form'
@@ -8,10 +8,15 @@ export default async function StageSponsor() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Locate the user's current launch-status commitment. The resolver will only
-  // land here when one exists, but guard anyway — if there's no launch
-  // commitment the right place for the user is /start, which will re-route.
-  const { data: commitment } = await supabase
+  // Use the service client (filtered by user.id) instead of the RLS-authenticated
+  // client. We were seeing production bounces where a commitment had just been
+  // inserted via /api/commitments (service client) and then this page's RLS
+  // read returned null a second later — some kind of auth-context propagation
+  // race. Filtering by user.id on the service client gives us the same
+  // privacy guarantee (the user can only ever see their own rows because
+  // that's all we query for) without the timing issue.
+  const service = createServiceClient()
+  const { data: commitment } = await service
     .from('commitments')
     .select('id, title')
     .eq('user_id', user.id)

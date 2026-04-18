@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import StageShell from '@/components/stage-shell'
@@ -18,14 +18,19 @@ export default async function StageLaunch({ params }: { params: Promise<{ id: st
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: commitment } = await supabase
+  // Service client with user.id filter — same RLS race workaround as
+  // /start/sponsor and /start/companion. Without this, users who had
+  // just created a commitment via /api/commitments could land here from
+  // the preceding stage and get bounced to /start, then back to commitment.
+  const service = createServiceClient()
+  const { data: commitment } = await service
     .from('commitments')
     .select('id, title, description, frequency, status, launch_ends_at, streak_starts_at, streak_ends_at')
     .eq('id', id).eq('user_id', user.id).single()
 
   if (!commitment) redirect('/start')
 
-  const { data: sponsorships } = await supabase
+  const { data: sponsorships } = await service
     .from('sponsorships').select('id, sponsor_name, pledge_amount').eq('commitment_id', id).eq('status', 'pledged')
 
   const totalPledged = (sponsorships ?? []).reduce((s, p) => s + Number(p.pledge_amount), 0)
