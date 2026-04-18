@@ -7,16 +7,19 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const db = createServiceClient()
-
+  const ssr = await createClient()
+  const { data: { user } } = await ssr.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // getUser() via SSR, data reads and writes via service client — see
+  // commit 0710ce4 for the full writeup. All queries below are scoped by
+  // user.id; ownership is enforced at the application layer.
+  const db = createServiceClient()
+
   // Fetch commitment and verify ownership + status
-  const { data: commitment, error: commError } = await supabase
+  const { data: commitment, error: commError } = await db
     .from('commitments')
     .select('id, status, user_id')
     .eq('id', id)
@@ -31,14 +34,16 @@ export async function POST(
     return NextResponse.json({ error: 'Only active commitments can be marked as complete.' }, { status: 409 })
   }
 
-  // Mark as complete
-  const { error: updateError } = await supabase
+  // Mark as complete — user_id filter prevents cross-user writes via
+  // service client; we've already verified ownership above.
+  const { error: updateError } = await db
     .from('commitments')
     .update({
       status: 'completed',
       completed_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .eq('user_id', user.id)
 
   if (updateError) {
     console.error('Error completing commitment:', updateError)
@@ -46,7 +51,7 @@ export async function POST(
   }
 
   // Calculate total pledged
-  const { data: pledges } = await supabase
+  const { data: pledges } = await db
     .from('sponsorships')
     .select('pledge_amount')
     .eq('commitment_id', id)

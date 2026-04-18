@@ -1,5 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+
+// The earnings page is purely derived from live DB state for the current user;
+// nothing on it should ever be cached. Same reasoning as the dashboard.
+export const dynamic = 'force-dynamic'
 
 // v4 earnings view. Columns: Commitment / Pledged / Released.
 // The retired v3 contributions table (mentor/coach/cb/pl four-way split) is gone.
@@ -15,9 +19,14 @@ interface CommitmentEarning {
 }
 
 export default async function EarningsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // getUser() via SSR client reads the session cookie. Data reads go through
+  // the service client — see commit 0710ce4 for the full writeup. All
+  // queries are scoped by user.id; ownership is enforced at app layer.
+  const ssr = await createClient()
+  const { data: { user } } = await ssr.auth.getUser()
   if (!user) redirect('/login')
+
+  const supabase = createServiceClient()
 
   // All commitments the user has ever started. We include launch/active/
   // completed/abandoned so the practitioner can see the full arc of their

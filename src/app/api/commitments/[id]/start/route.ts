@@ -6,14 +6,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const db = createServiceClient()
+  const ssr = await createClient()
+  const { data: { user } } = await ssr.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // getUser() via SSR, data ops via service client — see 0710ce4 writeup.
+  const db = createServiceClient()
 
   const { statement } = await request.json()
 
-  const { data: commitment } = await supabase
+  const { data: commitment } = await db
     .from('commitments')
     .select('id, status, title')
     .eq('id', id).eq('user_id', user.id).single()
@@ -25,8 +27,9 @@ export async function POST(
   const streakEndsAt = new Date(now)
   streakEndsAt.setUTCDate(streakEndsAt.getUTCDate() + 90)
 
-  // Flip to active, set streak_starts_at to now
-  const { error } = await supabase
+  // Flip to active, set streak_starts_at to now. user_id filter protects
+  // the service-client write: we only update rows owned by this user.
+  const { error } = await db
     .from('commitments')
     .update({
       status: 'active',
@@ -34,6 +37,7 @@ export async function POST(
       streak_ends_at: streakEndsAt.toISOString(),
     })
     .eq('id', id)
+    .eq('user_id', user.id)
 
   if (error) return NextResponse.json({ error: 'Failed to start commitment.' }, { status: 500 })
 

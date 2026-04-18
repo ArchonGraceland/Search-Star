@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export type Stage =
   | { step: 1 }                          // no practice
@@ -8,10 +8,19 @@ export type Stage =
   | { step: 5; commitmentId: string }    // launch window (Companion intro seen)
   | { step: 6; commitmentId: string }    // active streak
 
+// getUser() reads the session cookie via the SSR client. Data reads run
+// through the service client — see commit 0710ce4 for the full root-cause
+// writeup. In brief: the SSR client's outbound Postgres queries sometimes
+// run unauthenticated, so RLS-gated tables like commitments silently
+// return zero rows. Every read below is filtered by user.id (which we've
+// verified from getUser()), so ownership is enforced at the application
+// layer — going through the service client is safe.
 export async function resolveStage(): Promise<Stage> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const ssr = await createClient()
+  const { data: { user } } = await ssr.auth.getUser()
   if (!user) return { step: 1 }
+
+  const supabase = createServiceClient()
 
   // Step 1: practice exists?
   const { data: practices } = await supabase

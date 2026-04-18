@@ -7,16 +7,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const db = createServiceClient()
-
+  const ssr = await createClient()
+  const { data: { user } } = await ssr.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // getUser() via SSR, data ops via service client — see 0710ce4 writeup.
+  // Writes below are scoped to the authenticated user.id.
+  const db = createServiceClient()
+
   // Verify the commitment belongs to the authenticated user
-  const { data: commitment, error: commitmentError } = await supabase
+  const { data: commitment, error: commitmentError } = await db
     .from('commitments')
     .select('id, status, sessions_logged, streak_starts_at')
     .eq('id', id)
@@ -33,7 +35,7 @@ export async function POST(
   const newSessionsLogged = (commitment.sessions_logged ?? 0) + 1
 
   // Insert the post
-  const { data: post, error: postError } = await supabase
+  const { data: post, error: postError } = await db
     .from('commitment_posts')
     .insert({
       commitment_id: id,
@@ -58,13 +60,14 @@ export async function POST(
     : commitment.status
 
   // Update sessions_logged (and possibly status)
-  await supabase
+  await db
     .from('commitments')
     .update({
       sessions_logged: newSessionsLogged,
       ...(newStatus !== commitment.status ? { status: newStatus } : {}),
     })
     .eq('id', id)
+    .eq('user_id', user.id)
 
   // Sponsor notification emails are added in Phase 2 (with the invitation flow).
   // v3's validator-notification path is retired along with the validator role.

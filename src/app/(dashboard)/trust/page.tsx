@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TrustControls } from './trust-controls'
 import { computeTrustForUser, type CompletedStreakSummary } from '@/lib/trust-compute'
@@ -80,11 +80,17 @@ function formatStreakRange(s: CompletedStreakSummary): string {
 }
 
 export default async function TrustPage() {
-  const supabase = await createClient()
+  // profiles + trust_records have public-read RLS, so those reads work fine
+  // through either client. But computeTrustForUser queries commitments and
+  // sponsorships, which need the service client (see 0710ce4 writeup).
+  // getUser() must use the SSR client to read the session cookie.
+  const ssr = await createClient()
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await ssr.auth.getUser()
   if (!user) redirect('/login')
+
+  const supabase = createServiceClient()
 
   const { data: profile } = await supabase
     .from('profiles')
