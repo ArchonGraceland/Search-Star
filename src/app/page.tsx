@@ -210,30 +210,24 @@ export default function HomePage() {
               Hear It Explained
             </p>
             <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '36px', fontWeight: 700, color: '#1a1a1a', marginBottom: '12px', lineHeight: 1.2, textAlign: 'center' }}>
-              Three narrations.
+              Two narrations.
             </h2>
             <p style={{ fontSize: '16px', color: '#5a5a5a', lineHeight: 1.7, textAlign: 'center', marginBottom: '48px', maxWidth: '560px', margin: '0 auto 48px' }}>
-              Written and recorded explanations of how Search Star works, why it exists, and how the economics are designed.
+              Short recorded explanations of how Search Star works, and why sponsors are the witnesses.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
               {[
                 {
-                  slug: 'video-01-90-day-commitment',
-                  title: 'What Is a 90-Day Commitment?',
-                  duration: '3:00',
-                  description: 'The commitment mechanic, the 14-day launch period, the start ritual, how sponsors work, and why 90 days.',
+                  slug: 'how-v4-works',
+                  title: 'How Search Star Works',
+                  duration: '3:58',
+                  description: 'The commitment, the launch window, sponsors as witnesses, the Companion, and how Trust grows.',
                 },
                 {
-                  slug: 'video-02-sponsorship-model',
-                  title: 'How the Sponsorship Model Works',
-                  duration: '3:12',
-                  description: 'Sponsors pledge during the launch window. You keep 100% of what you earn. A single optional 5% contribution at release supports Search Star.',
-                },
-                {
-                  slug: 'video-03-why-search-star',
-                  title: 'Why Search Star Exists',
-                  duration: '4:28',
-                  description: 'The garbage culture problem, formation versus performance, conscientiousness as the most important unverifiable trait, and trust as an action.',
+                  slug: 'sponsors-as-witnesses',
+                  title: 'Why Sponsors Are the Witnesses',
+                  duration: '3:46',
+                  description: 'Why money on the line is what makes vouching honest, and why any sponsor can veto a streak at any time.',
                 },
               ].map((item) => (
                 <div key={item.slug} style={{ background: '#ffffff', border: '1px solid #d4d4d4', borderRadius: '3px', overflow: 'hidden' }}>
