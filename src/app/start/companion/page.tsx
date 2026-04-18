@@ -8,6 +8,22 @@ export default async function StageCompanion() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Look up the user's active launch commitment so we can hand its id
+  // to the continue button and navigate directly to /start/launch/{id}
+  // after the companion step is acknowledged. Going direct bypasses the
+  // stage resolver and the Router Cache, both of which have caused users
+  // to bounce back to earlier stages in production.
+  const { data: commitment } = await supabase
+    .from('commitments')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'launch')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!commitment) redirect('/start')
+
   return (
     <StageShell stage={4}>
       <p style={{
@@ -82,7 +98,7 @@ export default async function StageCompanion() {
         </p>
       </div>
 
-      <CompanionContinueButton />
+      <CompanionContinueButton commitmentId={commitment.id} />
     </StageShell>
   )
 }

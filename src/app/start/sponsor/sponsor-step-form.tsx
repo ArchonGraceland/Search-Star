@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 interface Props {
@@ -8,7 +7,6 @@ interface Props {
 }
 
 export default function SponsorStepForm({ commitmentId }: Props) {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [dismissing, setDismissing] = useState(false)
@@ -46,8 +44,8 @@ export default function SponsorStepForm({ commitmentId }: Props) {
     setEmail('')
     // Small delay so the user sees confirmation.
     setTimeout(() => {
-      router.refresh()
-      router.push('/start')
+      // Hard navigation to the next stage, bypasses Router Cache.
+      window.location.assign('/start/companion')
     }, 900)
   }
 
@@ -60,8 +58,8 @@ export default function SponsorStepForm({ commitmentId }: Props) {
       setError('Could not record your choice. Try again.')
       return
     }
-    router.refresh()
-    router.push('/start')
+    // Hard navigation to the next stage, bypasses Router Cache.
+    window.location.assign('/start/companion')
   }
 
   return (

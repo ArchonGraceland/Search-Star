@@ -1,10 +1,12 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-export default function CompanionContinueButton() {
-  const router = useRouter()
+interface Props {
+  commitmentId: string
+}
+
+export default function CompanionContinueButton({ commitmentId }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -17,8 +19,10 @@ export default function CompanionContinueButton() {
       setError('Could not continue. Try again.')
       return
     }
-    router.refresh()
-    router.push('/start')
+    // Hard navigation direct to the launch page for this commitment.
+    // Skips both the stage resolver and the App Router cache, which have
+    // caused bounces back to earlier stages in production.
+    window.location.assign(`/start/launch/${commitmentId}`)
   }
 
   return (

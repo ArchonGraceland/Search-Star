@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import StageShell from '@/components/stage-shell'
 
@@ -14,7 +13,6 @@ const LABELS = [
 interface Category { id: string; name: string }
 
 export default function StagePractice() {
-  const router = useRouter()
   const [name, setName] = useState('')
   const [label, setLabel] = useState<'skill' | 'craft' | 'pursuit'>('skill')
   const [categoryId, setCategoryId] = useState('')
@@ -43,8 +41,9 @@ export default function StagePractice() {
     })
 
     if (res.ok) {
-      router.refresh()
-      router.push('/start')
+      // Hard navigation to the next stage to bypass the Router Cache.
+      // See /start/commitment for the full rationale.
+      window.location.assign('/start/commitment')
     } else {
       const data = await res.json()
       setError(data.error || 'Something went wrong.')

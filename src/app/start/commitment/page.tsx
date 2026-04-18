@@ -1,11 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import StageShell from '@/components/stage-shell'
 
 export default function StageCommitment() {
-  const router = useRouter()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily')
@@ -34,13 +32,18 @@ export default function StageCommitment() {
 
     const data = await res.json()
     if (res.ok && data.id) {
-      // refresh() invalidates the App Router's client-side cache so the
-      // subsequent navigation re-fetches the /start RSC payload. Without
-      // this, router.push('/start') can serve a cached "no commitment yet"
-      // decision from before we just created the commitment, redirecting
-      // the user right back to stage 2 with a blank form.
-      router.refresh()
-      router.push('/start')
+      // Hard browser navigation to the next stage. We previously tried
+      // router.refresh() + router.push('/start') through the resolver, but
+      // it didn't reliably land users on /start/sponsor in production —
+      // some combination of the Router Cache and RSC redirect semantics
+      // was still producing a bounce back to this page.
+      //
+      // window.location.assign() sidesteps every client-side cache layer
+      // and forces a fresh server roundtrip. And because /api/commitments
+      // returns the new commitment's id, we can route directly to the
+      // sponsor stage instead of going through the resolver — one less
+      // place for something to go wrong.
+      window.location.assign('/start/sponsor')
     } else {
       setError(data.error || data.detail || 'Something went wrong. Please try again.')
       setLoading(false)
