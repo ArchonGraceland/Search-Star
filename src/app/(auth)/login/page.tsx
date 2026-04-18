@@ -1,16 +1,30 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 
-export default function Login() {
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Surface errors arriving from /auth/callback as a visible notice instead
+  // of leaving users wondering why they landed on the login page. The
+  // callback redirects here with ?error=auth when a confirmation link
+  // is expired, malformed, or fails to verify.
+  useEffect(() => {
+    const urlError = searchParams.get('error')
+    if (urlError === 'auth') {
+      setError(
+        "We couldn't confirm that link. It may have expired or already been used. Sign in below, or request a new confirmation email."
+      )
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -154,5 +168,15 @@ export default function Login() {
       </div>
 
     </div>
+  )
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#f5f5f5' }} />
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }

@@ -19,10 +19,23 @@ export default function Signup() {
     setError(null)
 
     const supabase = createClient()
+    // emailRedirectTo pins where Supabase sends the user after they click
+    // the confirmation link. Without this, Supabase falls back to its
+    // project-level Site URL setting, which can route through a
+    // Supabase-hosted page that looks nothing like Search Star. Pointing
+    // at our own /auth/callback means the link, the verification, and the
+    // landing experience are all inside our domain and styled by us.
+    //
+    // The `{{ .ConfirmationURL }}` token in the email template will contain
+    // this URL with the Supabase token hash appended. Our /auth/confirm
+    // route then verifies that token and redirects to /start.
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
 
     if (error) {
