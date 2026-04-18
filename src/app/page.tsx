@@ -203,59 +203,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── Narration ── */}
-        <section className="py-20 px-6" style={{ background: '#f5f5f5', borderTop: '1px solid #d4d4d4' }}>
-          <div className="max-w-3xl mx-auto">
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', letterSpacing: '0.2em', color: '#1a3a6b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px', textAlign: 'center' }}>
-              Hear It Explained
-            </p>
-            <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '36px', fontWeight: 700, color: '#1a1a1a', marginBottom: '12px', lineHeight: 1.2, textAlign: 'center' }}>
-              Two narrations.
-            </h2>
-            <p style={{ fontSize: '16px', color: '#5a5a5a', lineHeight: 1.7, textAlign: 'center', marginBottom: '48px', maxWidth: '560px', margin: '0 auto 48px' }}>
-              Short recorded explanations of how Search Star works, and why sponsors are the witnesses.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-              {[
-                {
-                  slug: 'how-v4-works',
-                  title: 'How Search Star Works',
-                  duration: '3:58',
-                  description: 'The commitment, the launch window, sponsors as witnesses, the Companion, and how Trust grows.',
-                },
-                {
-                  slug: 'sponsors-as-witnesses',
-                  title: 'Why Sponsors Are the Witnesses',
-                  duration: '3:46',
-                  description: 'Why money on the line is what makes vouching honest, and why any sponsor can veto a streak at any time.',
-                },
-              ].map((item) => (
-                <div key={item.slug} style={{ background: '#ffffff', border: '1px solid #d4d4d4', borderRadius: '3px', overflow: 'hidden' }}>
-                  <video
-                    controls
-                    preload="metadata"
-                    style={{ width: '100%', display: 'block', background: '#1a3a6b', maxHeight: '480px' }}
-                    src={`/video/${item.slug}.mp4`}
-                  />
-                  <div style={{ padding: '24px 28px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
-                      <h3 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '21px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.2 }}>
-                        {item.title}
-                      </h3>
-                      <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#767676', flexShrink: 0, paddingTop: '3px' }}>
-                        {item.duration}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '15px', color: '#5a5a5a', lineHeight: 1.65, margin: 0 }}>
-                      {item.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* ── CTA ── */}
         <section className="py-24 px-6" style={{ background: '#1a3a6b' }}>
           <div className="max-w-2xl mx-auto text-center">
