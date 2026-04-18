@@ -43,6 +43,7 @@ export default function StagePractice() {
     })
 
     if (res.ok) {
+      router.refresh()
       router.push('/start')
     } else {
       const data = await res.json()

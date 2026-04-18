@@ -17,6 +17,7 @@ export default function CompanionContinueButton() {
       setError('Could not continue. Try again.')
       return
     }
+    router.refresh()
     router.push('/start')
   }
 

@@ -34,6 +34,12 @@ export default function StageCommitment() {
 
     const data = await res.json()
     if (res.ok && data.id) {
+      // refresh() invalidates the App Router's client-side cache so the
+      // subsequent navigation re-fetches the /start RSC payload. Without
+      // this, router.push('/start') can serve a cached "no commitment yet"
+      // decision from before we just created the commitment, redirecting
+      // the user right back to stage 2 with a blank form.
+      router.refresh()
       router.push('/start')
     } else {
       setError(data.error || data.detail || 'Something went wrong. Please try again.')

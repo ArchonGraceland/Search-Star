@@ -45,7 +45,10 @@ export default function SponsorStepForm({ commitmentId }: Props) {
     setSuccessMsg(`Invitation sent to ${clean}. Taking you to the next step…`)
     setEmail('')
     // Small delay so the user sees confirmation.
-    setTimeout(() => router.push('/start'), 900)
+    setTimeout(() => {
+      router.refresh()
+      router.push('/start')
+    }, 900)
   }
 
   async function handleDismiss() {
@@ -57,6 +60,7 @@ export default function SponsorStepForm({ commitmentId }: Props) {
       setError('Could not record your choice. Try again.')
       return
     }
+    router.refresh()
     router.push('/start')
   }
 
