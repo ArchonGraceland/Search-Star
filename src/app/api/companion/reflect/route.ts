@@ -216,8 +216,13 @@ export async function POST(request: Request) {
     // verbatim in the framing so the model doesn't have to guess which entry
     // is "the one." The full record still goes in as background below.
     const latestBody = (latestPost.body ?? '').trim()
+    // Same "Session 0 = start ritual" rule as formatSessionRecord below.
+    // The latest-post-framing needs to stay honest about what kind of
+    // post it's pointing the model at.
     const latestSessionLabel =
-      latestPost.session_number && latestPost.session_number > 0
+      latestPost.session_number === 0
+        ? 'the start ritual'
+        : latestPost.session_number && latestPost.session_number > 0
         ? `session ${latestPost.session_number}`
         : 'a session'
     const mediaNote =
@@ -346,15 +351,22 @@ function formatSessionRecord(
   const lines: string[] = []
   for (const post of posts) {
     const date = formatDate(post.posted_at)
-    const n = post.session_number ?? '?'
+    // session_number = 0 is the start-ritual post — a statement of intent
+    // the practitioner wrote when they declared the commitment. It is NOT
+    // a logged session and should not be counted as one. The /log UI
+    // renders it as "Start ritual" and so do we.
+    const label =
+      post.session_number === 0
+        ? 'Start ritual'
+        : `Session ${post.session_number ?? '?'}`
     const hasMedia = (post.media_urls?.length ?? 0) > 0
     const bodyText = (post.body ?? '').trim()
     const mediaNote = hasMedia ? ' (with media)' : ''
 
     if (bodyText.length === 0) {
-      lines.push(`Session ${n} — ${date}${mediaNote}: (no written entry)`)
+      lines.push(`${label} — ${date}${mediaNote}: (no written entry)`)
     } else {
-      lines.push(`Session ${n} — ${date}${mediaNote}:\n${bodyText}`)
+      lines.push(`${label} — ${date}${mediaNote}:\n${bodyText}`)
     }
   }
 

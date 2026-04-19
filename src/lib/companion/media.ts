@@ -92,21 +92,42 @@ export async function getOrFetchTranscript(
   }
 
   try {
-    // Pull the video bytes from Cloudinary, forward to Groq as multipart.
-    const videoRes = await fetch(videoUrl)
-    if (!videoRes.ok) {
-      console.error('Companion transcription: video fetch failed', {
+    // Groq's Whisper endpoint caps request bodies at 25 MB. A typical
+    // practitioner video uploaded from a phone is 20–40 MB because mp4
+    // bundles audio + video tracks + high-bitrate encoding. Sending the
+    // whole video fails with HTTP 413 on anything longer than about 15
+    // seconds, which is a regression against our product guidance ("keep
+    // videos under 15 seconds" is a suggestion, not a hard upload cap).
+    //
+    // Cloudinary's URL transforms include a video-to-audio extractor:
+    // rewriting a ".../video/upload/.../file.mp4" URL to ".mp3" on the
+    // tail makes Cloudinary ffmpeg-extract the audio track on the fly
+    // and cache it at the new URL. In practice the audio is 10–100x
+    // smaller than the source video — the 30 MB test video reduced to
+    // 266 KB of mp3. Whisper cares about audio anyway.
+    //
+    // Fallback: if the URL doesn't look like a Cloudinary delivery URL
+    // (unlikely in practice — all our uploads go through Cloudinary),
+    // fetch the original bytes and let Groq size-check it. Better to
+    // try and fail with a real error than to silently do nothing.
+    const transcodeUrl = buildAudioTranscodeUrl(videoUrl)
+    const audioRes = await fetch(transcodeUrl)
+    if (!audioRes.ok) {
+      console.error('Companion transcription: audio extract fetch failed', {
         postId,
-        status: videoRes.status,
+        transcodeUrl,
+        status: audioRes.status,
       })
       return UNAVAILABLE_PLACEHOLDER
     }
-    const videoBlob = await videoRes.blob()
+    const audioBlob = await audioRes.blob()
 
     const form = new FormData()
-    // Filename is cosmetic but Groq requires *something*; derive from URL.
-    const filename = videoUrl.split('/').pop()?.split('?')[0] || 'video.mp4'
-    form.append('file', videoBlob, filename)
+    // Filename drives Groq's content-type detection. Match the transcode
+    // extension so Groq parses the payload as mp3 rather than guessing
+    // from magic bytes.
+    const baseName = videoUrl.split('/').pop()?.split('?')[0]?.replace(/\.[^.]+$/, '') || 'audio'
+    form.append('file', audioBlob, `${baseName}.mp3`)
     form.append('model', GROQ_MODEL)
     form.append('response_format', 'json')
 
@@ -156,4 +177,45 @@ export async function getOrFetchTranscript(
     })
     return UNAVAILABLE_PLACEHOLDER
   }
+}
+
+// ---------------------------------------------------------------------------
+// Cloudinary video → audio URL transform
+// ---------------------------------------------------------------------------
+//
+// Cloudinary delivers uploaded videos at URLs like:
+//   https://res.cloudinary.com/<cloud>/video/upload/v<ver>/<folder>/<id>.mp4
+//
+// Changing the trailing extension to ".mp3" (and keeping the rest intact)
+// makes Cloudinary extract and serve just the audio track, transcoded to
+// mp3. First request triggers the transcode (a couple of seconds for a
+// short video); subsequent requests hit the CDN cache. No auth required
+// since our upload preset is unsigned and videos are publicly readable.
+//
+// Other Cloudinary extensions are accepted (webm, mov, etc.); we rewrite
+// any of them. Non-Cloudinary URLs — unlikely in practice, all our
+// uploads go through Cloudinary — are returned unchanged so the caller
+// falls through to the old behavior (fetch bytes, send to Groq, probably
+// 413, log, return placeholder). We don't try to detect "is this a
+// Cloudinary URL" structurally because the /video/upload/ path marker
+// is already enforced by isVideoUrl in src/lib/media.ts for any URL that
+// reached this point.
+
+function buildAudioTranscodeUrl(videoUrl: string): string {
+  // Rewrite the extension only if it looks like a real file extension on
+  // the path's last segment. Guard against query strings and fragments.
+  const hashIdx = videoUrl.indexOf('#')
+  const queryIdx = videoUrl.indexOf('?')
+  const cutIdx = Math.min(
+    hashIdx === -1 ? videoUrl.length : hashIdx,
+    queryIdx === -1 ? videoUrl.length : queryIdx
+  )
+  const pathPart = videoUrl.slice(0, cutIdx)
+  const tailPart = videoUrl.slice(cutIdx)
+  // Match the last dot-extension on the path. The `i` flag is cosmetic —
+  // Cloudinary lowercases extensions, but user-uploaded .MOV exists in
+  // the wild.
+  const extMatch = pathPart.match(/\.[a-zA-Z0-9]{2,5}$/)
+  if (!extMatch) return videoUrl
+  return `${pathPart.slice(0, -extMatch[0].length)}.mp3${tailPart}`
 }
