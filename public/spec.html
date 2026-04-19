@@ -139,6 +139,7 @@
       <a class="toc-indent" href="#companion-role">8.1 Role &amp; Purpose</a>
       <a class="toc-indent" href="#companion-authority">8.2 No Authority Over Trust</a>
       <a class="toc-indent" href="#companion-other">8.3 Other AI Surfaces</a>
+      <a class="toc-indent" href="#companion-video">8.4 The Companion on Video</a>
       <a href="#selforganizing">9. Self-Organizing Systems</a>
       <a class="toc-indent" href="#selforganizing-precedents">9.1 Precedents</a>
       <a class="toc-indent" href="#selforganizing-principles">9.2 Structural Principles</a>
@@ -755,8 +756,21 @@
 
       <p>When the spec or product copy refers to "the AI" it means whichever surface is relevant to that moment. When it refers to "the Companion" it means specifically the default, practitioner-facing surface described in <a href="#companion-role">§ 8.1</a>.</p>
 
+      <h3 id="companion-video">8.4 The Companion on Video</h3>
+      <p>Many practices on Search Star are naturally filmed — gym training, woodworking, cooking, instrument practice, running form, language pronunciation, any physical craft. The Companion's relationship to video is narrow and deliberate: <strong>it listens to what the practitioner said, and it does not grade what the practitioner did.</strong></p>
+
+      <p><strong>Voice-annotated video is the default pattern for visual practices.</strong> The practitioner narrates what they are doing while they film it. The narration is transcribed and becomes part of the session record the Companion reads. A statement like "squat, 8 at 225, last two felt heavy, my knee tracked okay" — said into the camera mid-set — is richer data than anything a vision model could extract from the footage itself, and it is accurate in a way inference over pixels cannot be. The Companion engages with that description specifically: quoting or paraphrasing what was said, asking a grounded question, noticing when the same complaint appears across three sessions.</p>
+
+      <p><strong>The Companion does not offer technical critique of execution from video.</strong> It cannot see joint angles, bar paths, knife technique, pronunciation boundaries, or grain direction at a precision that would make such critique honest. Flagging an egregious-looking breakdown and missing a subtler one is worse than not flagging at all — it teaches practitioners to distrust the Companion on the few things it could usefully say. If a practitioner asks directly about their form or technique, the Companion says plainly that it cannot assess execution from video and asks them what they notice themselves.</p>
+
+      <p>This is a product choice, not a technical limitation. Specialized tools exist for pose estimation, velocity-based training, and similar domain-specific analysis; those tools may appear on Search Star over time as dedicated surfaces with their own disclaimers and constraints. They will not be merged into the Companion. The Companion's value comes from being a steady attentive presence over weeks and months — noticing patterns, remembering what was said, asking good questions — not from acting as a referee for each individual set.</p>
+
+      <div class="callout callout-info">
+        <strong>The principle:</strong> The Companion earns its value by doing one thing well over long time horizons — attention, memory, questions. It does not reach for authority that belongs elsewhere. Over ninety days of sessions, noticing that squat volume plateaued six weeks ago and asking the practitioner what they think about that is more useful than any single video-frame form critique could be.
+      </div>
+
       <div class="callout callout-green">
-        <strong>Open questions (deferred):</strong> Naming (Companion vs. other options). Memory architecture across sessions, commitments, and years. Exact format of the day-90 sponsor summary. Whether and how the Companion surfaces to sponsors during the 90 days versus only at completion. These are product-design questions to be resolved as the Companion is built.
+        <strong>Open questions (deferred):</strong> Naming (Companion vs. other options). Exact format of the day-90 sponsor summary. Whether the Companion produces a mid-streak summary at, say, day 45 as well as the final one at day 90. Long-term memory architecture across commitments and years once a practitioner has completed several streaks. These are product-design questions to be resolved as the Companion matures.
       </div>
     </div>
 
