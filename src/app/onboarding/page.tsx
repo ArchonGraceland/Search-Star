@@ -161,7 +161,7 @@ export default function OnboardingPage() {
               The target payout and the sponsor mix.
             </h3>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75, marginBottom: '20px' }}>
-              The target payout for a completed 90-day streak is <strong>$2,500</strong> — spread across however many sponsors the practitioner gathered. Some practitioners will hit that in five pledges. Some in twenty. Any dollar amount from a real person in your life counts: a grandmother&apos;s $5 signals as strongly as a senior engineer&apos;s $500. The credibility signal is the number of sponsors who stayed present through the 90 days, not the total dollars. The scale differs; the structure is identical.
+              The target payout for a completed 90-day streak is <strong>$2,500</strong>{' '}— spread across however many sponsors the practitioner gathered. Some practitioners will hit that in five pledges. Some in twenty. Any dollar amount from a real person in your life counts: a grandmother&apos;s $5 signals as strongly as a senior engineer&apos;s $500. The credibility signal is the number of sponsors who stayed present through the 90 days, not the total dollars. The scale differs; the structure is identical.
             </p>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75 }}>
               Three kinds of sponsor can pledge, and the rules on how they combine are deliberate.
@@ -212,7 +212,7 @@ export default function OnboardingPage() {
                 What the Companion does not do
               </p>
               <p style={{ fontSize: '15px', color: '#3a3a3a', lineHeight: 1.7 }}>
-                The Companion does not grade your work, score your form, critique your technique from video, or cast a vote on whether your streak should complete. It holds <strong>no authority over the Trust record.</strong> Attestation belongs entirely to the sponsors who put money on the line. An AI that produced authoritative-sounding verdicts on the quality of someone&apos;s squats or the correctness of their joinery would corrode the whole model. The Companion&apos;s value comes from being a different kind of presence entirely — the one who has been watching and remembering, not the one who evaluates.
+                The Companion does not grade your work, score your form, critique your technique from video, or cast a vote on whether your streak should complete. It holds <strong>no authority over the Trust record.</strong>{' '}Attestation belongs entirely to the sponsors who put money on the line. An AI that produced authoritative-sounding verdicts on the quality of someone&apos;s squats or the correctness of their joinery would corrode the whole model. The Companion&apos;s value comes from being a different kind of presence entirely — the one who has been watching and remembering, not the one who evaluates.
               </p>
             </div>
 
