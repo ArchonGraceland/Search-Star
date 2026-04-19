@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { isVideoUrl } from '@/lib/media'
+import CompanionPanel from '@/components/companion-panel'
 
 interface Post {
   id: string
@@ -437,6 +438,12 @@ export default function LogClient({
                   </div>
                 </div>
               )}
+
+              {/* Companion — below the session evidence, above the three-jobs
+                  reminder. Rendered in dark variant to blend with the navy
+                  shell. /log is an active-only surface (status filter in
+                  page.tsx), so the default 'active' status is always correct. */}
+              <CompanionPanel commitmentId={commitmentId} variant="dark" status="active" />
 
               {/* Three jobs */}
               <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '3px', padding: '20px' }}>

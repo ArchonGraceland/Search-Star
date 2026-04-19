@@ -5,20 +5,26 @@ import { useState } from 'react'
 // CompanionPanel
 //
 // The practitioner's daily surface for the Companion. Rendered on /commit/[id]
-// below the session history, for launch and active commitments.
+// (light theme) and /log (dark theme on the navy shell), for launch and
+// active commitments.
 //
-// The collapsed-state copy adapts to the commitment status: during active the
-// Companion has read the session record, during launch there are no sessions
-// yet so the framing is forward-looking (what are you about to begin?). The
-// opening-reflection call itself is identical either way — the server side
-// picks the right system prompt from the commitment's status, so the client
-// just has to get the pre-open copy right.
+// Two theme variants live in the same component so the contract — collapsed
+// until tapped, opening reflection on first expand, single-column chat with
+// serif Companion voice, follow-up turns — cannot drift between surfaces.
+// The `variant` prop picks a `theme` object; every color/border/background
+// reads from there. Structure and behavior are identical either way.
+//
+// The collapsed-state copy adapts to the commitment status: during active
+// the Companion has read the session record, during launch there are no
+// sessions yet so the framing is forward-looking (what are you about to
+// begin?). The opening-reflection call itself is identical either way —
+// the server side picks the right system prompt from the commitment's
+// status, so the client just has to get the pre-open copy right.
 //
 // Visual conventions (worth calling out because they're deliberate):
 //
 // - The panel itself uses Roboto/sans for chrome (the eyebrow label, the
-//   expand button, error states, the input textarea) — same as the rest of
-//   the dashboard.
+//   expand button, error states, the input textarea).
 // - The Companion's own speech is Crimson Text serif at 16px with relaxed
 //   line-height. This is the visual equivalent of a different voice speaking.
 //   Every other text on the page is sans; when the Companion talks, the font
@@ -32,12 +38,84 @@ import { useState } from 'react'
 
 type ChatTurn = { role: 'user' | 'assistant'; content: string }
 
+type Theme = {
+  panelBg: string
+  panelBorder: string
+  panelAccent: string
+  eyebrow: string
+  collapsedCopy: string
+  userTurn: string
+  assistantTurn: string
+  loadingText: string
+  errorText: string
+  textareaBg: string
+  textareaBgDisabled: string
+  textareaBorder: string
+  textareaText: string
+  textareaPlaceholderClass: string
+  primaryBg: string
+  primaryBgDisabled: string
+  primaryText: string
+}
+
+const LIGHT_THEME: Theme = {
+  panelBg: '#fafaf8',
+  panelBorder: '1px solid #d4d4d4',
+  panelAccent: '3px solid #1a3a6b',
+  eyebrow: '#767676',
+  collapsedCopy: '#3a3a3a',
+  userTurn: '#3a3a3a',
+  assistantTurn: '#1a1a1a',
+  loadingText: '#b8b8b8',
+  errorText: '#991b1b',
+  textareaBg: '#fff',
+  textareaBgDisabled: '#f5f5f5',
+  textareaBorder: '1px solid #d4d4d4',
+  textareaText: '#1a1a1a',
+  textareaPlaceholderClass: 'companion-textarea-light',
+  primaryBg: '#1a3a6b',
+  primaryBgDisabled: '#b8b8b8',
+  primaryText: '#fff',
+}
+
+// Dark variant lives on the /log navy shell (#1a3a6b background). A solid
+// white panel would read as a popup, so the panel is a subtle translucent
+// lift of the navy, matching the tokens /log's other cards use
+// (rgba(255,255,255,0.06) bg, 0.1 border, 0.45 label). The primary button
+// inverts to white-on-navy-text to stay readable against the shell.
+const DARK_THEME: Theme = {
+  panelBg: 'rgba(255,255,255,0.06)',
+  panelBorder: '1px solid rgba(255,255,255,0.1)',
+  panelAccent: '3px solid rgba(255,255,255,0.5)',
+  eyebrow: 'rgba(255,255,255,0.45)',
+  collapsedCopy: 'rgba(255,255,255,0.75)',
+  userTurn: 'rgba(255,255,255,0.7)',
+  assistantTurn: '#ffffff',
+  loadingText: 'rgba(255,255,255,0.4)',
+  errorText: 'rgba(255,150,150,0.9)',
+  textareaBg: 'rgba(255,255,255,0.08)',
+  textareaBgDisabled: 'rgba(255,255,255,0.04)',
+  textareaBorder: '1px solid rgba(255,255,255,0.15)',
+  textareaText: '#ffffff',
+  textareaPlaceholderClass: 'companion-textarea-dark',
+  primaryBg: '#ffffff',
+  primaryBgDisabled: 'rgba(255,255,255,0.18)',
+  primaryText: '#1a3a6b',
+}
+
 interface CompanionPanelProps {
   commitmentId: string
   status?: 'launch' | 'active'
+  variant?: 'light' | 'dark'
 }
 
-export default function CompanionPanel({ commitmentId, status = 'active' }: CompanionPanelProps) {
+export default function CompanionPanel({
+  commitmentId,
+  status = 'active',
+  variant = 'light',
+}: CompanionPanelProps) {
+  const theme = variant === 'dark' ? DARK_THEME : LIGHT_THEME
+
   const [expanded, setExpanded] = useState(false)
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [loading, setLoading] = useState(false)
@@ -111,12 +189,12 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
   return (
     <div
       style={{
-        background: '#fafaf8',
-        border: '1px solid #d4d4d4',
-        borderLeft: '3px solid #1a3a6b',
+        background: theme.panelBg,
+        border: theme.panelBorder,
+        borderLeft: theme.panelAccent,
         borderRadius: '3px',
         padding: '20px 24px',
-        marginBottom: '40px',
+        marginBottom: variant === 'dark' ? '24px' : '40px',
       }}
     >
       <p
@@ -126,7 +204,7 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
           fontWeight: 700,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
-          color: '#767676',
+          color: theme.eyebrow,
           marginBottom: '12px',
           marginTop: 0,
         }}
@@ -140,7 +218,7 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
             style={{
               fontFamily: 'Roboto, sans-serif',
               fontSize: '14px',
-              color: '#3a3a3a',
+              color: theme.collapsedCopy,
               marginBottom: '14px',
               lineHeight: '1.5',
               marginTop: 0,
@@ -153,8 +231,8 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
           <button
             onClick={handleExpand}
             style={{
-              background: '#1a3a6b',
-              color: '#fff',
+              background: theme.primaryBg,
+              color: theme.primaryText,
               fontFamily: 'Roboto, sans-serif',
               fontSize: '13px',
               fontWeight: 700,
@@ -186,7 +264,7 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
                     style={{
                       fontFamily: 'Roboto, sans-serif',
                       fontSize: '14px',
-                      color: '#3a3a3a',
+                      color: theme.userTurn,
                       margin: 0,
                       lineHeight: '1.5',
                       whiteSpace: 'pre-wrap',
@@ -199,7 +277,7 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
                     style={{
                       fontFamily: "'Crimson Text', Georgia, serif",
                       fontSize: '16px',
-                      color: '#1a1a1a',
+                      color: theme.assistantTurn,
                       margin: 0,
                       lineHeight: '1.7',
                       whiteSpace: 'pre-wrap',
@@ -215,7 +293,7 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
                 style={{
                   fontFamily: 'Roboto, sans-serif',
                   fontSize: '13px',
-                  color: '#b8b8b8',
+                  color: theme.loadingText,
                   margin: 0,
                   fontStyle: 'italic',
                 }}
@@ -228,7 +306,7 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
                 style={{
                   fontFamily: 'Roboto, sans-serif',
                   fontSize: '13px',
-                  color: '#991b1b',
+                  color: theme.errorText,
                   margin: 0,
                 }}
               >
@@ -251,16 +329,18 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
               placeholder="Write to the Companion..."
               rows={3}
               disabled={loading}
+              className={theme.textareaPlaceholderClass}
               style={{
                 fontFamily: 'Roboto, sans-serif',
                 fontSize: '14px',
-                color: '#1a1a1a',
+                color: theme.textareaText,
                 padding: '10px 12px',
-                border: '1px solid #d4d4d4',
+                border: theme.textareaBorder,
                 borderRadius: '3px',
                 resize: 'vertical',
                 lineHeight: '1.5',
-                background: loading ? '#f5f5f5' : '#fff',
+                background: loading ? theme.textareaBgDisabled : theme.textareaBg,
+                outline: 'none',
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -269,8 +349,8 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
                 disabled={loading || draft.trim().length === 0}
                 style={{
                   background:
-                    loading || draft.trim().length === 0 ? '#b8b8b8' : '#1a3a6b',
-                  color: '#fff',
+                    loading || draft.trim().length === 0 ? theme.primaryBgDisabled : theme.primaryBg,
+                  color: theme.primaryText,
                   fontFamily: 'Roboto, sans-serif',
                   fontSize: '13px',
                   fontWeight: 700,
@@ -286,6 +366,13 @@ export default function CompanionPanel({ commitmentId, status = 'active' }: Comp
               </button>
             </div>
           </div>
+
+          {/* Inline styles can't target pseudo-elements, so the class hook
+              on the textarea above drives placeholder color per variant. */}
+          <style>{`
+            .companion-textarea-light::placeholder { color: #b8b8b8; }
+            .companion-textarea-dark::placeholder { color: rgba(255,255,255,0.3); }
+          `}</style>
         </>
       )}
     </div>
