@@ -65,7 +65,7 @@ export default function VisibilityPage() {
             <polygon points="6,32 24,36 20,32 24,28" fill="#fff" opacity="0.6"/>
             <circle cx="32" cy="32" r="3" fill="#fff"/>
           </svg>
-          <Link href="/" className="font-body text-xs font-medium tracking-[0.2em] uppercase text-white/60 no-underline hover:text-white/80">
+          <Link href="/home" className="font-body text-xs font-medium tracking-[0.2em] uppercase text-white/60 no-underline hover:text-white/80">
             Search Star
           </Link>
         </div>

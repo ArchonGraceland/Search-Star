@@ -12,7 +12,7 @@ export default function StageShell({ stage, children }: StageShellProps) {
       {/* Header */}
       <header style={{ background: '#1a3a6b', borderBottom: '3px solid #112a4f', padding: '16px 24px' }}>
         <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+          <Link href="/home" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
             <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style={{ width: 20, height: 20 }}>
               <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8"/>
               <polygon points="32,6 36,24 32,20 28,24" fill="#fff"/>

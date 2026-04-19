@@ -62,7 +62,7 @@ export default function InstitutionEnrollPage() {
     <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       {/* Portal header */}
       <header style={{ background: '#1a3a6b', borderBottom: '3px solid #112a4f', padding: '18px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '20px', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
+        <Link href="/home" style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '20px', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           Search Star
         </Link>
         <nav style={{ display: 'flex', gap: '4px' }}>

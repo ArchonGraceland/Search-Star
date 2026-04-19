@@ -40,7 +40,7 @@ export default function MobileNavToggle({ navLinks, displayName, children }: Pro
           padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)',
         }}>
           <div>
-            <Link href="/" style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '20px', fontWeight: 700, color: '#ffffff', textDecoration: 'none' }}>
+            <Link href="/home" style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '20px', fontWeight: 700, color: '#ffffff', textDecoration: 'none' }}>
               Search Star
             </Link>
             {displayName && (

@@ -200,9 +200,9 @@ export default function LogClient({
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             marginBottom: '28px',
           }}>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}>
+            <Link href="/home" style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', textDecoration: 'none' }}>
               Search Star
-            </span>
+            </Link>
             <Link href="/dashboard" style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>
               Dashboard
             </Link>
