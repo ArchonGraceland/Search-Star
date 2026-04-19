@@ -5,7 +5,14 @@ import { useState } from 'react'
 // CompanionPanel
 //
 // The practitioner's daily surface for the Companion. Rendered on /commit/[id]
-// below the session history, only when commitment.status === 'active'.
+// below the session history, for launch and active commitments.
+//
+// The collapsed-state copy adapts to the commitment status: during active the
+// Companion has read the session record, during launch there are no sessions
+// yet so the framing is forward-looking (what are you about to begin?). The
+// opening-reflection call itself is identical either way — the server side
+// picks the right system prompt from the commitment's status, so the client
+// just has to get the pre-open copy right.
 //
 // Visual conventions (worth calling out because they're deliberate):
 //
@@ -27,9 +34,10 @@ type ChatTurn = { role: 'user' | 'assistant'; content: string }
 
 interface CompanionPanelProps {
   commitmentId: string
+  status?: 'launch' | 'active'
 }
 
-export default function CompanionPanel({ commitmentId }: CompanionPanelProps) {
+export default function CompanionPanel({ commitmentId, status = 'active' }: CompanionPanelProps) {
   const [expanded, setExpanded] = useState(false)
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [loading, setLoading] = useState(false)
@@ -138,8 +146,9 @@ export default function CompanionPanel({ commitmentId }: CompanionPanelProps) {
               marginTop: 0,
             }}
           >
-            The Companion has read your session record. It can ask a question,
-            notice a pattern, or just listen if you want to think out loud.
+            {status === 'launch'
+              ? 'The Companion can talk through what you\u2019re about to begin \u2014 what you\u2019re committing to, how you\u2019d explain it to someone who doesn\u2019t know you, or what day 90 might look like.'
+              : 'The Companion has read your session record. It can ask a question, notice a pattern, or just listen if you want to think out loud.'}
           </p>
           <button
             onClick={handleExpand}
@@ -156,7 +165,7 @@ export default function CompanionPanel({ commitmentId }: CompanionPanelProps) {
               cursor: 'pointer',
             }}
           >
-            Reflect on my practice
+            {status === 'launch' ? 'Talk about what I\u2019m starting' : 'Reflect on my practice'}
           </button>
         </>
       ) : (

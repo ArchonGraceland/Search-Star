@@ -1,7 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type Anthropic from '@anthropic-ai/sdk'
-import { getAnthropic, COMPANION_MODEL, COMPANION_SYSTEM_PROMPT } from '@/lib/anthropic'
+import { getAnthropic, COMPANION_MODEL, COMPANION_SYSTEM_PROMPT, COMPANION_LAUNCH_SYSTEM_PROMPT } from '@/lib/anthropic'
 import { buildImageBlocks, getOrFetchTranscript } from '@/lib/companion/media'
 import { isVideoUrl } from '@/lib/media'
 
@@ -13,9 +13,11 @@ import { isVideoUrl } from '@/lib/media'
 // optionally with the in-session history so the Companion has conversational
 // context).
 //
-// Gated to active commitments only: the Companion is the teacher that walks
-// alongside the practice while it's happening. For commitments in 'launch',
-// there are no sessions yet to read; for 'completed' or 'abandoned', the
+// Allowed for launch and active commitments. During launch there are no
+// sessions yet, so the Companion opens with questions about what the
+// practitioner is about to begin (see COMPANION_LAUNCH_SYSTEM_PROMPT).
+// During active it reads the session record and responds to what the
+// practitioner has actually done. For 'completed' or 'abandoned', the
 // day-90 summary endpoint is the appropriate surface.
 //
 // Rate limit: 20 calls per user per hour, enforced via companion_rate_limit.
@@ -73,11 +75,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
   }
 
-  // Gate to active status. The Companion panel is only rendered on active
-  // commitments in the client, but the endpoint defends the same line.
-  if (commitment.status !== 'active') {
+  // Gate to launch or active status. During launch the Companion helps the
+  // practitioner get clearer about what they're about to begin; during
+  // active it reads the session record and responds. Completed and
+  // abandoned commitments belong to the day-90 summary endpoint, not here.
+  if (commitment.status !== 'active' && commitment.status !== 'launch') {
     return NextResponse.json(
-      { error: 'Companion reflection is available only during an active commitment.' },
+      { error: 'Companion reflection is available during launch and active commitments.' },
       { status: 403 }
     )
   }
@@ -160,40 +164,100 @@ export async function POST(request: Request) {
   const latestPost = posts[posts.length - 1]
   const latestImages = latestPost ? buildImageBlocks(latestPost.media_urls) : []
 
-  // Build the messages array. Two modes:
-  //   - Opening reflection: no user_message. The first user turn is the
-  //     session record (with any images from the latest post interleaved),
-  //     framed as a request for the Companion's opening.
-  //   - Follow-up: same first user turn, then a terse assistant ack, then
-  //     the prior in-session history (if any), then the new user message.
-  //     The session record stays at the top so the Companion always
-  //     re-orients on the actual practice.
+  // Is the latest post fresh enough that the Companion should anchor on it?
+  // Ten minutes is the window — covers posting, Cloudinary upload, transcript
+  // lag, and the practitioner tapping over to the Companion panel. Older
+  // than that and the practitioner has wandered back in for a second look,
+  // which reads better as "reflect on the record" than "respond to what
+  // I just said."
+  const LATEST_POST_FRESH_MS = 10 * 60 * 1000
+  const latestPostIsFresh =
+    !!latestPost &&
+    Date.now() - new Date(latestPost.posted_at).getTime() < LATEST_POST_FRESH_MS
+
+  // Status-aware system prompt. Launch has its own voice (§COMPANION_LAUNCH_SYSTEM_PROMPT)
+  // because there are no sessions yet — the Companion is helping the practitioner
+  // get clearer about what they're about to begin, not reflecting on what's done.
+  const systemPrompt =
+    commitment.status === 'launch'
+      ? COMPANION_LAUNCH_SYSTEM_PROMPT
+      : COMPANION_SYSTEM_PROMPT
+
+  // Build the messages array. Three modes:
+  //   - Opening reflection, latest post is fresh: the practitioner just posted.
+  //     Frame the turn as "respond to what was just said/shown"; demote the
+  //     rest of the record to background context.
+  //   - Opening reflection, no fresh post (cold open or no posts at all): the
+  //     practitioner opened the panel without a new session. Frame the turn
+  //     as "here is the record (or the commitment, during launch); respond
+  //     as the Companion."
+  //   - Follow-up: user_message is present. Same framing as the appropriate
+  //     opening mode above, then a terse assistant ack, then the prior
+  //     history, then the new user message.
   //
-  // Note: the first user turn is a content array (text + image blocks); all
-  // subsequent turns remain plain strings — they're conversational follow-ups
-  // that don't carry fresh media.
+  // The first user turn is a content array (text + image blocks). Subsequent
+  // turns are plain strings — they're conversational follow-ups that don't
+  // carry fresh media.
   type ContentBlock = Anthropic.Messages.TextBlockParam | Anthropic.Messages.ImageBlockParam
   type Msg =
     | { role: 'user' | 'assistant'; content: string }
     | { role: 'user'; content: ContentBlock[] }
   const messages: Msg[] = []
 
-  const recordHeader =
-    !user_message || user_message.trim().length === 0
+  const isOpening = !user_message || user_message.trim().length === 0
+
+  // Framing sentence for the first user turn. The wording differs by whether
+  // the practitioner just posted (respond to it), has an empty record but is
+  // in launch (respond to the commitment), or is replaying the record (respond
+  // to the record). The follow-up case re-uses whichever framing opened.
+  let framingText: string
+  if (latestPostIsFresh && latestPost) {
+    // Anchor the Companion on the latest post. Include body and transcript
+    // verbatim in the framing so the model doesn't have to guess which entry
+    // is "the one." The full record still goes in as background below.
+    const latestBody = (latestPost.body ?? '').trim()
+    const latestSessionLabel =
+      latestPost.session_number && latestPost.session_number > 0
+        ? `session ${latestPost.session_number}`
+        : 'a session'
+    const mediaNote =
+      (latestPost.media_urls?.length ?? 0) > 0
+        ? latestBody.includes('[video transcript:')
+          ? ' (with a video — the transcript is included in the body below)'
+          : ' (with an image — shown below)'
+        : ''
+    const bodyBlock =
+      latestBody.length > 0
+        ? `What the practitioner just posted${mediaNote}:\n\n${latestBody}`
+        : `The practitioner just posted ${latestSessionLabel}${mediaNote}, with no written body.`
+    const instruction = isOpening
+      ? 'Respond to what they just said or showed. Quote or paraphrase something specific from it, and engage with that as the Companion.'
+      : 'I may follow up with questions after this — stay grounded in what I just posted and the record below.'
+    framingText = `${bodyBlock}\n\n${instruction}\n\nFor context, here is the full session record (most recent last):`
+  } else if (commitment.status === 'launch') {
+    // Launch, cold open. No sessions to respond to; the subject is the
+    // commitment itself. formatSessionRecord already emits the title and
+    // description at the top and a "(No sessions logged yet.)" note.
+    framingText = isOpening
+      ? 'The practitioner has declared this commitment and is in the 14-day launch window before the streak begins. Respond as the Companion.'
+      : "The practitioner has declared this commitment and is in the launch window. I may follow up — stay grounded in what's here."
+  } else {
+    // Active, cold open. The record is the subject.
+    framingText = isOpening
       ? 'Below is the session record so far for this commitment. Respond as the Companion.'
       : "Below is the session record for this commitment. I may follow up with questions; stay grounded in what's here."
+  }
 
-  // Content array: intro → images from latest session (if any) → record text.
-  // Images sit between the framing sentence and the full record so they read
-  // as "here is what the practitioner most recently shared, alongside the
-  // written history."
+  // Content array: framing → images from latest post (if any) → full record.
+  // Images sit between the framing and the record so they read as "here is
+  // what the practitioner most recently shared, alongside the written history."
   const firstTurnContent: ContentBlock[] = [
-    { type: 'text', text: recordHeader },
+    { type: 'text', text: framingText },
     ...latestImages,
     { type: 'text', text: recordText },
   ]
 
-  if (!user_message || user_message.trim().length === 0) {
+  if (isOpening) {
     messages.push({ role: 'user', content: firstTurnContent })
   } else {
     messages.push({ role: 'user', content: firstTurnContent })
@@ -203,7 +267,7 @@ export async function POST(request: Request) {
     // shape the Companion's voice.
     messages.push({
       role: 'assistant',
-      content: "Got it — I've read the record.",
+      content: "Got it — I've read what you just posted and the record.",
     })
 
     // Include sanitized prior turns from the in-session history.
@@ -229,7 +293,7 @@ export async function POST(request: Request) {
     const response = await anthropic.messages.create({
       model: COMPANION_MODEL,
       max_tokens: 400,
-      system: COMPANION_SYSTEM_PROMPT,
+      system: systemPrompt,
       messages,
     })
 

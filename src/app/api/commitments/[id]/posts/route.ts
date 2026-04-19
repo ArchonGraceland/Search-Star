@@ -30,7 +30,17 @@ export async function POST(
   }
 
   const body = await request.json()
-  const { body: postBody } = body
+  const { body: postBody, media_urls: rawMediaUrls } = body
+
+  // Sanitize media_urls: accept only an array of non-empty strings.
+  // The /log client and /commit/[id] form both send `media_urls: [url]`
+  // after a Cloudinary upload. Prior to this commit the field was silently
+  // dropped here, so every post in production has an empty `media_urls`
+  // even when a photo or video was uploaded — visible in David's
+  // "Where did my camera links go?" session on 2026-04-18.
+  const mediaUrls: string[] = Array.isArray(rawMediaUrls)
+    ? rawMediaUrls.filter((u): u is string => typeof u === 'string' && u.length > 0)
+    : []
 
   const newSessionsLogged = (commitment.sessions_logged ?? 0) + 1
 
@@ -41,6 +51,7 @@ export async function POST(
       commitment_id: id,
       user_id: user.id,
       body: postBody?.trim() || null,
+      media_urls: mediaUrls,
       session_number: newSessionsLogged,
       posted_at: new Date().toISOString(),
     })

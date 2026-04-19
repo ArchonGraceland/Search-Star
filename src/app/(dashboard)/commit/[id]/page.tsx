@@ -1,9 +1,32 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import CompanionPanel from '@/components/companion-panel'
+import { isVideoUrl } from '@/lib/media'
+
+// Cloudinary direct-upload helper. Same pattern as src/app/log/client.tsx —
+// unsigned upload preset, video vs image routing, folder 'searchstar/sessions'.
+// Preset must be configured as unsigned in the Cloudinary dashboard.
+async function uploadToCloudinary(file: File): Promise<string> {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
+  const isVideo = file.type.startsWith('video/')
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('upload_preset', uploadPreset)
+  formData.append('folder', 'searchstar/sessions')
+  if (isVideo) formData.append('resource_type', 'video')
+  const endpoint = isVideo ? 'video' : 'image'
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${endpoint}/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) throw new Error('Upload failed')
+  const data = await res.json()
+  return data.secure_url as string
+}
 
 interface Practice {
   id: string
@@ -34,6 +57,7 @@ interface Post {
   body: string | null
   session_number: number
   posted_at: string
+  media_urls: string[] | null
 }
 
 interface SponsorStats {
@@ -178,6 +202,17 @@ export default function CommitDetailPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [loggedToday, setLoggedToday] = useState(false)
 
+  // Media upload state. Mirrors /log/client.tsx — one media item per post,
+  // preview via object URL while uploading, persisted Cloudinary URL on
+  // success. Hidden file inputs drive camera vs gallery selection; the
+  // preview replaces the buttons once something is picked.
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null)
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+  const [mediaIsVideo, setMediaIsVideo] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+
   const [sponsorStats, setSponsorStats] = useState<SponsorStats>({ total_pledged: 0, pledge_count: 0 })
   const [copied, setCopied] = useState(false)
 
@@ -223,17 +258,58 @@ export default function CommitDetailPage() {
     setShowContributionModal(true)
   }, [commitment, id, sponsorStats.total_pledged])
 
+  const handleMediaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const isVid = file.type.startsWith('video/')
+    setMediaIsVideo(isVid)
+    setSubmitError(null)
+    if (file.size > 50 * 1024 * 1024) {
+      setSubmitError(isVid ? 'Video too large — keep it under 15 seconds.' : 'Photo too large.')
+      e.target.value = ''
+      return
+    }
+    const objectUrl = URL.createObjectURL(file)
+    setMediaPreview(objectUrl)
+    setMediaUrl(null)
+    setUploading(true)
+    try {
+      const url = await uploadToCloudinary(file)
+      setMediaUrl(url)
+    } catch {
+      setSubmitError('Upload failed. Try again.')
+      setMediaPreview(null)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeMedia = () => {
+    setMediaUrl(null)
+    setMediaPreview(null)
+    setMediaIsVideo(false)
+    if (galleryInputRef.current) galleryInputRef.current.value = ''
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
+  }
+
+  const hasContent = sessionBody.trim().length > 0 || mediaUrl !== null
+
   const handleLogSession = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!hasContent || uploading) return
     setSubmitting(true)
     setSubmitError(null)
     const res = await fetch(`/api/commitments/${id}/posts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body: sessionBody }),
+      body: JSON.stringify({
+        body: sessionBody.trim() || undefined,
+        media_urls: mediaUrl ? [mediaUrl] : undefined,
+      }),
     })
     if (res.ok) {
       setSessionBody('')
+      removeMedia()
       await load()
     } else if (res.status === 409) {
       setLoggedToday(true)
@@ -481,6 +557,40 @@ export default function CommitDetailPage() {
                 onFocus={(e) => { e.target.style.borderColor = '#1a3a6b' }}
                 onBlur={(e) => { e.target.style.borderColor = '#d4d4d4' }}
               />
+
+              {/* Media preview — shows while uploading and after success */}
+              {mediaPreview && (
+                <div style={{ marginBottom: '12px', position: 'relative', display: 'inline-block' }}>
+                  {mediaIsVideo ? (
+                    <video src={mediaPreview} style={{ width: '160px', height: '120px', objectFit: 'cover', borderRadius: '3px', opacity: uploading ? 0.5 : 1, display: 'block', background: '#f0f0f0' }} muted playsInline />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={mediaPreview} alt="" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '3px', opacity: uploading ? 0.5 : 1, display: 'block', background: '#f0f0f0' }} />
+                  )}
+                  {uploading && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(26,58,107,0.2)', borderRadius: '3px' }}>
+                      <div className="commit-upload-spinner" />
+                    </div>
+                  )}
+                  {!uploading && (
+                    <>
+                      {mediaIsVideo && (
+                        <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.65)', borderRadius: '2px', padding: '2px 6px', fontFamily: 'Roboto, sans-serif', fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', color: '#fff' }}>
+                          VIDEO
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={removeMedia}
+                        style={{ position: 'absolute', top: '-8px', right: '-8px', width: '22px', height: '22px', borderRadius: '50%', background: '#1a3a6b', border: '2px solid #fff', color: '#fff', fontSize: '14px', lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+                      >
+                        ×
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
               {sessionBody.length > 0 && (
                 <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8', marginBottom: '12px', textAlign: 'right' }}>
                   {sessionBody.length}/1000
@@ -491,13 +601,89 @@ export default function CommitDetailPage() {
                   <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#991b1b', margin: 0 }}>{submitError}</p>
                 </div>
               )}
-              <button
-                type="submit"
-                disabled={submitting}
-                style={{ background: submitting ? '#8a9fc0' : '#1a3a6b', color: '#fff', fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em', padding: '10px 20px', borderRadius: '3px', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer' }}
-              >
-                {submitting ? 'Logging...' : 'Log session \u2192'}
-              </button>
+
+              {/* Hidden file inputs — one for the camera (capture=environment forces
+                  the rear camera on mobile), one for the gallery. */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*,video/*"
+                capture="environment"
+                onChange={handleMediaChange}
+                style={{ display: 'none' }}
+                id="commit-camera-input"
+              />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleMediaChange}
+                style={{ display: 'none' }}
+                id="commit-gallery-input"
+              />
+
+              {/* Controls row: camera + gallery on the left, submit on the right.
+                  Once media is picked the camera/gallery buttons collapse to a
+                  single "Replace" affordance — the preview already tells the
+                  practitioner what's attached. */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                {!mediaPreview && (
+                  <>
+                    <label htmlFor="commit-camera-input" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 14px', border: '1px solid #d4d4d4', borderRadius: '3px', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#5a5a5a', background: '#fafafa', userSelect: 'none' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                      </svg>
+                      Camera
+                    </label>
+                    <label htmlFor="commit-gallery-input" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 14px', border: '1px solid #d4d4d4', borderRadius: '3px', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#5a5a5a', background: '#fff', userSelect: 'none' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                      Gallery
+                    </label>
+                  </>
+                )}
+                {mediaPreview && !uploading && (
+                  <label htmlFor="commit-gallery-input" style={{ display: 'inline-flex', alignItems: 'center', padding: '7px 12px', border: '1px solid #d4d4d4', borderRadius: '3px', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#767676', background: '#fafafa', userSelect: 'none' }}>
+                    Replace
+                  </label>
+                )}
+
+                <div style={{ flex: 1 }} />
+
+                <button
+                  type="submit"
+                  disabled={submitting || uploading || !hasContent}
+                  style={{
+                    background: (submitting || uploading || !hasContent) ? '#8a9fc0' : '#1a3a6b',
+                    color: '#fff',
+                    fontFamily: 'Roboto, sans-serif',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    padding: '10px 20px',
+                    borderRadius: '3px',
+                    border: 'none',
+                    cursor: (submitting || uploading || !hasContent) ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {uploading ? 'Uploading\u2026' : submitting ? 'Logging\u2026' : 'Log session \u2192'}
+                </button>
+              </div>
+
+              <style>{`
+                @keyframes commit-spin { to { transform: rotate(360deg); } }
+                .commit-upload-spinner {
+                  width: 24px; height: 24px;
+                  border: 2px solid rgba(26,58,107,0.2);
+                  border-top-color: #1a3a6b;
+                  border-radius: 50%;
+                  animation: commit-spin 0.7s linear infinite;
+                }
+              `}</style>
             </form>
           )}
         </div>
@@ -537,10 +723,13 @@ export default function CommitDetailPage() {
         )}
       </div>
 
-      {/* Companion — active status only. See src/components/companion-panel.tsx
-          for voice and interaction design. */}
-      {commitment.status === 'active' && (
-        <CompanionPanel commitmentId={commitment.id} />
+      {/* Companion — available during launch and active. During launch the
+          panel's opening reflection uses COMPANION_LAUNCH_SYSTEM_PROMPT on
+          the server side (no sessions yet, so the conversation is about
+          what's about to begin). See src/components/companion-panel.tsx
+          for the voice and interaction design. */}
+      {(commitment.status === 'launch' || commitment.status === 'active') && (
+        <CompanionPanel commitmentId={commitment.id} status={commitment.status} />
       )}
 
       {/* Mark as complete — active status only */}
