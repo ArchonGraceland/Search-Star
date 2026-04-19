@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { SignOutButton } from './sign-out-button'
 
-// Shared chrome styles — used by both the auth-aware and static variants.
+// Shared chrome styles (also mirrored in public-header-static.tsx).
 const HEADER_STYLE: React.CSSProperties = { background: '#1a3a6b', borderBottom: '3px solid #112a4f', padding: '20px 24px' }
 const INNER_STYLE: React.CSSProperties = { maxWidth: '1120px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }
 const LOGO_STYLE: React.CSSProperties = { fontFamily: '"Crimson Text", Georgia, serif', fontSize: '22px', fontWeight: 700, color: '#ffffff', textDecoration: 'none', letterSpacing: '0.01em' }
@@ -11,7 +11,7 @@ const HOW_IT_WORKS_STYLE: React.CSSProperties = { ...NAV_LINK_BASE, color: 'rgba
 const SIGN_IN_STYLE: React.CSSProperties = { ...NAV_LINK_BASE, border: '1px solid rgba(255,255,255,0.3)', borderRadius: '3px', color: 'rgba(255,255,255,0.8)' }
 const PRIMARY_CTA_STYLE: React.CSSProperties = { ...NAV_LINK_BASE, background: '#ffffff', borderRadius: '3px', color: '#1a3a6b' }
 
-// PublicHeader — the default export. Server component, auth-aware.
+// PublicHeader — async server component, auth-aware.
 //
 // Renders chrome for public-facing pages: homepage (/ and /home), /onboarding,
 // /manifesto. A logged-out visitor sees "Sign In / Sign Up". A logged-in
@@ -23,11 +23,11 @@ const PRIMARY_CTA_STYLE: React.CSSProperties = { ...NAV_LINK_BASE, background: '
 // "How It Works" is visible in both states — returning users may still want
 // to re-read the explainer or share it.
 //
-// For client components that cannot render an async server component as
-// a child (notably the /sponsor/[id] and /sponsor/invited/[token] pledge
-// pages), use the named `PublicHeaderStatic` export instead. Those surfaces
-// are for external pledgers who typically aren't authenticated Search Star
-// users anyway, so the static "Sign In / Sign Up" chrome is fine there.
+// For client components ('use client') that cannot render an async server
+// component, use PublicHeaderStatic from '@/components/public-header-static'.
+// It must live in a separate file because named imports do not tree-shake
+// across the server/client boundary — importing anything from this file
+// would pull 'next/headers' (via supabase/server) into the client bundle.
 export default async function PublicHeader() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -61,37 +61,6 @@ export default async function PublicHeader() {
               </Link>
             </>
           )}
-        </nav>
-      </div>
-    </header>
-  )
-}
-
-// PublicHeaderStatic — synchronous variant for client components.
-//
-// Client components in Next.js App Router cannot render an async server
-// component as a direct child, so the auth-aware header above won't work
-// inside 'use client' pages. This static variant always shows the
-// logged-out nav (Sign In / Sign Up). Used on sponsor pledge pages, which
-// are typically visited by external pledgers who aren't signed in to
-// Search Star at all.
-export function PublicHeaderStatic() {
-  return (
-    <header style={HEADER_STYLE}>
-      <div style={INNER_STYLE}>
-        <Link href="/" style={LOGO_STYLE}>
-          Search Star
-        </Link>
-        <nav className="public-header-nav">
-          <Link href="/onboarding" className="nav-how-it-works" style={HOW_IT_WORKS_STYLE}>
-            How It Works
-          </Link>
-          <Link href="/login" style={SIGN_IN_STYLE}>
-            Sign In
-          </Link>
-          <Link href="/signup" style={PRIMARY_CTA_STYLE}>
-            Sign Up
-          </Link>
         </nav>
       </div>
     </header>

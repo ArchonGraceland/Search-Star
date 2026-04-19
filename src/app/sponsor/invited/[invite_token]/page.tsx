@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { PublicHeaderStatic as PublicHeader } from '@/components/public-header'
+import PublicHeader from '@/components/public-header-static'
 import StripePaymentForm from '@/components/stripe-payment-form'
 
 interface InvitationData {
