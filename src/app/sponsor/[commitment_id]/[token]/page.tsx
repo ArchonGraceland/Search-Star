@@ -10,8 +10,8 @@ interface Post {
   id: string
   body: string | null
   media_urls: string[] | null
-  session_number: number | null
   posted_at: string
+  is_session: boolean
 }
 
 function formatDate(iso: string): string {
@@ -49,13 +49,26 @@ export default async function SponsorFeed({
   if (!sponsorship) notFound()
 
   // Fetch the commitment with practitioner display_name and practice name.
+  type CommitmentFeedRow = {
+    id: string
+    status: string
+    started_at: string
+    user_id: string
+    practices: { name: string } | { name: string }[] | null
+  }
   const { data: commitment } = await supabase
     .from('commitments')
-    .select('id, status, streak_starts_at, streak_ends_at, user_id, practices(name)')
+    .select('id, status, started_at, user_id, practices(name)')
     .eq('id', commitment_id)
-    .single()
+    .single<CommitmentFeedRow>()
 
   if (!commitment) notFound()
+
+  // v4: streak_ends_at = started_at + 90 days (column retired).
+  const streakStartsAt = commitment.started_at
+  const streakEndsAt = commitment.started_at
+    ? new Date(new Date(commitment.started_at).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
+    : null
 
   // Get practitioner display name.
   const { data: profile } = await supabase
@@ -66,16 +79,20 @@ export default async function SponsorFeed({
 
   const practitionerName = profile?.display_name ?? 'the practitioner'
 
-  const practice = commitment.practices as { name: string } | { name: string }[] | null
+  const practice = commitment.practices
   const practiceName = practice
     ? (Array.isArray(practice) ? practice[0]?.name : practice.name) ?? null
     : null
 
   // Fetch the session post stream — chronological, oldest first.
+  // Filter to session-marked practitioner posts only; the feed sponsors
+  // see is the record, not the full chat.
   const { data: posts } = await supabase
-    .from('commitment_posts')
-    .select('id, body, media_urls, session_number, posted_at')
+    .from('room_messages')
+    .select('id, body, media_urls, posted_at, is_session')
     .eq('commitment_id', commitment_id)
+    .eq('message_type', 'practitioner_post')
+    .eq('is_session', true)
     .order('posted_at', { ascending: true })
 
   const postList: Post[] = (posts as Post[] | null) ?? []
@@ -85,7 +102,7 @@ export default async function SponsorFeed({
   // for an Anthropic call every time a sponsor visits during the
   // active streak. summarizeCommitment never throws; it returns
   // {ok:false,...} on failure so the page renders cleanly either way.
-  const summaryEligible = isDay90Reached(commitment.status, commitment.streak_ends_at)
+  const summaryEligible = isDay90Reached(commitment.status, streakEndsAt)
   const summaryResult = summaryEligible ? await summarizeCommitment(commitment_id) : null
 
   return (
@@ -115,7 +132,7 @@ export default async function SponsorFeed({
           </p>
         )}
         <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#767676', margin: '0 0 28px' }}>
-          {formatRange(commitment.streak_starts_at, commitment.streak_ends_at)}
+          {formatRange(streakStartsAt, streakEndsAt)}
         </p>
 
         {/* Pledge summary */}
@@ -193,7 +210,7 @@ export default async function SponsorFeed({
           <SponsorActions
             sponsorshipId={sponsorship.id}
             token={token}
-            canRelease={!!commitment.streak_ends_at && new Date(commitment.streak_ends_at) <= new Date()}
+            canRelease={!!streakEndsAt && new Date(streakEndsAt) <= new Date()}
             canVeto={true}
             practitionerName={practitionerName}
             pledgeAmount={Number(sponsorship.pledge_amount)}
@@ -217,7 +234,7 @@ export default async function SponsorFeed({
               <div key={post.id} style={{ background: '#ffffff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '18px 22px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px', gap: '12px', flexWrap: 'wrap' }}>
                   <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1a3a6b' }}>
-                    {post.session_number != null && post.session_number > 0 ? `Session ${post.session_number}` : 'Start ritual'}
+                    Session
                   </span>
                   <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#767676' }}>
                     {formatDate(post.posted_at)}

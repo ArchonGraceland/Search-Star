@@ -1,56 +1,13 @@
-import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  const ssr = await createClient()
-  const { data: { user } } = await ssr.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  // getUser() via SSR, data ops via service client — see 0710ce4 writeup.
-  const db = createServiceClient()
-
-  const { statement } = await request.json()
-
-  const { data: commitment } = await db
-    .from('commitments')
-    .select('id, status, title')
-    .eq('id', id).eq('user_id', user.id).single()
-
-  if (!commitment) return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
-  if (commitment.status !== 'launch') return NextResponse.json({ error: 'Commitment is not in launch status.' }, { status: 400 })
-
-  const now = new Date()
-  const streakEndsAt = new Date(now)
-  streakEndsAt.setUTCDate(streakEndsAt.getUTCDate() + 90)
-
-  // Flip to active, set streak_starts_at to now. user_id filter protects
-  // the service-client write: we only update rows owned by this user.
-  const { error } = await db
-    .from('commitments')
-    .update({
-      status: 'active',
-      streak_starts_at: now.toISOString(),
-      streak_ends_at: streakEndsAt.toISOString(),
-    })
-    .eq('id', id)
-    .eq('user_id', user.id)
-
-  if (error) return NextResponse.json({ error: 'Failed to start commitment.' }, { status: 500 })
-
-  // Log the ritual statement as the first session post
-  if (statement?.trim()) {
-    await db.from('commitment_posts').insert({
-      commitment_id: id,
-      user_id: user.id,
-      body: statement.trim(),
-      session_number: 0,
-      posted_at: now.toISOString(),
-    })
-  }
-
-  return NextResponse.json({ ok: true })
+// v4 Decision #8 retires the start ritual. A commitment's streak begins
+// immediately at declaration; there is no 14-day launch window between
+// creation and start, and no ritual statement post. This endpoint returns
+// 410 Gone so any stale clients call it once, see a clear response, and
+// stop. New clients route commitment creation straight through
+// POST /api/commitments which creates the commitment in 'active' status.
+export async function POST() {
+  return NextResponse.json({
+    error: 'Start ritual retired in v4. Declaration starts the streak.',
+  }, { status: 410 })
 }

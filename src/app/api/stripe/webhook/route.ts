@@ -94,11 +94,16 @@ export async function POST(request: Request) {
         }
 
         // Look up commitment + practitioner display info for email bodies.
+        type CommitmentStripeRow = {
+          id: string
+          user_id: string
+          practices: { name: string } | { name: string }[] | null
+        }
         const { data: commitment } = await db
           .from('commitments')
-          .select('id, title, user_id')
+          .select('id, user_id, practices(name)')
           .eq('id', sponsorship.commitment_id)
-          .maybeSingle()
+          .maybeSingle<CommitmentStripeRow>()
 
         if (!commitment) {
           console.error(
@@ -121,7 +126,11 @@ export async function POST(request: Request) {
         const sponsorFeedUrl = `https://www.searchstar.com/sponsor/${commitment.id}/${sponsorship.access_token}`
         const sponsorEmail = sponsorship.sponsor_email
         const sponsorName = sponsorship.sponsor_name ?? 'A sponsor'
-        const commitmentTitle = commitment.title ?? 'their commitment'
+        // v4: practice name serves as the commitment title (title column retired)
+        const practiceJoin = Array.isArray(commitment.practices)
+          ? commitment.practices[0]
+          : commitment.practices
+        const commitmentTitle = practiceJoin?.name ?? 'their commitment'
         const sponsorMessage = sponsorship.message
 
         // Sponsor confirmation email — copied verbatim (minus template

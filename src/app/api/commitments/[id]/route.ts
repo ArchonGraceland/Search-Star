@@ -1,18 +1,17 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+// v4 commitment detail GET. The title/description/frequency/launch_*/streak_*
+// columns are all retired (see 20260420_v4_rooms_and_messages). What remains:
+// id, status, started_at, room_id, created_at, completed_at, target_payout_amount.
+// The practice name substitutes for the old title. sessions_logged is computed
+// from room_messages.is_session=true. posts come from room_messages scoped to
+// this commitment with message_type='practitioner_post'.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  // getUser() reads the session cookie via the SSR client. Once we have a
-  // verified user id we route the data reads through the service client,
-  // same pattern as commit 0710ce4 — the SSR client's outbound Postgres
-  // queries intermittently run unauthenticated, silently returning zero
-  // rows for RLS-gated tables like commitments. The data query below is
-  // filtered by both id AND user_id, so going through the service client
-  // is safe: we're enforcing ownership at the application layer.
   const ssr = await createClient()
   const { data: { user } } = await ssr.auth.getUser()
 
@@ -24,10 +23,8 @@ export async function GET(
   const { data: commitment, error } = await supabase
     .from('commitments')
     .select(`
-      id, title, description, frequency, sessions_per_week,
-      status, launch_starts_at, launch_ends_at,
-      streak_starts_at, streak_ends_at, completed_at,
-      sessions_logged, created_at,
+      id, status, started_at, completed_at, created_at,
+      room_id, target_payout_amount,
       practices (id, name, label, skill_categories(name))
     `)
     .eq('id', id)
@@ -39,10 +36,17 @@ export async function GET(
   }
 
   const { data: posts } = await supabase
-    .from('commitment_posts')
-    .select('id, body, session_number, posted_at')
+    .from('room_messages')
+    .select('id, body, posted_at, is_session')
     .eq('commitment_id', id)
+    .eq('message_type', 'practitioner_post')
     .order('posted_at', { ascending: false })
 
-  return NextResponse.json({ commitment, posts: posts ?? [] })
+  // Compute sessions_logged as the count of is_session=true posts.
+  const sessionsLogged = (posts ?? []).filter((p) => p.is_session).length
+
+  return NextResponse.json({
+    commitment: { ...commitment, sessions_logged: sessionsLogged },
+    posts: posts ?? [],
+  })
 }

@@ -10,8 +10,8 @@ interface SponsorPageData {
   title: string
   practitioner_name: string
   practice_name: string | null
-  launch_ends_at: string
-  streak_ends_at: string
+  launch_ends_at: string | null
+  streak_ends_at: string | null
   total_pledged: number
   pledge_count: number
   status: string
@@ -190,7 +190,9 @@ export default function SponsorPage() {
               Streak ends
             </p>
             <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '24px', fontWeight: 700, color: '#1a3a6b', margin: 0 }}>
-              {new Date(data.streak_ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {data.streak_ends_at
+                ? new Date(data.streak_ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : '—'}
             </p>
           </div>
         </div>

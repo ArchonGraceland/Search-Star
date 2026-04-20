@@ -71,8 +71,8 @@ function formatDurabilityValue(days: number): string {
 }
 
 function formatStreakRange(s: CompletedStreakSummary): string {
-  if (!s.streak_starts_at || !s.completed_at) return ''
-  const start = new Date(s.streak_starts_at)
+  if (!s.started_at || !s.completed_at) return ''
+  const start = new Date(s.started_at)
   const end = new Date(s.completed_at)
   const fmt = (d: Date) =>
     d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })

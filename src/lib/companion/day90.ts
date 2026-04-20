@@ -39,7 +39,6 @@ const MAX_IMAGES_IN_SUMMARY = 6
 
 type PostRow = {
   id: string
-  session_number: number | null
   body: string | null
   media_urls: string[] | null
   posted_at: string
@@ -65,7 +64,10 @@ export async function summarizeCommitment(
 
   const { data: commitment, error: commErr } = await db
     .from('commitments')
-    .select('id, title, description, streak_starts_at, streak_ends_at')
+    .select(`
+      id, started_at, completed_at,
+      practices (name, label)
+    `)
     .eq('id', commitmentId)
     .single()
 
@@ -73,10 +75,17 @@ export async function summarizeCommitment(
     return { ok: false, error: 'Commitment not found.' }
   }
 
+  // Normalize Supabase's possibly-array join shape
+  const rawPractice = (commitment as unknown as { practices?: { name?: string | null; label?: string | null } | { name?: string | null; label?: string | null }[] }).practices
+  const practice = Array.isArray(rawPractice) ? rawPractice[0] : rawPractice
+  const practiceName = practice?.name ?? null
+
   const { data: postsData, error: postsErr } = await db
-    .from('commitment_posts')
-    .select('id, session_number, body, media_urls, posted_at, transcript')
+    .from('room_messages')
+    .select('id, body, media_urls, posted_at, transcript')
     .eq('commitment_id', commitmentId)
+    .eq('message_type', 'practitioner_post')
+    .eq('is_session', true)
     .order('posted_at', { ascending: true })
 
   if (postsErr) {
@@ -120,11 +129,17 @@ export async function summarizeCommitment(
     })
   )
 
+  // Compute a notional streak-end for the header block. In v4 the
+  // streak_ends_at column is retired; day-90 is started_at + 90 days.
+  const streakEndsAt = commitment.started_at
+    ? new Date(new Date(commitment.started_at).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
+    : null
+
   const { record, truncated } = formatRecord(
-    commitment.title,
-    commitment.description,
-    commitment.streak_starts_at,
-    commitment.streak_ends_at,
+    practiceName,
+    null, // description is retired in v4; practice name is the commitment statement
+    commitment.started_at,
+    streakEndsAt,
     posts
   )
 
@@ -206,25 +221,25 @@ export function isDay90Reached(
 // ---------------------------------------------------------------------------
 
 function formatRecord(
-  title: string | null,
+  practiceName: string | null,
   description: string | null,
-  streakStartsAt: string | null,
+  startedAt: string | null,
   streakEndsAt: string | null,
   posts: PostRow[]
 ): { record: string; truncated: boolean } {
   const headerLines: string[] = []
-  if (title) headerLines.push(`Commitment: ${title}`)
+  if (practiceName) headerLines.push(`Commitment: ${practiceName}`)
   if (description) headerLines.push(`What the practitioner named it for: ${description}`)
-  if (streakStartsAt && streakEndsAt) {
+  if (startedAt && streakEndsAt) {
     headerLines.push(
-      `Streak window: ${dateOnly(streakStartsAt)} → ${dateOnly(streakEndsAt)}`
+      `Streak window: ${dateOnly(startedAt)} → ${dateOnly(streakEndsAt)}`
     )
   }
   headerLines.push(`Total sessions logged: ${posts.length}`)
 
-  const sessionLines: string[] = posts.map((post) => {
+  const sessionLines: string[] = posts.map((post, idx) => {
     const date = dateOnly(post.posted_at)
-    const n = post.session_number ?? '?'
+    const n = idx + 1 // session number is computed from chronological order now
     const hasMedia = (post.media_urls?.length ?? 0) > 0
     const mediaNote = hasMedia ? ' (with media)' : ''
     const bodyText = (post.body ?? '').trim()

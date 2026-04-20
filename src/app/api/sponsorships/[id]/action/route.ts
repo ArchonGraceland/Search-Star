@@ -74,16 +74,36 @@ export async function POST(
     )
   }
 
-  // Load the commitment to check timing and status.
+  // Load the commitment to check timing and status. v4: streak_ends is
+  // computed from started_at + 90d (streak_ends_at column retired).
+  type CommitmentActionRow = {
+    id: string
+    status: string
+    user_id: string
+    started_at: string
+    practices: { name: string } | { name: string }[] | null
+  }
   const { data: commitment } = await db
     .from('commitments')
-    .select('id, title, status, user_id, streak_ends_at')
+    .select('id, status, user_id, started_at, practices(name)')
     .eq('id', sponsorship.commitment_id)
-    .single()
+    .single<CommitmentActionRow>()
 
   if (!commitment) {
     return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
   }
+
+  // practiceName serves as the commitment title in all downstream copy —
+  // the v3 commitments.title column is retired; practice name IS the
+  // declared commitment statement (see 20260420_v4_rooms_and_messages).
+  const practiceJoin = Array.isArray(commitment.practices)
+    ? commitment.practices[0]
+    : commitment.practices
+  const practiceName = practiceJoin?.name ?? 'their practice'
+
+  const streakEndsAt = commitment.started_at
+    ? new Date(new Date(commitment.started_at).getTime() + 90 * 24 * 60 * 60 * 1000)
+    : null
 
   const now = new Date()
 
@@ -95,7 +115,7 @@ export async function POST(
         { status: 409 }
       )
     }
-    if (!commitment.streak_ends_at || new Date(commitment.streak_ends_at) > now) {
+    if (!streakEndsAt || streakEndsAt > now) {
       return NextResponse.json(
         { error: 'The streak has not reached day 90 yet.' },
         { status: 409 }
@@ -360,7 +380,7 @@ export async function POST(
                 Your commitment has ended
               </h2>
               <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.65; color: #3a3a3a; margin: 0 0 16px;">
-                <strong>${sponsorship.sponsor_name}</strong> has vetoed your commitment <em>&ldquo;${commitment.title}&rdquo;</em>. Per the no-escape-hatch principle, any single sponsor veto ends the streak. No payment has been taken from any sponsor.
+                <strong>${sponsorship.sponsor_name}</strong> has vetoed your commitment <em>&ldquo;${practiceName}&rdquo;</em>. Per the no-escape-hatch principle, any single sponsor veto ends the streak. No payment has been taken from any sponsor.
               </p>
               ${note?.trim() ? `<div style="background: #f5f5f5; border-left: 3px solid #991b1b; padding: 14px 18px; margin: 0 0 20px; border-radius: 2px;"><p style="font-family: Arial, sans-serif; font-size: 13px; color: #3a3a3a; margin: 0; font-style: italic;">&ldquo;${note.trim()}&rdquo;</p></div>` : ''}
               <p style="font-family: Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #767676; margin: 0;">
@@ -369,7 +389,7 @@ export async function POST(
             </div>
           </div>
         `,
-        text: `${sponsorship.sponsor_name} has vetoed your commitment "${commitment.title}". Any single sponsor veto ends the streak. No payment has been taken.${note?.trim() ? `\n\nReason: "${note.trim()}"` : ''}`,
+        text: `${sponsorship.sponsor_name} has vetoed your commitment "${practiceName}". Any single sponsor veto ends the streak. No payment has been taken.${note?.trim() ? `\n\nReason: "${note.trim()}"` : ''}`,
       })
     }
 
@@ -398,7 +418,7 @@ export async function POST(
                   The commitment has ended
                 </h2>
                 <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.65; color: #3a3a3a; margin: 0 0 16px;">
-                  Another sponsor of <em>&ldquo;${commitment.title}&rdquo;</em> by ${practitionerName} has vetoed, ending the commitment. On Search Star, any single sponsor veto ends the streak. No payment has been taken from your pledge.
+                  Another sponsor of <em>&ldquo;${practiceName}&rdquo;</em> by ${practitionerName} has vetoed, ending the commitment. On Search Star, any single sponsor veto ends the streak. No payment has been taken from your pledge.
                 </p>
                 <p style="font-family: Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #767676; margin: 0;">
                   Thank you for being willing to witness.
@@ -406,7 +426,7 @@ export async function POST(
               </div>
             </div>
           `,
-          text: `Another sponsor of "${commitment.title}" by ${practitionerName} has vetoed, ending the commitment. No payment has been taken from your pledge.`,
+          text: `Another sponsor of "${practiceName}" by ${practitionerName} has vetoed, ending the commitment. No payment has been taken from your pledge.`,
         })
       } catch (err) {
         console.error('Failed to notify sponsor of veto:', err)

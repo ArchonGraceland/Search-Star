@@ -19,7 +19,7 @@
 //                 and reliability
 //   Breadth     — count of distinct skill categories across completed streaks
 //   Durability  — calendar days between the oldest completed streak's
-//                 streak_starts_at and the most recent's completed_at
+//                 started_at and the most recent's completed_at
 //
 // All numbers here are v1 CALIBRATIONS — notional until real completion data
 // accumulates. The algorithm is intentionally transparent so that admins can
@@ -158,7 +158,7 @@ export interface CompletedStreakSummary {
   commitment_id: string
   practice_name: string | null
   category_id: string | null
-  streak_starts_at: string | null
+  started_at: string | null
   completed_at: string | null
   sponsor_count: number
   distinct_domains: number
@@ -195,7 +195,7 @@ export async function computeTrustForUser(
   const { data: commitments } = await db
     .from('commitments')
     .select(
-      'id, status, streak_starts_at, completed_at, practice_id, practices(id, name, category_id)',
+      'id, status, started_at, completed_at, practice_id, practices(id, name, category_id)',
     )
     .eq('user_id', userId)
     .eq('status', 'completed')
@@ -367,7 +367,7 @@ export async function computeTrustForUser(
       commitment_id: c.id,
       practice_name: practice?.name ?? null,
       category_id: practice?.category_id ?? null,
-      streak_starts_at: c.streak_starts_at,
+      started_at: c.started_at,
       completed_at: c.completed_at,
       sponsor_count: sponsorCount,
       distinct_domains: distinctDomains,
@@ -382,7 +382,7 @@ export async function computeTrustForUser(
   let durabilityDays = 0
   if (streakDetails.length > 0) {
     const starts = streakDetails
-      .map((s) => s.streak_starts_at)
+      .map((s) => s.started_at)
       .filter((x): x is string => !!x)
       .map((s) => new Date(s).getTime())
     const ends = streakDetails

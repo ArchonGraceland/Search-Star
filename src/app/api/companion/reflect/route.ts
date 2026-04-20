@@ -1,7 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type Anthropic from '@anthropic-ai/sdk'
-import { getAnthropic, COMPANION_MODEL, COMPANION_SYSTEM_PROMPT, COMPANION_LAUNCH_SYSTEM_PROMPT } from '@/lib/anthropic'
+import { getAnthropic, COMPANION_MODEL, COMPANION_SYSTEM_PROMPT } from '@/lib/anthropic'
 import { buildImageBlocks, getOrFetchTranscript } from '@/lib/companion/media'
 import { isVideoUrl } from '@/lib/media'
 
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   // Load the commitment and confirm the caller owns it.
   const { data: commitment, error: commErr } = await db
     .from('commitments')
-    .select('id, user_id, status, title, description')
+    .select(`id, user_id, status, practices(name)`)
     .eq('id', commitment_id)
     .eq('user_id', user.id)
     .single()
@@ -75,16 +75,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
   }
 
-  // Gate to launch or active status. During launch the Companion helps the
-  // practitioner get clearer about what they're about to begin; during
-  // active it reads the session record and responds. Completed and
-  // abandoned commitments belong to the day-90 summary endpoint, not here.
-  if (commitment.status !== 'active' && commitment.status !== 'launch') {
+  // v4 Decision #8: the 'launch' status is retired. Only 'active' commitments
+  // get reflect. Completed/vetoed/abandoned belong to the day-90 summary.
+  if (commitment.status !== 'active') {
     return NextResponse.json(
-      { error: 'Companion reflection is available during launch and active commitments.' },
+      { error: 'Companion reflection is available during active commitments.' },
       { status: 403 }
     )
   }
+
+  const rawPractice = (commitment as unknown as { practices?: { name?: string | null } | { name?: string | null }[] }).practices
+  const practice = Array.isArray(rawPractice) ? rawPractice[0] : rawPractice
+  const practiceName = practice?.name ?? null
 
   // Rate limit check + increment. Keyed on (user_id, hour_bucket) where the
   // bucket is the current hour truncated. An upsert with an increment is
@@ -120,9 +122,11 @@ export async function POST(request: Request) {
   // Load the most recent sessions, sort chronologically for the model.
   // `id` and `transcript` pulled so we can cache Whisper output per post.
   const { data: recentPosts } = await db
-    .from('commitment_posts')
-    .select('id, session_number, body, media_urls, posted_at, transcript')
+    .from('room_messages')
+    .select('id, body, media_urls, posted_at, transcript')
     .eq('commitment_id', commitment_id)
+    .eq('message_type', 'practitioner_post')
+    .eq('is_session', true)
     .order('posted_at', { ascending: false })
     .limit(MAX_SESSIONS_IN_CONTEXT)
 
@@ -152,8 +156,8 @@ export async function POST(request: Request) {
   )
 
   const recordText = formatSessionRecord(
-    commitment.title,
-    commitment.description,
+    practiceName,
+    null,
     posts
   )
 
@@ -175,13 +179,8 @@ export async function POST(request: Request) {
     !!latestPost &&
     Date.now() - new Date(latestPost.posted_at).getTime() < LATEST_POST_FRESH_MS
 
-  // Status-aware system prompt. Launch has its own voice (§COMPANION_LAUNCH_SYSTEM_PROMPT)
-  // because there are no sessions yet — the Companion is helping the practitioner
-  // get clearer about what they're about to begin, not reflecting on what's done.
-  const systemPrompt =
-    commitment.status === 'launch'
-      ? COMPANION_LAUNCH_SYSTEM_PROMPT
-      : COMPANION_SYSTEM_PROMPT
+  // v4 Decision #8: there is no launch window. Always use the active prompt.
+  const systemPrompt = COMPANION_SYSTEM_PROMPT
 
   // Build the messages array. Three modes:
   //   - Opening reflection, latest post is fresh: the practitioner just posted.
@@ -207,24 +206,15 @@ export async function POST(request: Request) {
   const isOpening = !user_message || user_message.trim().length === 0
 
   // Framing sentence for the first user turn. The wording differs by whether
-  // the practitioner just posted (respond to it), has an empty record but is
-  // in launch (respond to the commitment), or is replaying the record (respond
-  // to the record). The follow-up case re-uses whichever framing opened.
+  // the practitioner just posted (respond to it) or is replaying the record
+  // (respond to the record). The follow-up case re-uses whichever framing
+  // opened.
   let framingText: string
   if (latestPostIsFresh && latestPost) {
     // Anchor the Companion on the latest post. Include body and transcript
     // verbatim in the framing so the model doesn't have to guess which entry
     // is "the one." The full record still goes in as background below.
     const latestBody = (latestPost.body ?? '').trim()
-    // Same "Session 0 = start ritual" rule as formatSessionRecord below.
-    // The latest-post-framing needs to stay honest about what kind of
-    // post it's pointing the model at.
-    const latestSessionLabel =
-      latestPost.session_number === 0
-        ? 'the start ritual'
-        : latestPost.session_number && latestPost.session_number > 0
-        ? `session ${latestPost.session_number}`
-        : 'a session'
     const mediaNote =
       (latestPost.media_urls?.length ?? 0) > 0
         ? latestBody.includes('[video transcript:')
@@ -234,18 +224,11 @@ export async function POST(request: Request) {
     const bodyBlock =
       latestBody.length > 0
         ? `What the practitioner just posted${mediaNote}:\n\n${latestBody}`
-        : `The practitioner just posted ${latestSessionLabel}${mediaNote}, with no written body.`
+        : `The practitioner just posted a session${mediaNote}, with no written body.`
     const instruction = isOpening
       ? 'Respond to what they just said or showed. Quote or paraphrase something specific from it, and engage with that as the Companion.'
       : 'I may follow up with questions after this — stay grounded in what I just posted and the record below.'
     framingText = `${bodyBlock}\n\n${instruction}\n\nFor context, here is the full session record (most recent last):`
-  } else if (commitment.status === 'launch') {
-    // Launch, cold open. No sessions to respond to; the subject is the
-    // commitment itself. formatSessionRecord already emits the title and
-    // description at the top and a "(No sessions logged yet.)" note.
-    framingText = isOpening
-      ? 'The practitioner has declared this commitment and is in the 14-day launch window before the streak begins. Respond as the Companion.'
-      : "The practitioner has declared this commitment and is in the launch window. I may follow up — stay grounded in what's here."
   } else {
     // Active, cold open. The record is the subject.
     framingText = isOpening
@@ -326,7 +309,6 @@ export async function POST(request: Request) {
 
 type PostRow = {
   id: string
-  session_number: number | null
   body: string | null
   media_urls: string[] | null
   posted_at: string
@@ -334,12 +316,12 @@ type PostRow = {
 }
 
 function formatSessionRecord(
-  title: string | null,
+  practiceName: string | null,
   description: string | null,
   posts: PostRow[]
 ): string {
   const header: string[] = []
-  if (title) header.push(`Commitment: ${title}`)
+  if (practiceName) header.push(`Commitment: ${practiceName}`)
   if (description) header.push(`What the practitioner named it for: ${description}`)
 
   if (posts.length === 0) {
@@ -349,16 +331,10 @@ function formatSessionRecord(
   }
 
   const lines: string[] = []
-  for (const post of posts) {
+  posts.forEach((post, idx) => {
     const date = formatDate(post.posted_at)
-    // session_number = 0 is the start-ritual post — a statement of intent
-    // the practitioner wrote when they declared the commitment. It is NOT
-    // a logged session and should not be counted as one. The /log UI
-    // renders it as "Start ritual" and so do we.
-    const label =
-      post.session_number === 0
-        ? 'Start ritual'
-        : `Session ${post.session_number ?? '?'}`
+    // session_number is now computed from chronological order (oldest → newest).
+    const label = `Session ${idx + 1}`
     const hasMedia = (post.media_urls?.length ?? 0) > 0
     const bodyText = (post.body ?? '').trim()
     const mediaNote = hasMedia ? ' (with media)' : ''
@@ -368,7 +344,7 @@ function formatSessionRecord(
     } else {
       lines.push(`${label} — ${date}${mediaNote}:\n${bodyText}`)
     }
-  }
+  })
 
   return [...header, '', 'Session record:', '', lines.join('\n\n')].join('\n')
 }

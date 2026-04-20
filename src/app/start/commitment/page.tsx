@@ -32,18 +32,10 @@ export default function StageCommitment() {
 
     const data = await res.json()
     if (res.ok && data.id) {
-      // Hard browser navigation to the next stage. We previously tried
-      // router.refresh() + router.push('/start') through the resolver, but
-      // it didn't reliably land users on /start/sponsor in production —
-      // some combination of the Router Cache and RSC redirect semantics
-      // was still producing a bounce back to this page.
-      //
-      // window.location.assign() sidesteps every client-side cache layer
-      // and forces a fresh server roundtrip. And because /api/commitments
-      // returns the new commitment's id, we can route directly to the
-      // sponsor stage instead of going through the resolver — one less
-      // place for something to go wrong.
-      window.location.assign('/start/sponsor')
+      // v4 Decision #8: after declaration the practitioner lands directly in
+      // their room, where the sponsor-invite surface now lives. The prior
+      // /start/sponsor page is retired.
+      window.location.assign(`/room/${data.room_id}`)
     } else {
       setError(data.error || data.detail || 'Something went wrong. Please try again.')
       setLoading(false)

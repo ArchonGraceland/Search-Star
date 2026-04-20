@@ -19,12 +19,12 @@ export default async function StartPage() {
 
   const stage = await resolveStage()
 
+  // v4 Decision #8 simplification: three stages → three destinations.
+  // Step 3 takes the practitioner directly into their room, where the
+  // sponsor-invite surface now lives.
   if (stage.step === 1) redirect('/start/practice')
   if (stage.step === 2) redirect('/start/commitment')
-  if (stage.step === 3) redirect('/start/sponsor')
-  if (stage.step === 4) redirect('/start/companion')
-  if (stage.step === 5) redirect(`/start/launch/${stage.commitmentId}`)
-  if (stage.step === 6) redirect(`/start/active/${stage.commitmentId}`)
+  if (stage.step === 3) redirect(`/room/${stage.roomId}`)
 
   redirect('/dashboard')
 }

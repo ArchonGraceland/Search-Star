@@ -18,16 +18,27 @@ export async function GET(
   const db = createServiceClient()
 
   // Verify commitment belongs to user
+  type CommitmentRow = {
+    id: string
+    status: string
+    user_id: string
+    practices: { name: string } | { name: string }[] | null
+  }
   const { data: commitment, error: commError } = await db
     .from('commitments')
-    .select('id, title, status, user_id')
+    .select('id, status, user_id, practices(name)')
     .eq('id', id)
     .eq('user_id', user.id)
-    .single()
+    .single<CommitmentRow>()
 
   if (commError || !commitment) {
     return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
   }
+
+  const practice = commitment.practices
+  const practiceName = practice
+    ? (Array.isArray(practice) ? practice[0]?.name : practice.name) ?? null
+    : null
 
   const { data: sponsorships } = await db
     .from('sponsorships')
@@ -40,7 +51,7 @@ export async function GET(
 
   return NextResponse.json({
     commitment_id: id,
-    commitment_title: commitment.title,
+    commitment_title: practiceName, // practice name IS the commitment statement in v4
     sponsorships: list,
     total_pledged,
   })

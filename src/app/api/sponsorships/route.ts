@@ -14,14 +14,21 @@ export async function GET(request: Request) {
 
   const supabase = createServiceClient()
 
+  type CommitmentRow = {
+    id: string
+    status: string
+    started_at: string
+    user_id: string
+    practices: { name: string } | { name: string }[] | null
+  }
   const { data: commitment, error } = await supabase
     .from('commitments')
     .select(`
-      id, title, status, launch_ends_at, streak_ends_at,
+      id, status, started_at, user_id,
       practices (name)
     `)
     .eq('id', commitment_id)
-    .single()
+    .single<CommitmentRow>()
 
   if (error || !commitment) {
     return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
@@ -31,7 +38,7 @@ export async function GET(request: Request) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('display_name, user_id')
-    .eq('user_id', (await supabase.from('commitments').select('user_id').eq('id', commitment_id).single()).data?.user_id ?? '')
+    .eq('user_id', commitment.user_id)
     .single()
 
   // Get pledge stats
@@ -44,17 +51,22 @@ export async function GET(request: Request) {
   const total_pledged = (pledges ?? []).reduce((sum, p) => sum + (p.pledge_amount ?? 0), 0)
   const pledge_count = (pledges ?? []).length
 
-  const practice = commitment.practices as { name: string } | { name: string }[] | null
+  const practice = commitment.practices
   const practice_name = practice
     ? (Array.isArray(practice) ? practice[0]?.name : practice.name) ?? null
     : null
 
+  // v4: streak_ends_at computed from started_at + 90d. launch_ends_at retired.
+  const streakEndsAt = commitment.started_at
+    ? new Date(new Date(commitment.started_at).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
+    : null
+
   return NextResponse.json({
     commitment_id: commitment.id,
-    title: commitment.title,
+    title: practice_name, // practice name IS the commitment statement
     status: commitment.status,
-    launch_ends_at: commitment.launch_ends_at,
-    streak_ends_at: commitment.streak_ends_at,
+    launch_ends_at: null, // retired
+    streak_ends_at: streakEndsAt,
     practitioner_name: profile?.display_name ?? 'the practitioner',
     practice_name,
     total_pledged,
@@ -104,20 +116,32 @@ export async function POST(request: Request) {
     invitationId = invitation.id
   }
 
-  // Fetch commitment and verify launch status
+  // Fetch commitment and verify it's accepting pledges. v4 Decision #8: the
+  // 'launch' status is retired; only 'active' commitments accept pledges
+  // (any point between day 1 and day 90, per decision #3).
+  type CommitmentPOSTRow = {
+    id: string
+    status: string
+    user_id: string
+    practices: { name: string } | { name: string }[] | null
+  }
   const { data: commitment, error: commError } = await supabase
     .from('commitments')
-    .select('id, title, status, user_id')
+    .select('id, status, user_id, practices(name)')
     .eq('id', commitment_id)
-    .single()
+    .single<CommitmentPOSTRow>()
 
   if (commError || !commitment) {
     return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
   }
 
-  if (!['launch', 'active'].includes(commitment.status)) {
+  if (commitment.status !== 'active') {
     return NextResponse.json({ error: 'This commitment is no longer accepting pledges.' }, { status: 409 })
   }
+
+  const practiceForDesc = Array.isArray(commitment.practices)
+    ? commitment.practices[0]?.name ?? 'a practice'
+    : commitment.practices?.name ?? 'a practice'
 
   // Generate a URL-safe access token. The sponsor uses this to follow the practice
   // at /sponsor/[commitment_id]/[token] without needing a Search Star account.
@@ -161,7 +185,7 @@ export async function POST(request: Request) {
         intent_type: 'pledge',
         sponsor_email: sponsor_email.trim().toLowerCase(),
       },
-      description: `Search Star pledge: ${commitment.title}`,
+      description: `Search Star pledge: ${practiceForDesc}`,
     })
     if (!pi.client_secret) {
       throw new Error('Stripe returned a PaymentIntent without a client_secret.')

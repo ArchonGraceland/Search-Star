@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
     const { data: commitment } = await db
       .from('commitments')
-      .select('status, streak_ends_at')
+      .select('status, started_at')
       .eq('id', commitment_id)
       .single()
 
@@ -56,7 +56,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Not found.' }, { status: 404 })
     }
 
-    if (!isDay90Reached(commitment.status, commitment.streak_ends_at)) {
+    // Day 90 is started_at + 90 days in v4 (streak_ends_at column retired).
+    const streakEndsAt = commitment.started_at
+      ? new Date(new Date(commitment.started_at).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
+      : null
+
+    if (!isDay90Reached(commitment.status, streakEndsAt)) {
       return NextResponse.json(
         {
           error:

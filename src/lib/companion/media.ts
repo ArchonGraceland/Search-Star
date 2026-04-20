@@ -10,7 +10,7 @@ import { isImageUrl, isVideoUrl } from '@/lib/media'
 //      URL directly to the model via URLImageSource rather than fetching and
 //      base64-encoding. One fewer roundtrip, and the SDK >= 0.90 supports it.
 //   2. Transcribe videos once via Groq Whisper and cache the result on
-//      commitment_posts.transcript. The day-90 summary reads many posts, so
+//      room_messages.transcript. The day-90 summary reads many posts, so
 //      a per-post cache matters for both latency and cost; /reflect benefits
 //      too on the handful of calls that replay an earlier session.
 //
@@ -159,7 +159,7 @@ export async function getOrFetchTranscript(
     try {
       const db = createServiceClient()
       await db
-        .from('commitment_posts')
+        .from('room_messages')
         .update({ transcript })
         .eq('id', postId)
     } catch (persistErr) {

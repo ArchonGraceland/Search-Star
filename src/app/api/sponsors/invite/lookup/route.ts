@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   // Load the commitment to expose the public-facing fields the pledge page needs.
   const { data: commitment } = await db
     .from('commitments')
-    .select('id, title, status, launch_ends_at, streak_ends_at, practices(name)')
+    .select('id, status, started_at, practices(name)')
     .eq('id', invitation.commitment_id)
     .single()
 
@@ -46,16 +46,23 @@ export async function GET(request: Request) {
     ? (Array.isArray(practice) ? practice[0]?.name : practice.name) ?? null
     : null
 
+  // v4 Decision #8: the commitment_title surface is retired; the practice
+  // name is the commitment statement. streak_ends_at is computed from
+  // started_at + 90 days (column dropped).
+  const streakEndsAt = commitment.started_at
+    ? new Date(new Date(commitment.started_at).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
+    : null
+
   return NextResponse.json({
     invitation_id: invitation.id,
     commitment_id: invitation.commitment_id,
-    commitment_title: commitment.title,
+    commitment_title: practice_name, // pragmatic alias — callers expect this key
     commitment_status: commitment.status,
     practitioner_name: profile?.display_name ?? 'the practitioner',
     practice_name,
     invitee_email: invitation.invitee_email,
     status: invitation.status,
-    launch_ends_at: commitment.launch_ends_at,
-    streak_ends_at: commitment.streak_ends_at,
+    launch_ends_at: null, // retired — returned as null for legacy callers
+    streak_ends_at: streakEndsAt,
   })
 }

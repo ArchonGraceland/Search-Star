@@ -36,23 +36,38 @@ export async function POST(request: Request) {
   const db = createServiceClient()
 
   // Verify commitment exists, belongs to the user, and is in an invitable status.
+  type CommitmentInviteRow = {
+    id: string
+    status: string
+    user_id: string
+    practices: { name: string } | { name: string }[] | null
+  }
   const { data: commitment, error: commErr } = await db
     .from('commitments')
-    .select('id, title, status, user_id')
+    .select('id, status, user_id, practices(name)')
     .eq('id', commitment_id)
     .eq('user_id', user.id)
-    .single()
+    .single<CommitmentInviteRow>()
 
   if (commErr || !commitment) {
     return NextResponse.json({ error: 'Commitment not found.' }, { status: 404 })
   }
 
-  if (!['launch', 'active'].includes(commitment.status)) {
+  // v4 Decision #8: 'launch' status is retired. Invitations are allowed any
+  // time during an active commitment (any point between day 1 and day 90,
+  // per decision #3).
+  if (commitment.status !== 'active') {
     return NextResponse.json(
-      { error: 'Invitations can only be sent during launch or active status.' },
+      { error: 'Invitations can only be sent during an active commitment.' },
       { status: 409 }
     )
   }
+
+  // v4: the practice name IS the commitment statement (title column retired).
+  const practiceJoin = Array.isArray(commitment.practices)
+    ? commitment.practices[0]
+    : commitment.practices
+  const commitmentTitle = practiceJoin?.name ?? 'their 90-day commitment'
 
   // Prevent duplicate pending invitations to the same email for the same commitment.
   const { data: existing } = await db
@@ -120,7 +135,7 @@ export async function POST(request: Request) {
               On Search Star, a sponsor is a witness. You pledge now, watch the practice unfold on a private feed, and release payment at day 90 when the commitment is complete.
             </p>
             <div style="background: #f5f5f5; border-left: 3px solid #1a3a6b; padding: 16px 20px; margin: 0 0 24px; border-radius: 2px;">
-              <p style="font-family: Georgia, serif; font-size: 18px; font-weight: 700; margin: 0; color: #1a1a1a;">${commitment.title}</p>
+              <p style="font-family: Georgia, serif; font-size: 18px; font-weight: 700; margin: 0; color: #1a1a1a;">${commitmentTitle}</p>
             </div>
             <a href="${pledgeUrl}" style="display: inline-block; background: #1a3a6b; color: #ffffff; font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 12px 24px; border-radius: 3px; text-decoration: none; margin-bottom: 24px;">
               Review and pledge →
@@ -131,7 +146,7 @@ export async function POST(request: Request) {
           </div>
         </div>
       `,
-      text: `${practitionerName} has invited you to sponsor their 90-day commitment: "${commitment.title}".\n\nReview and pledge: ${pledgeUrl}\n\nNo payment is required today. Funds are only collected when they reach day 90 and you release your pledge.`,
+      text: `${practitionerName} has invited you to sponsor their 90-day commitment: "${commitmentTitle}".\n\nReview and pledge: ${pledgeUrl}\n\nNo payment is required today. Funds are only collected when they reach day 90 and you release your pledge.`,
     })
   } catch (err) {
     console.error('Failed to send sponsor invitation email:', err)

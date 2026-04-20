@@ -28,14 +28,22 @@ export default async function EarningsPage() {
 
   const supabase = createServiceClient()
 
-  // All commitments the user has ever started. We include launch/active/
-  // completed/abandoned so the practitioner can see the full arc of their
+  // All commitments the user has ever started. We include active/completed/
+  // vetoed/abandoned so the practitioner can see the full arc of their
   // sponsorship activity — not just commitments that reached day 90.
+  type CommitmentEarningsRow = {
+    id: string
+    completed_at: string | null
+    status: string
+    created_at: string
+    practices: { name: string } | { name: string }[] | null
+  }
   const { data: commitments } = await supabase
     .from('commitments')
-    .select('id, title, completed_at, status, created_at')
+    .select('id, completed_at, status, created_at, practices(name)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
+    .returns<CommitmentEarningsRow[]>()
 
   const earnings: CommitmentEarning[] = []
   let grandTotalPledged = 0
@@ -63,9 +71,12 @@ export default async function EarningsPage() {
       }
     }
 
+    const practiceJoin = Array.isArray(c.practices) ? c.practices[0] : c.practices
+    const practiceName = practiceJoin?.name ?? 'Untitled commitment'
+
     earnings.push({
       id: c.id,
-      title: c.title,
+      title: practiceName,
       completed_at: c.completed_at,
       status: c.status,
       total_pledged: pledged,

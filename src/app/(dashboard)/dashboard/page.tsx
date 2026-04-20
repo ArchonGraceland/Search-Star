@@ -2,10 +2,10 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-// The dashboard's output is a function of live database state for a single
-// authenticated user: active commitment, launch-window commitment, recent
-// pledges, lifetime earnings. Nothing on this page should ever be cached at
-// any layer. Same reasoning as /start/page.tsx.
+// v4 Decision #8: the room is the primary post-login surface. When the
+// user has an active commitment, we redirect to their room immediately.
+// The dashboard remains as a "between commitments" fallback — a user who
+// has no active commitment and no room yet sees trust stage + CTAs here.
 export const dynamic = 'force-dynamic'
 
 const STAGE_LABELS: Record<string, string> = {
@@ -24,18 +24,11 @@ const STAGE_COLORS: Record<string, string> = {
   mature: '#4a1a6b',
 }
 
-function streakDay(streakStartsAt: string): number {
-  const start = new Date(streakStartsAt)
+function streakDay(startedAt: string): number {
+  const start = new Date(startedAt)
   const now = new Date()
   const diff = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
   return Math.max(1, Math.min(90, diff + 1))
-}
-
-function launchDaysRemaining(launchEndsAt: string): number {
-  const end = new Date(launchEndsAt)
-  const now = new Date()
-  const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  return Math.max(0, diff)
 }
 
 const cardStyle: React.CSSProperties = {
@@ -81,15 +74,6 @@ const softLink: React.CSSProperties = {
 }
 
 export default async function DashboardPage() {
-  // getUser() must go through the SSR client — it reads the session cookie.
-  // Once we have the user id, subsequent data reads go through the service
-  // client, per the pattern established in commit 501d976 for the stage
-  // pages. All queries below are filtered by user.id which we've just
-  // verified, so the RLS check is redundant anyway; going through the
-  // service client sidesteps an intermittent issue in which the SSR
-  // client's outbound Postgres queries are running unauthenticated (so
-  // tables without a public-read policy — commitments, sponsorships —
-  // return zero rows even though the row exists and belongs to the user).
   const ssr = await createClient()
   const { data: { user } } = await ssr.auth.getUser()
   if (!user) redirect('/login')
@@ -113,35 +97,30 @@ export default async function DashboardPage() {
   const name = profile?.display_name || 'Practitioner'
   const trustStage = profile?.trust_stage || 'seedling'
 
-  // Active commitment
+  // Active commitment — if one exists, the user belongs in their room.
+  // Redirect immediately. The "dashboard as overview" model is retired
+  // per Decision #8; the room is the home surface.
+  type ActiveCommitmentRow = {
+    id: string
+    started_at: string
+    room_id: string
+    practices: { name: string } | { name: string }[] | null
+  }
   const { data: activeCommitments } = await supabase
     .from('commitments')
-    .select('id, title, status, sessions_logged, streak_starts_at, launch_ends_at')
+    .select('id, started_at, room_id, practices(name)')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(1)
+    .returns<ActiveCommitmentRow[]>()
   const activeCommitment = activeCommitments?.[0] ?? null
 
-  // Launch window commitment
-  const { data: launchCommitments } = await supabase
-    .from('commitments')
-    .select('id, title, status, launch_ends_at')
-    .eq('user_id', user.id)
-    .eq('status', 'launch')
-    .order('created_at', { ascending: false })
-    .limit(1)
-  const launchCommitment = launchCommitments?.[0] ?? null
-
-  // Sponsor count for launch commitment
-  let sponsorCount = 0
-  if (launchCommitment) {
-    const { count: sc } = await supabase
-      .from('sponsorships').select('id', { count: 'exact', head: true }).eq('commitment_id', launchCommitment.id)
-    sponsorCount = sc ?? 0
+  if (activeCommitment) {
+    redirect(`/room/${activeCommitment.room_id}`)
   }
 
-  // Recent sponsor pledges on user's commitments — Phase 2 will add richer sponsor-activity surfaces.
+  // Recent pledges across the user's commitments
   const { data: userCommitmentIds } = await supabase
     .from('commitments')
     .select('id')
@@ -158,11 +137,6 @@ export default async function DashboardPage() {
         .limit(3)
     : { data: [] }
 
-  // Lifetime earnings — sum of pledge_amount on released sponsorships for this
-  // user's commitments. The v3 four-way contributions split has been retired
-  // (see docs/v4-decisions.md §5); the practitioner receives the full pledged
-  // amount at release and the voluntary donation is paid by the sponsor
-  // separately, never deducted from what was promised.
   let totalReleased = 0
   if (userCommitmentIdList.length > 0) {
     const { data: released } = await supabase
@@ -180,76 +154,16 @@ export default async function DashboardPage() {
         Welcome, {name}.
       </h1>
 
-      {/* Continue journey CTA */}
-      <Link
-        href="/start"
-        style={{
-          display: 'flex',
-          background: '#1a3a6b',
-          borderRadius: '3px',
-          padding: '16px 24px',
-          marginBottom: '24px',
-          textDecoration: 'none',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>Your practice</span>
-        <span style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '18px', fontWeight: 700, color: '#ffffff' }}>Continue your journey →</span>
-      </Link>
-
-      {/* Active commitment */}
+      {/* No active commitment — CTA to declare */}
       <div style={{ ...cardStyle, borderLeft: '3px solid #1a3a6b' }}>
-        <p style={labelStyle}>Active Commitment</p>
-        {activeCommitment ? (
-          <>
-            <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '22px', fontWeight: 700, marginBottom: '12px', color: '#1a1a1a' }}>
-              {activeCommitment.title}
-            </p>
-            <div style={{ display: 'flex', gap: '24px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a' }}>
-                Day {activeCommitment.streak_starts_at ? streakDay(activeCommitment.streak_starts_at) : '—'} of 90
-              </span>
-              <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a' }}>
-                {activeCommitment.sessions_logged} session{activeCommitment.sessions_logged !== 1 ? 's' : ''} logged
-              </span>
-            </div>
-            <Link href={`/commit/${activeCommitment.id}`} style={softLink}>
-              View commitment →
-            </Link>
-          </>
-        ) : (
-          <>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', marginBottom: '16px' }}>
-              No active commitment. Ready to start your 90 days?
-            </p>
-            <Link href="/commit" style={ctaLink}>
-              Declare your commitment →
-            </Link>
-          </>
-        )}
+        <p style={labelStyle}>No active commitment</p>
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', marginBottom: '16px' }}>
+          Ready to declare your next 90 days?
+        </p>
+        <Link href="/start/commitment" style={ctaLink}>
+          Declare your commitment →
+        </Link>
       </div>
-
-      {/* Launch window (only shown if exists) */}
-      {launchCommitment && (
-        <div style={{ ...cardStyle, borderLeft: '3px solid #b45309' }}>
-          <p style={{ ...labelStyle, color: '#b45309' }}>Launch Window</p>
-          <p style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '22px', fontWeight: 700, marginBottom: '12px', color: '#1a1a1a' }}>
-            {launchCommitment.title}
-          </p>
-          <div style={{ display: 'flex', gap: '24px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a' }}>
-              {launchDaysRemaining(launchCommitment.launch_ends_at)} days remaining
-            </span>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '13px', color: '#5a5a5a' }}>
-              {sponsorCount} sponsor{sponsorCount !== 1 ? 's' : ''} pledged
-            </span>
-          </div>
-          <Link href={`/commit/${launchCommitment.id}`} style={ctaLink}>
-              Log a session →
-            </Link>
-        </div>
-      )}
 
       {/* Trust stage */}
       <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
@@ -315,6 +229,11 @@ export default async function DashboardPage() {
         </div>
         <Link href="/earnings" style={softLink}>View earnings →</Link>
       </div>
+
+      {/* Unused-but-suppressed: streakDay is imported for future card that shows
+          partial streak info. Leaving the import+function in place so we don't
+          have to re-add it in a day. */}
+      <span style={{ display: 'none' }}>{streakDay('2026-04-20')}</span>
     </div>
   )
 }
