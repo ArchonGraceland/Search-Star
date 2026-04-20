@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
 interface Profile {
@@ -32,9 +32,12 @@ export default async function AdminUsers({
   const perPage = 20
   const offset = (page - 1) * perPage
 
-  const supabase = await createClient()
+  // Admin access gated by admin/layout.tsx. Service client sidesteps the
+  // documented @supabase/ssr JWT-propagation race (commits 0710ce4 /
+  // 1dccc46 / 501d976 / 0f28db9).
+  const db = createServiceClient()
 
-  let dbQuery = supabase
+  let dbQuery = db
     .from('profiles')
     .select('user_id, display_name, location, trust_stage, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })

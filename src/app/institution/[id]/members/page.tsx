@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -37,7 +37,15 @@ export default async function InstitutionMembersPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: institution } = await supabase
+  // Data reads via service client. Authorization is enforced in two places:
+  // the institution lookup below must return a row for the page to render,
+  // and the contact_email/admin check gates access at the application
+  // layer. If the institution read silently returned empty through the SSR
+  // client (bug documented in commits 0710ce4 / 1dccc46 / 501d976 /
+  // 0f28db9), we'd bounce the legitimate owner to /login.
+  const db = createServiceClient()
+
+  const { data: institution } = await db
     .from('institutions')
     .select('id, name, contact_email')
     .eq('id', id)
@@ -49,7 +57,7 @@ export default async function InstitutionMembersPage({
   if (institution.contact_email !== user.email && !isAdmin) redirect('/dashboard')
 
   // Paginated memberships
-  const { data: memberships, count } = await supabase
+  const { data: memberships, count } = await db
     .from('institution_memberships')
     .select('id, user_id, enrolled_at', { count: 'exact' })
     .eq('institution_id', id)
@@ -65,13 +73,13 @@ export default async function InstitutionMembersPage({
   const profileMap: Record<string, string> = {}
 
   if (userIds.length > 0) {
-    const { data: trustRows } = await supabase
+    const { data: trustRows } = await db
       .from('trust_records')
       .select('user_id, stage')
       .in('user_id', userIds)
     for (const r of trustRows ?? []) trustMap[r.user_id] = r.stage
 
-    const { data: profileRows } = await supabase
+    const { data: profileRows } = await db
       .from('profiles')
       .select('user_id, display_name')
       .in('user_id', userIds)

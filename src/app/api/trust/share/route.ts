@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST() {
@@ -6,10 +6,15 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Data ops via service client. Authorization is enforced by the
+  // user.id filter used below; visibility check stays as-is. See commits
+  // 0710ce4 / 1dccc46 / 501d976 / 0f28db9.
+  const db = createServiceClient()
+
   const userId = user.id
 
   // Check profile visibility — private profiles cannot share
-  const { data: profile } = await supabase
+  const { data: profile } = await db
     .from('profiles')
     .select('visibility')
     .eq('user_id', userId)
@@ -25,7 +30,7 @@ export async function POST() {
   }
 
   // Get current share state
-  const { data: trust } = await supabase
+  const { data: trust } = await db
     .from('trust_records')
     .select('share_enabled')
     .eq('user_id', userId)
@@ -34,7 +39,7 @@ export async function POST() {
   const newShareEnabled = !(trust?.share_enabled ?? false)
 
   // Upsert with toggled value
-  const { error } = await supabase
+  const { error } = await db
     .from('trust_records')
     .upsert({ user_id: userId, share_enabled: newShareEnabled }, { onConflict: 'user_id' })
 

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { AdminTicketActions } from '@/components/admin-ticket-actions'
 
@@ -38,8 +38,13 @@ export default async function AdminTicketDetail({
   const { id } = await params
   const supabase = await createClient()
 
+  // Data reads via service client. Admin access gated by admin/layout.tsx;
+  // supabase is retained here only for the auth.getUser() call below.
+  // See commits 0710ce4 / 1dccc46 / 501d976 / 0f28db9.
+  const db = createServiceClient()
+
   // Fetch ticket
-  const { data: ticket, error } = await supabase
+  const { data: ticket, error } = await db
     .from('support_tickets')
     .select('*')
     .eq('id', id)
@@ -57,14 +62,14 @@ export default async function AdminTicketDetail({
   }
 
   // Fetch user profile
-  const { data: userProfile } = await supabase
+  const { data: userProfile } = await db
     .from('profiles')
     .select('id, display_name')
     .eq('user_id', ticket.user_id)
     .single()
 
   // Fetch messages
-  const { data: messages } = await supabase
+  const { data: messages } = await db
     .from('ticket_messages')
     .select('*')
     .eq('ticket_id', id)
@@ -72,7 +77,7 @@ export default async function AdminTicketDetail({
 
   // Get current admin user id
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: adminProfile } = await supabase
+  const { data: adminProfile } = await db
     .from('profiles')
     .select('id')
     .eq('user_id', user!.id)

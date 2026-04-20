@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -83,10 +83,16 @@ export default async function AdminDonationsPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // All data reads below use the service client. Admin/layout.tsx gates
+  // this route; the defense-in-depth re-check of profiles.role that follows
+  // also runs through the service client. See commits 0710ce4 / 1dccc46 /
+  // 501d976 / 0f28db9 for the JWT-propagation bug writeup.
+  const db = createServiceClient()
+
   // Admin layout already gates access via profiles.role === 'admin', but
   // defense in depth: re-check here so this route is safe if the layout
   // is ever bypassed.
-  const { data: profile } = await supabase
+  const { data: profile } = await db
     .from('profiles')
     .select('role')
     .eq('user_id', user.id)
@@ -106,7 +112,7 @@ export default async function AdminDonationsPage({
   // Fetch donations in range. Status='succeeded' is the "real revenue" set;
   // pending/failed/canceled are displayed in the table with a status badge
   // so admins can reconcile with Stripe if needed.
-  let donationsQuery = supabase
+  let donationsQuery = db
     .from('donations')
     .select(
       'id, commitment_id, sponsor_id, pledge_amount, donation_amount, donation_rate, stripe_payment_intent_id, status, created_at'
@@ -123,7 +129,7 @@ export default async function AdminDonationsPage({
   // because the "this month" card is a fixed metric admins expect to see
   // regardless of what time window the table is showing.
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const { data: monthRaw } = await supabase
+  const { data: monthRaw } = await db
     .from('donations')
     .select('donation_amount')
     .eq('status', 'succeeded')
@@ -141,13 +147,13 @@ export default async function AdminDonationsPage({
 
   const [sponsorshipsRes, commitmentsRes] = await Promise.all([
     sponsorshipIds.length > 0
-      ? supabase
+      ? db
           .from('sponsorships')
           .select('id, sponsor_name, sponsor_email, commitment_id')
           .in('id', sponsorshipIds)
       : Promise.resolve({ data: [] as SponsorshipRow[] }),
     commitmentIds.length > 0
-      ? supabase.from('commitments').select('id, title').in('id', commitmentIds)
+      ? db.from('commitments').select('id, title').in('id', commitmentIds)
       : Promise.resolve({ data: [] as CommitmentRow[] }),
   ])
   const sponsorshipsById = new Map<string, SponsorshipRow>()
@@ -176,7 +182,7 @@ export default async function AdminDonationsPage({
   // "Percent of releases with a donation" — asks: of all pledges that were
   // released in this window, how many had any donation row attached (any
   // status)? Pulls the count of released sponsorships in the same window.
-  let releasesQuery = supabase
+  let releasesQuery = db
     .from('sponsorships')
     .select('id', { count: 'exact', head: true })
     .in('status', ['released', 'paid'])

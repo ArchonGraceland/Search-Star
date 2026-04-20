@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
 interface Ticket {
@@ -57,9 +57,12 @@ export default async function AdminTickets({
   const filterStatus = params.status || ''
   const filterPriority = params.priority || ''
 
-  const supabase = await createClient()
+  // Admin access gated by admin/layout.tsx. Service client sidesteps the
+  // documented @supabase/ssr JWT-propagation race (commits 0710ce4 /
+  // 1dccc46 / 501d976 / 0f28db9).
+  const db = createServiceClient()
 
-  let query = supabase
+  let query = db
     .from('support_tickets')
     .select('*')
     .order('created_at', { ascending: false })
@@ -78,7 +81,7 @@ export default async function AdminTickets({
   const userIds = [...new Set(allTickets.map(t => t.user_id))]
   let nameMap: Record<string, ProfileName> = {}
   if (userIds.length > 0) {
-    const { data: profiles } = await supabase
+    const { data: profiles } = await db
       .from('profiles')
       .select('id, user_id, display_name')
       .in('user_id', userIds) as { data: ProfileName[] | null }

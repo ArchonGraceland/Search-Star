@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { AdminUserActions } from '@/components/admin-user-actions'
 
@@ -12,10 +12,13 @@ export default async function AdminUserDetail({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  // Admin access gated by admin/layout.tsx. Service client sidesteps the
+  // documented @supabase/ssr JWT-propagation race (commits 0710ce4 /
+  // 1dccc46 / 501d976 / 0f28db9).
+  const db = createServiceClient()
 
   // id is user_id in v3
-  const { data: profile, error } = await supabase
+  const { data: profile, error } = await db
     .from('profiles')
     .select('user_id, display_name, location, bio, trust_stage, created_at')
     .eq('user_id', id)
@@ -34,20 +37,20 @@ export default async function AdminUserDetail({
   }
 
   // Trust record
-  const { data: trust } = await supabase
+  const { data: trust } = await db
     .from('trust_records')
     .select('stage, depth_score, breadth_score, durability_score, completed_streaks, updated_at')
     .eq('user_id', id)
     .single()
 
   // Practices count
-  const { count: practiceCount } = await supabase
+  const { count: practiceCount } = await db
     .from('practices')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', id)
 
   // Completed commitments
-  const { count: completedCommitments } = await supabase
+  const { count: completedCommitments } = await db
     .from('commitments')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', id)

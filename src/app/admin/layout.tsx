@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
@@ -15,8 +15,15 @@ export default async function AdminLayout({
     redirect('/login')
   }
 
+  // Data reads via service client. This layout is the admin gate — a silent
+  // empty read (the @supabase/ssr JWT-propagation bug documented in commits
+  // 0710ce4 / 1dccc46 / 501d976 / 0f28db9) would boot a real admin out to
+  // /dashboard at line 30 even with valid creds. Authorization is still
+  // enforced at the app layer via the profile.role === 'admin' check.
+  const db = createServiceClient()
+
   // Check admin role
-  const { data: profile } = await supabase
+  const { data: profile } = await db
     .from('profiles')
     .select('role, display_name')
     .eq('user_id', user.id)
@@ -29,7 +36,7 @@ export default async function AdminLayout({
   const displayName = profile.display_name || user.email?.split('@')[0] || 'Admin'
 
   // Get unresolved ticket count for badge
-  const { count: openTickets } = await supabase
+  const { count: openTickets } = await db
     .from('support_tickets')
     .select('id', { count: 'exact', head: true })
     .neq('status', 'resolved')

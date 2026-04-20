@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -58,8 +58,16 @@ export default async function InstitutionDashboardPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Data reads via service client. Authorization is enforced in two places:
+  // the institution lookup below must return a row for the page to render,
+  // and the contact_email/admin check gates access at the application
+  // layer. If the institution read silently returned empty through the SSR
+  // client (bug documented in commits 0710ce4 / 1dccc46 / 501d976 /
+  // 0f28db9), we'd bounce the legitimate owner to /login.
+  const db = createServiceClient()
+
   // Load institution
-  const { data: institution } = await supabase
+  const { data: institution } = await db
     .from('institutions')
     .select('id, name, type, contact_name, contact_email, budget_total, budget_spent, skill_category_id')
     .eq('id', id)
@@ -72,13 +80,13 @@ export default async function InstitutionDashboardPage({
   if (institution.contact_email !== user.email && !isAdmin) redirect('/dashboard')
 
   // Member count
-  const { count: memberCount } = await supabase
+  const { count: memberCount } = await db
     .from('institution_memberships')
     .select('*', { count: 'exact', head: true })
     .eq('institution_id', id)
 
   // Stage distribution
-  const { data: members } = await supabase
+  const { data: members } = await db
     .from('institution_memberships')
     .select('user_id')
     .eq('institution_id', id)
@@ -94,7 +102,7 @@ export default async function InstitutionDashboardPage({
   }
 
   if (memberIds.length > 0) {
-    const { data: trustRows } = await supabase
+    const { data: trustRows } = await db
       .from('trust_records')
       .select('stage')
       .in('user_id', memberIds)
@@ -106,7 +114,7 @@ export default async function InstitutionDashboardPage({
   // Skill category name
   let categoryName = 'All categories'
   if (institution.skill_category_id) {
-    const { data: cat } = await supabase
+    const { data: cat } = await db
       .from('skill_categories')
       .select('name')
       .eq('id', institution.skill_category_id)

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -11,6 +11,12 @@ export default async function AdminDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || user.user_metadata?.role !== 'admin') redirect('/dashboard')
 
+  // Data reads via service client per 9b migration. The JWT role check above
+  // reads from user_metadata (a JWT claim), not a DB table, so it doesn't
+  // need the service client. See commits 0710ce4 / 1dccc46 / 501d976 /
+  // 0f28db9 for the full SSR JWT-propagation writeup.
+  const db = createServiceClient()
+
   // Platform stats
   const [
     { count: totalProfiles },
@@ -18,21 +24,21 @@ export default async function AdminDashboard() {
     { count: activeCommitments },
     { count: completedCommitments },
   ] = await Promise.all([
-    supabase.from('profiles').select('user_id', { count: 'exact', head: true }),
-    supabase.from('practices').select('id', { count: 'exact', head: true }).eq('is_active', true),
-    supabase.from('commitments').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-    supabase.from('commitments').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
+    db.from('profiles').select('user_id', { count: 'exact', head: true }),
+    db.from('practices').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    db.from('commitments').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+    db.from('commitments').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
   ])
 
   // Recent signups
-  const { data: recentUsers } = await supabase
+  const { data: recentUsers } = await db
     .from('profiles')
     .select('user_id, display_name, trust_stage, created_at')
     .order('created_at', { ascending: false })
     .limit(8)
 
   // Recent support tickets
-  const { data: recentTickets } = await supabase
+  const { data: recentTickets } = await db
     .from('support_tickets')
     .select('id, subject, status, created_at')
     .order('created_at', { ascending: false })

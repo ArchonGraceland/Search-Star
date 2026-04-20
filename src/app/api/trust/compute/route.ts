@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { computeAndPersistTrust } from '@/lib/trust-compute'
 
@@ -18,8 +18,15 @@ export async function POST() {
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Pass service client to the compute helper. Authorization is enforced at
+  // the application layer via .eq('user_id', userId) inside trust-compute;
+  // the helper's own comment (src/lib/trust-compute.ts:183-186) explicitly
+  // sanctions this pattern — it's already used in the release-action hook.
+  // See commits 0710ce4 / 1dccc46 / 501d976 / 0f28db9.
+  const db = createServiceClient()
+
   try {
-    const result = await computeAndPersistTrust(supabase, user.id)
+    const result = await computeAndPersistTrust(db, user.id)
     return NextResponse.json({
       stage: result.stage,
       depth_score: result.depth_score,
