@@ -164,19 +164,18 @@ const completed = [
   { v: "Phase 7", t: "Companion v1", d: "AI Companion present in every active commitment. Day-90 summary generated for sponsors at release. No authority, no Trust writes" },
   { v: "Phase 7.1", t: "Companion v1.5", d: "Companion available during the 14-day launch window with its own system prompt. Media upload (camera/gallery) on commitment detail page. Companion panel mounted on /log (the PWA daily surface) in a dark-theme variant. Voice-annotated video pattern codified as the default for visual practices — Whisper transcribes, Companion reads what the practitioner said, does not grade execution from video" },
   { v: "Phase 8", t: "Public Narrative Rewrite", d: "Homepage, onboarding, manifesto, spec, and roadmap all rewritten against v4. Homepage restructured around the four presences (Practitioner, Sponsor, Companion, Institution) with the Companion as a first-class role rather than a supporting detail. Onboarding page absorbs the problem framing so direct-link visitors see the full argument. /home escape-hatch route added so logged-in users on /log can reach the marketing homepage (middleware otherwise redirects / → /log). Public header made auth-aware: logged-in visitors see Dashboard / Sign Out instead of Sign In / Sign Up across /, /home, /onboarding, /manifesto. Split into public-header.tsx (async, auth-aware) and public-header-static.tsx (for client components) after named-export approach hit the RSC server/client module-graph boundary. Retired v3 terminology swept from public surfaces. Version strings at v4.0" },
+  { v: "Phase 9 (Auth + Reliability)", t: "Launch Blockers — partial", d: "Two of four Launch Blockers shipped. Self-serve password reset flow: 'Forgot password?' link on /login, /auth/forgot-password page calling supabase.auth.resetPasswordForEmail, /auth/reset page that consumes the recovery session established by /auth/confirm and calls supabase.auth.updateUser client-side. Always-200 submit avoids account enumeration. The remaining @supabase/ssr → service-client migration also landed: twelve files across admin/, institution/, and /api/trust/* migrated. The admin layout gate is the most consequential — a silent empty read on the role lookup would have booted a real admin out to /dashboard; institution dashboards had the same failure mode for contact_email checks. Pattern unchanged from prior sweeps (commits 0710ce4, 1dccc46, 501d976, 0f28db9): getUser() stays on the SSR client, RLS-gated reads/writes route through createServiceClient() with application-layer authorization preserved. Remaining Launch Blockers — Companion v2 doc rewrite and video recut — tracked separately under Phase 9.1" },
 ];
 
 const phases = [
-  { v: "Phase 9", t: "Launch Blockers", target: "Next", status: "next", effort: "Medium",
-    depends: "Three independent items blocking real-user launch. Can ship in any order; all small-to-medium. None require product-design work — the shape of each is already clear.",
+  { v: "Phase 9.1", t: "Launch Blockers — remainder", target: "Next", status: "next", effort: "Small",
+    depends: "Two of four Launch Blockers shipped (auth + reliability — see completed grid). The remaining two are content work, smaller in scope, and largely David-led.",
     items: [
-      "Password reset flow — supabase.auth.resetPasswordForEmail, /auth/reset handler, new-password form. Resend already wired. Currently no self-serve recovery for mistyped signup passwords",
-      "Remaining @supabase/ssr → service-client migration for admin, institution, and /api/trust/* routes (E2E path already migrated in commits 0710ce4, 1dccc46, 501d976, 0f28db9)",
-      "Rewrite docs/next-session-companion-v2.md — prior doc is stale now that Stage A has shipped; needs to reflect current state and scope Stage B (chat UI, streaming, voice input, persisted threads)",
+      "Rewrite docs/next-session-companion-v2.md — prior doc is stale now that Stage A has shipped; needs to reflect current state and scope Stage B (chat UI, streaming, voice input, persisted threads). Being handled in a separate working session",
       "Videos replaced or recut: seven-feeds-of-death.mp4, SearchStar_Trust_as_Validation.mp4 — David plans to rebuild with his own voice rather than TTS",
     ] },
   { v: "Phase 10", t: "Companion v2 (Stage B)", target: "Following", status: "planned", effort: "Large",
-    depends: "Docs rewrite from Phase 9 must land first. This is the north-star interaction: David uploads a video on his phone mid-session and the Companion responds to what he just said, as a continuing conversation rather than a one-shot reflection.",
+    depends: "Docs rewrite from Phase 9.1 must land first. This is the north-star interaction: David uploads a video on his phone mid-session and the Companion responds to what he just said, as a continuing conversation rather than a one-shot reflection.",
     items: [
       "Chat UI on Companion panel — current surface is one-shot reflect-on-request; v2 is a continuing conversation",
       "Streaming token responses",
@@ -248,7 +247,7 @@ function renderMilestones() {
 }
 renderMilestones();
 
-// Timeline — 4 phases: Phase 8 (in progress), Phase 9 (next), v4.8 (deferred), v4.9 (deferred)
+// Timeline — 4 phases: Phase 9.1 (next), Phase 10 (planned), v4.8 (deferred), v4.9 (deferred)
 const widths = [28, 22, 25, 25];
 document.getElementById('timeline').innerHTML = phases.map((p, i) => {
   let bg, color;
