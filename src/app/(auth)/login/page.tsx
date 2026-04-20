@@ -98,9 +98,14 @@ function LoginForm() {
               </div>
 
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', display: 'block', marginBottom: '6px' }}>
-                  Password
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+                  <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676' }}>
+                    Password
+                  </label>
+                  <Link href="/auth/forgot-password" style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#1a3a6b', textDecoration: 'none' }}>
+                    Forgot password?
+                  </Link>
+                </div>
                 <input
                   type="password"
                   value={password}
