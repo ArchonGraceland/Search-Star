@@ -1,5 +1,7 @@
 # Search Star v4 — Build Plan
 
+> **Notice (2026-04-20):** Decision #8 in `docs/v4-decisions.md` (Rooms are the primary surface) retires the 14-day launch period and introduces the room model. Several phases below still reference launch-period mechanics, `launch_ends_at`, and the "start ritual" as live concepts — those references are now historical. The operational plan for the room surface is in `docs/chat-room-plan.md`, which supersedes this document's Phase 7 ("Companion v1 surface") and substantially expands its scope. The deploy target is `main` (the `v4` branch is retired — see `docs/next-session-companion-v2.md`). Before starting any session against this document, read `docs/v4-decisions.md` and `docs/chat-room-plan.md` first.
+
 ## What we're doing and why
 
 The v3 codebase shipped a working product: 90-day practice commitments, a private validator feed, peer sponsorship, a four-way voluntary contribution split across mentor roles, and a Trust Record computed from validator confirmations. The v4 decisions retire three load-bearing pieces of that product: the validator role, the mentor role and the mentor economy, and the mentor-share contribution split. In their place: sponsors are the witnesses, an AI Companion accompanies the practitioner without authority, and a single 5% voluntary donation funds the platform.

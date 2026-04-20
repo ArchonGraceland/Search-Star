@@ -1,5 +1,7 @@
 # Next session — Companion v2: conversation as the product
 
+> **Deprecated 2026-04-20. Superseded by `docs/chat-room-plan.md`. Retain for tactical reference (file paths, Cloudinary preset, SSR client patterns, Whisper transcription details) only. The strategic framing below — practitioner-solo Companion surface with sponsors as eventual readers — is replaced by the room model in decision #8 where sponsors are active participants in a persistent multi-member chat.**
+
 **Context bundle for the next session's Claude.** Read this first. Everything you need to start working is here; don't re-read the prior transcript unless something specific doesn't line up.
 
 ---
