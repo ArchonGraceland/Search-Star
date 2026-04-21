@@ -93,7 +93,7 @@ export default function HomePage() {
                 {
                   label: 'Sponsor',
                   role: 'Holds the stake',
-                  body: 'Sponsors pledge money against your commitment during the 14-day launch window. They can veto at any time if they stop believing. They can release the pledge at day 90 if the work was real. Their continued presence through the 90 days is the attestation — not their opinion of you, their willingness to keep their stake in.',
+                  body: 'Sponsors pledge money against your commitment. They can join any time from day 1 to day 90. They can veto at any time if they stop believing. They can release the pledge at day 90 if the work was real. Their continued presence through the 90 days is the attestation — not their opinion of you, their willingness to keep their stake in.',
                 },
                 {
                   label: 'Companion',
@@ -127,17 +127,16 @@ export default function HomePage() {
               How It Works
             </p>
             <h2 style={{ fontFamily: '"Crimson Text", Georgia, serif', fontSize: '36px', fontWeight: 700, color: '#1a1a1a', marginBottom: '40px', lineHeight: 1.2, textAlign: 'center' }}>
-              Seven steps from declaration to recognition.
+              Six steps from declaration to recognition.
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {[
                 { n: '01', title: 'Name your practice.', body: 'A skill, craft, or pursuit. Something real you want to build over time. This is the first thing you do on Search Star — before any profile, any feed, any discovery.' },
-                { n: '02', title: 'Declare a 90-day commitment.', body: 'The sponsorable unit of practice. Write what you\'re committing to and what a successful streak looks like. This opens the 14-day launch window.' },
-                { n: '03', title: 'Invite sponsors.', body: 'Sponsors put something behind their belief in you. They pledge money against your 90 days, can veto any time during the streak, and release the pledge at day 90 if the work was real. Continued presence is the attestation.' },
-                { n: '04', title: 'Gather more sponsors during launch.', body: 'During the 14-day launch window, share your commitment with friends, family, and anyone who believes in what you\'re building. Additional sponsors can join mid-streak too — once in, they\'re bound by the same veto-or-release mechanic.' },
-                { n: '05', title: 'Perform the start ritual.', body: 'A written statement of intent, timestamped. This is the moment the streak begins. Day 1 of 90.' },
-                { n: '06', title: 'Log sessions. Talk to the Companion.', body: 'Each session becomes a post visible only to your sponsors. Text, photos, or short voice-annotated videos — narrate what you did while you filmed it, and the transcript becomes part of the record. The Companion reads each session and can ask a good question or notice something worth noticing. No public feed, no likes, no follower counts.' },
-                { n: '07', title: 'Complete the streak. Sponsors release.', body: 'At day 90, each sponsor chooses to release their pledge. You receive the full pledged amount — nothing is deducted. A separate, optional 5% voluntary contribution prompts you to support Search Star; it is removable in one click and never taken from your payout.' },
+                { n: '02', title: 'Declare a 90-day commitment.', body: 'The sponsorable unit of practice. Write what you\'re committing to and what a successful streak looks like. Declaring is the start. Day 1 of 90 begins the moment you post it — there is no preparation window to cross before the clock runs.' },
+                { n: '03', title: 'Invite your first sponsors.', body: 'Sponsors put something behind their belief in you. They pledge money against your 90 days, can veto any time during the streak, and release the pledge at day 90 if the work was real. Continued presence is the attestation.' },
+                { n: '04', title: 'Keep gathering sponsors across the 90 days.', body: 'Sponsors can join at any point from day 1 to day 90 — a friend who hears about what you are doing in week four can back the remaining sixty days. Once in, every sponsor is bound by the same veto-or-release mechanic as the first.' },
+                { n: '05', title: 'Log sessions. Talk to the Companion.', body: 'Each session becomes a post in a small private room shared with your sponsors. Text, photos, or short voice-annotated videos — narrate what you did while you filmed it, and the transcript becomes part of the record. The Companion reads each session and can ask a good question or notice something worth noticing. No public feed, no likes, no follower counts.' },
+                { n: '06', title: 'Complete the streak. Sponsors release.', body: 'At day 90, each sponsor chooses to release their pledge. You receive the full pledged amount — nothing is deducted. A separate, optional 5% voluntary contribution prompts you to support Search Star; it is removable in one click and never taken from your payout.' },
               ].map((step) => (
                 <div key={step.n} style={{ display: 'flex', gap: '24px', background: '#ffffff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '28px 32px' }}>
                   <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', fontWeight: 700, color: '#1a3a6b', opacity: 0.45, letterSpacing: '0.08em', flexShrink: 0, paddingTop: '4px', minWidth: '28px' }}>

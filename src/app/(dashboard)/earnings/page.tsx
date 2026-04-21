@@ -103,7 +103,7 @@ export default async function EarningsPage() {
         Your earnings
       </h1>
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#767676', margin: '0 0 32px', lineHeight: '1.5' }}>
-        Pledges are recorded during the launch period and released by sponsors at day 90.
+        Pledges are authorized when sponsors join during the 90 days and released at day 90 if the streak completes.
       </p>
 
       {/* Summary cards */}
@@ -195,7 +195,7 @@ export default async function EarningsPage() {
       )}
 
       <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#b8b8b8', marginTop: '20px', lineHeight: '1.5' }}>
-        Pledges are recorded during the launch period and released by sponsors at day 90. Voluntary donations to Search Star are separate from your earnings and are paid by the sponsor, never deducted from what was promised.
+        Pledges are authorized when sponsors join during the 90 days and released at day 90 if the streak completes. Voluntary donations to Search Star are separate from your earnings and are paid by the sponsor, never deducted from what was promised.
       </p>
     </div>
   )

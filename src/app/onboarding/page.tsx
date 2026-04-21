@@ -94,24 +94,15 @@ export default function OnboardingPage() {
               The atomic unit of the platform is the <strong>90-day commitment</strong>. A commitment is a declaration that you will practice a specific thing for 90 consecutive days, with a defined minimum session frequency, backed by people who know you. Why 90 days? Because it&apos;s long enough to show that something real is happening — that this isn&apos;t a burst of motivation that dissolves after three weeks — but short enough to be sponsorable. Two streaks fit in a year. That&apos;s the cadence: two serious, witnessed, sponsored periods of sustained practice, with space between them for reflection and recovery.
             </p>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75 }}>
-              The 90-day streak doesn&apos;t begin the moment you declare it. First there&apos;s a launch period, and then a start ritual. Both are deliberate.
+              Declaring the commitment is the start. There is no preparation window, no rehearsal period, no ritual to perform before the clock begins. You write what you are committing to and what a successful 90 days looks like, and the streak begins in that moment. Day 1 of 90 runs from there.
             </p>
 
             <div style={{ background: '#eef2f8', border: '1px solid #c8d4e8', borderRadius: '3px', padding: '28px 32px', marginTop: '32px' }}>
               <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#1a3a6b', marginBottom: '12px' }}>
-                The 14-Day Launch Period
+                Gathering Sponsors
               </p>
               <p style={{ fontSize: '15px', color: '#3a3a3a', lineHeight: 1.7 }}>
-                When you declare a commitment, a 14-day window opens before the streak begins. This is when you share your commitment with people who know you — friends, family, colleagues, anyone in your network who wants to back you. They follow a link, enter their name and pledge amount, and commit to paying out if you complete the 90 days. Sponsors can continue to join mid-streak as well, but the launch period is the time to do the initial work of sharing. At the end of the launch window, you perform the start ritual and the streak begins.
-              </p>
-            </div>
-
-            <div style={{ background: '#eef2f8', border: '1px solid #c8d4e8', borderRadius: '3px', padding: '28px 32px', marginTop: '16px' }}>
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#1a3a6b', marginBottom: '12px' }}>
-                The Start Ritual
-              </p>
-              <p style={{ fontSize: '15px', color: '#3a3a3a', lineHeight: 1.7 }}>
-                The start ritual is a written statement of intent, timestamped. You write what you are committing to, what you expect the work to require, and what completing this streak will mean to you. This statement becomes the first post your sponsors see. It is the moment the 90-day clock begins. The ritual matters because it creates a clear before and after — an act of declaration that is visible to your sponsors and permanent in your record.
+                Sponsors can join at any point from day 1 to day 90. Most practitioners invite the people closest to them first — friends, family, anyone in their network who wants to back the work — and continue gathering sponsors across the streak as word of what they are doing reaches further. A friend who hears about it in week four can back the remaining sixty days. Once in, every sponsor is bound by the same veto-or-release mechanic as the first.
               </p>
             </div>
 
@@ -120,7 +111,7 @@ export default function OnboardingPage() {
                 Logging Sessions
               </p>
               <p style={{ fontSize: '15px', color: '#3a3a3a', lineHeight: 1.7 }}>
-                Each day you practice, you log a session: a short post visible only to your sponsors and your Companion. Text, photos, or voice-annotated video — you narrate what you&apos;re doing while filming it, and the transcript becomes part of the record. There is no public feed, no likes, no follower counts. The feed is a private channel between you and the people you brought in to witness.
+                Each day you practice, you log a session: a short post inside a small private room shared with your sponsors and the Companion. Text, photos, or voice-annotated video — you narrate what you&apos;re doing while filming it, and the transcript becomes part of the record. There is no public feed, no likes, no follower counts. The room is a private channel between you and the people you brought in to witness.
               </p>
             </div>
           </div>
@@ -145,7 +136,7 @@ export default function OnboardingPage() {
               Any sponsor can veto at any time during the 90 days. One doubt, honestly held by one person who put money on the line, is enough to end a streak. That is the right default: it means you have to earn continued belief from every sponsor across the whole window, which is closer to what genuine character actually requires than a mechanical session count. Sponsors can also join mid-streak — once in, they&apos;re bound by the same veto-or-release mechanic as everyone else.
             </p>
             <p style={{ fontSize: '17px', color: '#3a3a3a', lineHeight: 1.75 }}>
-              Sponsors don&apos;t need a Search Star account. They follow a link you send them, enter their name, email, and pledge amount, and pledge. They gain access to a private feed of your session posts for that commitment. The feed is not social — no likes, no strangers, no follower counts. It is a channel between you and the people you chose to bring in.
+              Sponsors sign up for a Search Star account when they pledge. A practitioner sends them an invitation by email, they create an account (or sign in if they already have one), enter a pledge amount, and authorize a card hold against their pledge. Once in, they are a named member of the room around that commitment — visible to the practitioner and to the other sponsors. The room is not social in the consumer-platform sense — no likes, no strangers, no follower counts. It is a small shared space between the practitioner, the people they brought in to witness, and the Companion.
             </p>
 
             <div style={{ background: '#ffffff', border: '1px solid #d4d4d4', borderRadius: '3px', padding: '28px 32px', marginTop: '32px' }}>
@@ -153,7 +144,7 @@ export default function OnboardingPage() {
                 If a sponsor leaves, the streak ends.
               </p>
               <p style={{ fontSize: '15px', color: '#3a3a3a', lineHeight: 1.7 }}>
-                There is no substitution, no appeals process, no partial credit. If a sponsor vetoes, goes silent, or withdraws mid-streak for any reason, the streak ends and you restart from a new launch period with a new roster. The platform does not mediate sponsor relationships. Maintaining them across ninety days is part of the practice — arguably the most important part, because it&apos;s the part that&apos;s hardest to fake.
+                There is no substitution, no appeals process, no partial credit. If a sponsor vetoes, goes silent, or withdraws mid-streak for any reason, the streak ends and you declare a new one with a new roster. The platform does not mediate sponsor relationships. Maintaining them across ninety days is part of the practice — arguably the most important part, because it&apos;s the part that&apos;s hardest to fake.
               </p>
             </div>
 

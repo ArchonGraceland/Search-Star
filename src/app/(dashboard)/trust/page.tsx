@@ -386,7 +386,7 @@ export default async function TrustPage() {
             lineHeight: '1.6',
           }}
         >
-          Commitments that are still in progress, still in their launch period, abandoned mid-streak, or
+          Commitments that are still in progress, abandoned mid-streak, or
           ended by a sponsor veto are not counted here. Near-misses do not accumulate. The Record reflects
           what was finished under a full roster of witnesses — nothing more, nothing less.
         </p>
