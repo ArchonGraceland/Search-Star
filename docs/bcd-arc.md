@@ -211,6 +211,105 @@ Append to this log at the end of each session. Format:
 
 ---
 
+### Session 1 (2026-04-21) — B-1: milestone infrastructure
+
+**Shipped** (commit `3f9107f`):
+- `generateCompanionRoomMilestone({ roomId, commitmentId, dayNumber })` in
+  `src/lib/companion/room.ts` — third entry point, twinned with
+  `generateCompanionRoomWelcome`, reuses `loadRoomContext` +
+  `loadRoomHistory`. Guards against commitment/room mismatch.
+- `POST /api/admin/companion/milestone` — cookie client for auth
+  (`profiles.role === 'admin'`), service client for the write. Derives
+  `room_id` from the commitment server-side. Non-idempotent by design.
+- `docs/chat-room-plan.md §6.5` — three envelope candidates dry-run at
+  day 30/60/90 via live `claude-sonnet-4-6` calls against the real
+  commitment. Candidate B (context-named, with explicit day-90
+  disambiguation) chosen and adopted verbatim.
+
+**Deployed**: `dpl_DmYxZevCWNoPxcHuonERjRvRvYLC`, state READY, aliased
+to `searchstar.com`. Production smoke: `POST /api/admin/companion/milestone`
+without auth returns `401 {"error":"Unauthorized"}` as designed — proves
+the route is mounted, auth layer runs, body-parse gate is reached only
+after auth. DB contract end-to-end verified via MCP-inserted
+`companion_milestone` row (correct enum, FKs, RLS bypass under
+postgres); scrubbed immediately so production is clean.
+
+**Deferred**:
+- **The real authenticated end-to-end test** (POST with an admin
+  session cookie producing a row via the live Anthropic call). This
+  container cannot acquire an admin cookie; leaving to David to run
+  in-browser or via curl with a captured session cookie. Three-line
+  recipe at the bottom of this entry.
+
+**Key design finding from §6.5 worth carrying forward.** The day-90
+milestone is *not* the completion marker. They are distinct events
+with distinct copy contracts:
+  - **Milestone marker** (this session): triggered by the calendar
+    reaching day 30/60/90. Copy: `"Day N."` Nothing else.
+  - **Final-session-on-day-90 event**: triggered when the practitioner
+    marks a session on day 90. Handled by existing
+    `generateCompanionRoomResponse` path. Copy includes the
+    "Tom, Sarah, Mike — the record is in front of you" handoff.
+  - **Day-90 sponsor summary**: triggered when status moves to
+    `completed`. Produced by `summarizeCommitment` in `day90.ts`.
+    Rendered on the completion page, not posted into the room.
+
+Dry-run against candidate A at day 90 wrongly produced the completion
+handoff addressed *to the practitioner*; candidate C produced it
+addressed to the sponsor. Only candidate B (with the explicit "this
+is the milestone-day marker, not the completion marker"
+disambiguation) produced the correct bare `"Day ninety."` B is what
+shipped. Session 2's cron will fire all three of these in sequence on
+the same tick at day 90: milestone marker first, summary second,
+status flip third. Spelled out in §6.5 so Session 2 doesn't
+re-deliberate.
+
+**State for next session (B-2, cron)**:
+- `companion_milestone` is already in the `room_messages_message_type_check`
+  constraint — no migration needed.
+- The new lib function is `async`, returns `Promise<string | null>`,
+  and is safe to call from a cron handler that treats `null` as "no
+  row written, move on." Idempotency guard needs to live in the cron
+  caller, not the lib function — check for an existing `companion_milestone`
+  row on `(commitment_id, day_number)` before calling. The day_number
+  isn't on the row, so the guard needs to compute it from `posted_at`
+  relative to `commitments.started_at`, or the cron can just query by
+  `commitment_id + message_type='companion_milestone'` and check
+  whether the count matches the expected number of milestones so far.
+  The latter is simpler.
+- Day 90 in the cron: milestone first, then `summarizeCommitment`
+  (idempotent by nature — it reads the record, doesn't write), then
+  status flip to `completed`. The flip is the load-bearing action; if
+  the Anthropic call for the summary fails, that's tolerable (fallback
+  is the sponsor reads the record themselves). If the flip fails the
+  cron must retry next day.
+
+**Stale memory detected during the session**:
+- `userMemories` references a `SUMMARY_MODEL` constant as separate
+  from `COMPANION_MODEL` in `src/lib/anthropic.ts`. That constant
+  does not exist — `grep -rn "SUMMARY_MODEL" src/` returns nothing.
+  Only `COMPANION_MODEL` (= `'claude-sonnet-4-6'`) exists; `day90.ts`
+  uses it for the summary. If separate model selection is ever
+  wanted, introducing `SUMMARY_MODEL` is a mechanical change. Not
+  worth doing until there's a reason.
+
+**Three-line recipe for David's authenticated smoke test** (any session,
+while logged in as admin at `https://www.searchstar.com`):
+
+```
+# In browser devtools on any searchstar.com tab (logged in as admin):
+fetch('/api/admin/companion/milestone', {
+  method: 'POST',
+  headers: {'content-type': 'application/json'},
+  body: JSON.stringify({commitment_id: 'f6c2a97c-b8d7-45aa-984c-2e062834638e', day_number: 30})
+}).then(r => r.json()).then(console.log)
+# Expected: {ok: true, message_id: "<uuid>", commitment_id: "f6c2a97c...", room_id: "29b52264...", day_number: 30, commitment_status: "active"}
+# Then eyeball https://www.searchstar.com/room/29b52264-50be-411e-8294-2091ee28e8fb — "Day thirty." should appear.
+# Delete the row via admin UI or SQL if you want to leave production clean before Session 2's cron fires.
+```
+
+---
+
 ## Known follow-ups discovered during the arc
 
 *(Add here anything discovered mid-session that's out of current scope but
