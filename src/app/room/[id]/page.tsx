@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import RoomComposer from './room-composer'
-import RoomMessage from './room-message'
+import RealtimeMessages from './realtime-messages'
 import type { MessageType, RoomMessageData } from './types'
 
 // The room surface. v4 Decision #8: the primary post-login home when
@@ -129,6 +129,16 @@ export default async function RoomPage({
 
   const nameFor = (uid: string): string =>
     profiles?.find((p) => p.user_id === uid)?.display_name ?? 'A member'
+
+  // Plain object keyed by user_id → display_name, passed to the client
+  // component so Realtime-delivered messages from known members render
+  // with the right author name. Members who join after this page
+  // rendered fall back to "A member" in client shaping — router.refresh()
+  // rebuilds the map.
+  const nameMap: Record<string, string> = {}
+  for (const p of profiles ?? []) {
+    if (p.display_name) nameMap[p.user_id] = p.display_name
+  }
 
   // Practice names for all active commitments in this room.
   const practiceIds = Array.from(new Set((commitments ?? []).map((c) => c.practice_id)))
@@ -425,52 +435,18 @@ export default async function RoomPage({
             )}
           </div>
 
-          {shapedMessages.length === 0 ? (
-            <div
-              style={{
-                background: '#ffffff',
-                border: '1px dashed #b8b8b8',
-                borderRadius: '3px',
-                padding: '32px 28px',
-                textAlign: 'center',
-              }}
-            >
-              <p
-                style={{
-                  fontFamily: '"Crimson Text", Georgia, serif',
-                  fontSize: '18px',
-                  color: '#5a5a5a',
-                  margin: 0,
-                  lineHeight: 1.5,
-                }}
-              >
-                The room is quiet.
-                {myActiveCommitment
-                  ? ' Post the first session below.'
-                  : ' Wait for the practitioner to begin.'}
-              </p>
-            </div>
-          ) : (
-            <ul
-              style={{
-                listStyle: 'none',
-                padding: 0,
-                margin: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
-              }}
-            >
-              {shapedMessages.map((m) => (
-                <RoomMessage
-                  key={m.id}
-                  message={m}
-                  roomId={roomId}
-                  viewerUserId={user.id}
-                />
-              ))}
-            </ul>
-          )}
+          <RealtimeMessages
+            initialMessages={shapedMessages}
+            roomId={roomId}
+            viewerUserId={user.id}
+            nameMap={nameMap}
+            mySponsoredCommitmentIds={Array.from(mySponsoredCommitmentIds)}
+            emptyStateText={
+              myActiveCommitment
+                ? 'The room is quiet. Post the first session below.'
+                : 'The room is quiet. Wait for the practitioner to begin.'
+            }
+          />
 
           {/* Composer — only shown to the practitioner (who can both
               session-mark and chat) and to members who might want to

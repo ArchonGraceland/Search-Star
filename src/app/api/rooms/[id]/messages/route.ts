@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generateCompanionRoomResponse } from '@/lib/companion/room'
 
@@ -25,11 +25,15 @@ import { generateCompanionRoomResponse } from '@/lib/companion/room'
 // practitioner iff they own some active commitment in this room, AND
 // the specific commitment_id they're posting against belongs to them.
 //
-// When is_session=true, the Companion is invoked synchronously after
-// the insert. The Companion's response is written as a second message
-// (message_type='companion_response') and both IDs are returned. The
-// synchronous call is a deliberate simplification while we build; a
-// future revision can move it off the request path.
+// When is_session=true, the Companion is invoked via Next.js after()
+// — i.e. after the HTTP response has been sent. The POST returns the
+// inserted message row in <200ms; the Companion's response is written
+// into the same room as a separate companion_response row, which the
+// client picks up via the Supabase Realtime subscription on
+// room_messages (C-1, shipped 2026-04-21). Failures in the Companion
+// path are logged to Vercel runtime logs; the practitioner's session
+// is still recorded, and the sponsor's completion-page view is a
+// separate code path that recomputes independently.
 
 export async function POST(
   request: Request,
@@ -149,23 +153,53 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to post message.' }, { status: 500 })
   }
 
-  // If this was a session-marked practitioner post, invoke the Companion
-  // inline. Failures here are logged but do not roll back the post.
-  let companionMessageId: string | null = null
+  // If this was a session-marked practitioner post, queue the
+  // Companion call to run AFTER the HTTP response is sent. This keeps
+  // the POST response latency under 200ms — the Anthropic call plus
+  // context assembly typically runs 3–5s and was previously blocking
+  // the practitioner seeing their own message appear. The Companion
+  // writes its response into the same room as a separate row, which
+  // reaches connected clients via the Supabase Realtime subscription
+  // on room_messages.
+  //
+  // generateCompanionRoomResponse is already null-safe on every
+  // failure path (see src/lib/companion/room.ts) so the try/catch
+  // here exists only to guarantee nothing escapes into the serverless
+  // runtime's uncaught-exception path. Observability: the logs below
+  // are queryable in Vercel runtime logs by room_id / user_id /
+  // message_id if a Companion invocation silently fails to produce a
+  // row. The Session 2 cron handler uses the same log prefix shape.
   if (sessionFlag && resolvedCommitmentId) {
-    try {
-      companionMessageId = await generateCompanionRoomResponse({
-        db,
-        roomId,
-        triggerMessageId: inserted.id,
-      })
-    } catch (err) {
-      console.error('[rooms/messages POST] Companion invocation failed:', err)
-    }
+    const roomIdSnapshot = roomId
+    const triggerMessageId = inserted.id
+    const triggerUserId = user.id
+    after(async () => {
+      try {
+        const companionMessageId = await generateCompanionRoomResponse({
+          db,
+          roomId: roomIdSnapshot,
+          triggerMessageId,
+        })
+        if (!companionMessageId) {
+          console.error('[rooms/messages after] Companion returned null', {
+            room_id: roomIdSnapshot,
+            user_id: triggerUserId,
+            trigger_message_id: triggerMessageId,
+          })
+        }
+      } catch (err) {
+        console.error('[rooms/messages after] Companion invocation threw', {
+          room_id: roomIdSnapshot,
+          user_id: triggerUserId,
+          trigger_message_id: triggerMessageId,
+          err,
+        })
+      }
+    })
   }
 
   return NextResponse.json({
     message: inserted,
-    companion_message_id: companionMessageId,
+    companion_queued: sessionFlag && !!resolvedCommitmentId,
   })
 }
