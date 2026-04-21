@@ -868,6 +868,35 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   Router pages that import/iframe the current HTML content, which
   also removes the redirect hop. Fold into D-1 (Session 5) as a
   cleanup candidate. Not a blocker.
+- **Companion "talks at, not with" problem.** Surfaced by David
+  during Session 3.5 via screenshot of his real room use. The
+  Companion asked him "What made you switch to open palm?" on a
+  session mark; he answered it in a subsequent non-session message
+  ("Switch to open Palm because i think it's going to make my
+  biceps grow faster"); the Companion did not reply because the
+  gating in `src/app/api/rooms/[id]/messages/route.ts` is
+  `if (sessionFlag && resolvedCommitmentId)` — only session-marked
+  posts trigger a Companion response. Visually the Companion reads
+  as a conversational participant (bubble styling, questions
+  asked); under the hood it's one-shot reflection. User expectation
+  vs implementation mismatch.
+  The Companion DOES read up to 50 recent room messages as context
+  when it eventually fires (see `src/lib/companion/room.ts` lines
+  203-269), so the non-session replies aren't lost — they just
+  don't get an immediate acknowledgment. The conversation happens
+  across session marks, latency-shifted by up to a day.
+  Two fix paths, in ascending scope:
+  (a) Widen the gating: if the most recent Companion message in
+  the room ended with a `?`, the next practitioner message fires a
+  Companion response even if not session-marked. ~1hr implementation,
+  reuses the entire existing after() + Realtime pipeline. Solves
+  ~80% of the felt problem without touching Phase 10 scope.
+  (b) Full Phase 10: chat UI, persisted threads, streaming, voice.
+  Already on the roadmap, intentionally deferred.
+  Recommendation: ship (a) as a Phase 9.6 or alongside C-2 if
+  Session 4 has tool-budget. Reconsider (b)'s shape afterward; it
+  may turn out (a) captures most of the value and Phase 10's
+  scope can shrink.
 
 ---
 
