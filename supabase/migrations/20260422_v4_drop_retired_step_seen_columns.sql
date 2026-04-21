@@ -1,0 +1,37 @@
+-- Drop retired step_seen columns on profiles.
+--
+-- Background: v4 Decision #8 (rooms are primary; 14-day launch period
+-- and onboarding stage-gating retired; streak begins at declaration)
+-- retires the stage-gate flags that the old onboarding flow used to
+-- advance practitioners from "declared commitment" → "sponsor invited"
+-- → "met the Companion" → "streak active". The replacement flow has no
+-- stages to gate: a practitioner declares, the room is created, sponsors
+-- are invited inside the room, the Companion is a room member.
+--
+-- The two columns being dropped here are:
+--
+--   profiles.sponsor_step_seen    (added 2026-04-18 in
+--                                  20260418_v4_sponsor_step_seen.sql;
+--                                  NOT NULL DEFAULT false)
+--   profiles.companion_step_seen  (added 2026-04-16 in
+--                                  20260416_v4_role_excision.sql as a
+--                                  rename of mentor_step_seen;
+--                                  DEFAULT false)
+--
+-- No application code reads or writes either column as of this migration.
+-- The only writers were the two API routes
+--   /api/profiles/sponsor-step-seen
+--   /api/profiles/companion-step-seen
+-- which Session 6 (D-2) deletes in the same commit set. Both had zero
+-- production traffic in the 7-day Vercel runtime-log window audited
+-- during Session 5 (D-1), so there is no in-flight write to drain.
+--
+-- The only reader used to be src/lib/stage.ts; Decision #8 already
+-- reduced that resolver to 3 steps with no retired branches. The
+-- columns have been dead-weight since that simplification landed.
+--
+-- RLS policies reference neither column (grep verified in audit).
+-- No index on either column. Drop is a pure column removal.
+
+ALTER TABLE public.profiles DROP COLUMN IF EXISTS sponsor_step_seen;
+ALTER TABLE public.profiles DROP COLUMN IF EXISTS companion_step_seen;
