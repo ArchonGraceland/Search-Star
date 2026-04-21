@@ -932,7 +932,7 @@ Why this was safe: every `from('room_memberships')` call site in the app uses `c
 
 ### Session 5 (2026-04-21) — D-1: per-file audit
 
-**Shipped** (commit `<to be written in this commit>`):
+**Shipped** (commit `c3ed1d8`):
 - One comment fix in `src/lib/media.ts`. The previous comment claimed the shared `isVideoUrl`/`isImageUrl` helpers were "previously duplicated inline in `src/app/log/client.tsx` and `src/app/sponsor/[commitment_id]/[token]/page.tsx`." Both clauses are stale — `log/client.tsx` is obsolete (it is file #1 in the D-1 inventory) and the sponsor-token page no longer uses media classifiers (verified by grep: neither `isVideoUrl`, `isImageUrl`, nor any Cloudinary path string appears in that file). Rewrote the comment to describe the current call graph honestly: the helpers are imported by `src/lib/companion/media.ts`, `src/lib/companion/day90.ts`, and `src/app/api/companion/reflect/route.ts`. Also flagged `src/app/room/[id]/room-message.tsx` as a place where the classifiers are inlined rather than imported — that's a follow-up, not in scope.
 - No other code changes. No file deletions. No migrations. `npx tsc --noEmit` clean after the edit.
 
