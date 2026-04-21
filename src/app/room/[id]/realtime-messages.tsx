@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import RoomMessage from './room-message'
 import type { MessageType, RoomMessageData } from './types'
@@ -130,49 +131,134 @@ export default function RealtimeMessages({
   }
   const supabase = supabaseRef.current
 
+  const router = useRouter()
+
+  // Shared INSERT handler hoisted so both the initial subscription and
+  // any retry path use the same logic. payload.new is the raw inserted
+  // row; Supabase delivers snake_case columns matching the table.
+  const handleInsert = (payload: { new: unknown }) => {
+    const row = payload.new as {
+      id: string
+      user_id: string
+      commitment_id: string | null
+      message_type: string
+      body: string | null
+      media_urls: string[] | null
+      transcript: string | null
+      is_session: boolean
+      posted_at: string
+    }
+    setById((prev) => {
+      // Dedup: if this id is already known (typically our own
+      // just-POSTed row, already upserted via router.refresh()
+      // or a prior tick), leave the fuller SSR-shaped version
+      // in place. Only insert if absent.
+      if (prev.has(row.id)) return prev
+      const next = new Map(prev)
+      next.set(row.id, shapeIncoming(row, viewerUserId, nameMap, sponsoredSet))
+      return next
+    })
+  }
+
+  // Subscription effect.
+  //
+  // Supabase Realtime's websocket endpoint shows intermittent failures
+  // (~10% on channel setup in observed testing — CHANNEL_ERROR usually,
+  // occasionally TIMED_OUT; infra-side "DNS cache overflow" 503s on the
+  // websocket upgrade). The original Session 3 subscribe() call had no
+  // status callback, so a failed channel sat silently and liveness was
+  // lost for the entire page lifetime. This rewrite:
+  //
+  //   1. Logs subscription status transitions with the channel name
+  //      prefix so Vercel runtime / browser console shows what happened
+  //      when Realtime breaks.
+  //   2. On CHANNEL_ERROR or TIMED_OUT, removes the current channel and
+  //      creates a fresh one after a backoff. Bounded to 4 attempts with
+  //      doubling delays (1s, 2s, 4s, 8s). After the cap we stop trying;
+  //      the visibility fallback below covers the worst case.
+  //   3. Uses a visibilityState listener: when the tab becomes visible
+  //      again (user returns to this tab after being elsewhere) we call
+  //      router.refresh(). This resyncs via SSR regardless of channel
+  //      health, so even a dead channel never means permanently-stale
+  //      messages — just no intra-tab liveness.
+  //
+  // Channel name includes a timestamp so retried channels don't collide
+  // with the server-side channel registry entry from a prior attempt.
   useEffect(() => {
-    const channel = supabase
-      .channel(`room:${roomId}:messages`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'room_messages',
-          filter: `room_id=eq.${roomId}`,
-        },
-        (payload) => {
-          // payload.new is the raw inserted row. Supabase delivers it
-          // with snake_case columns matching the table.
-          const row = payload.new as {
-            id: string
-            user_id: string
-            commitment_id: string | null
-            message_type: string
-            body: string | null
-            media_urls: string[] | null
-            transcript: string | null
-            is_session: boolean
-            posted_at: string
+    let attempt = 0
+    let activeChannel: ReturnType<typeof supabase.channel> | null = null
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+    let cancelled = false
+
+    const connect = () => {
+      if (cancelled) return
+      const channelName = `room:${roomId}:messages:${Date.now()}`
+      const ch = supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'room_messages',
+            filter: `room_id=eq.${roomId}`,
+          },
+          handleInsert
+        )
+        .subscribe((status, err) => {
+          // eslint-disable-next-line no-console
+          console.log(`[realtime ${channelName}] status: ${status}`, err ?? '')
+
+          if (status === 'SUBSCRIBED') {
+            // Reset backoff on success so a later drop+retry starts
+            // from the short delay again.
+            attempt = 0
+            return
           }
-          setById((prev) => {
-            // Dedup: if this id is already known (typically our own
-            // just-POSTed row, already upserted via router.refresh()
-            // or a prior tick), leave the fuller SSR-shaped version
-            // in place. Only insert if absent.
-            if (prev.has(row.id)) return prev
-            const next = new Map(prev)
-            next.set(row.id, shapeIncoming(row, viewerUserId, nameMap, sponsoredSet))
-            return next
-          })
-        }
-      )
-      .subscribe()
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            if (cancelled) return
+            if (attempt >= 4) {
+              // eslint-disable-next-line no-console
+              console.warn(
+                `[realtime ${channelName}] giving up after ${attempt} retries; ` +
+                  `falling back to visibility-based router.refresh()`
+              )
+              return
+            }
+            const delayMs = 1000 * Math.pow(2, attempt)
+            attempt += 1
+            // Tear down the failed channel before scheduling the retry.
+            supabase.removeChannel(ch)
+            retryTimer = setTimeout(() => {
+              retryTimer = null
+              connect()
+            }, delayMs)
+          }
+        })
+      activeChannel = ch
+    }
+
+    connect()
+
+    // Tab-foreground safety net. If Realtime missed anything while the
+    // tab was backgrounded — or if the channel has been dead the whole
+    // time — returning to the tab triggers an SSR refetch that fills
+    // in any gaps. Cheap and covers all channel-health failure modes.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        router.refresh()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
-      supabase.removeChannel(channel)
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisibility)
+      if (retryTimer) clearTimeout(retryTimer)
+      if (activeChannel) supabase.removeChannel(activeChannel)
     }
-  }, [supabase, roomId, viewerUserId, nameMap, sponsoredSet])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, roomId, viewerUserId, nameMap, sponsoredSet, router])
 
   // Render sorted by posted_at ascending, same as the server does.
   const ordered = useMemo(() => {
