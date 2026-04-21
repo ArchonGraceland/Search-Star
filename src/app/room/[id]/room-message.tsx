@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { RoomMessageData } from './types'
 
 // RoomMessage renders one message bubble. It branches on message_type
@@ -49,6 +49,24 @@ export default function RoomMessage({ message, roomId, viewerUserId }: Props) {
   const [affirmCount, setAffirmCount] = useState(message.affirmation_count)
   const [affirming, setAffirming] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+
+  // Sync affirmation state from props when the parent updates them
+  // (Realtime affirmation events flow through realtime-messages.tsx's
+  // handleAffirmationInsert/Delete, which mutate the byId Map entry
+  // for this message, which re-renders us with fresh props). We skip
+  // the sync while an optimistic mutation is in flight: the local
+  // state is intentionally ahead of the server in that window, and
+  // clobbering it with prop values would cause a visual flicker when
+  // our own request's Realtime echo arrives. Once affirming returns
+  // to false, authoritative state is back in charge.
+  //
+  // Depends on the actual primitive values, not `message` identity,
+  // so unrelated re-renders don't retrigger.
+  useEffect(() => {
+    if (affirming) return
+    setAffirmed(message.viewer_affirmed)
+    setAffirmCount(message.affirmation_count)
+  }, [message.viewer_affirmed, message.affirmation_count, affirming])
 
   const isCompanion =
     message.message_type === 'companion_response' ||

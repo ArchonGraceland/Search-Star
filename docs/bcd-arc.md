@@ -826,6 +826,57 @@ deployment ID in the HTML — bundle is live.
   a separate 4.5 session because the SSE route + placeholder-row
   architecture is non-trivial.
 
+### Session 4 (2026-04-21) — C-2: followup path + affirmation liveness
+
+**Why two things and not three.** Session 4 carried three candidate scope items from the Session 3.5 handoff: verification of the base Realtime fix (no code), the two C-2 live decisions (affirmation liveness, token streaming), and a new follow-up from Session 3.5 (the "Companion talks at, not with" problem). Budget landed shipping the followup path + affirmation liveness; streaming deferred with rationale in docs/chat-room-plan.md §6.6.
+
+**Shipped** (single commit spanning four code files + two migrations):
+
+*(A) The "talks at, not with" fix — followup Companion responses on non-session practitioner messages.*
+- `src/lib/companion/room.ts`: `generateCompanionRoomResponse` and `buildUserContent` gained a `triggerKind: 'session' | 'followup'` parameter. Default `'session'` preserves existing behavior. `'followup'` swaps the user-turn envelope text from "marked this message as their session for today" to "You asked a question in your most recent message to this room. The practitioner is replying to that question now — not marking a session, just continuing the conversation." No change to system prompt, model, context assembly, or roster/history load. Header comment updated.
+- `src/app/api/rooms/[id]/messages/route.ts`: the existing `after()` block gained an `else if (messageType === 'practitioner_post')` branch. Inside: fetch the most recent `companion_*` message in the room strictly earlier than the just-inserted row; if its body contains `?` in the last 200 characters, invoke `generateCompanionRoomResponse({ triggerKind: 'followup' })`. DB lookup + heuristic is inside `after()` so POST latency is unchanged. Self-limiting: the Companion only re-fires if its own prior reply ended with `?`, so a chatty practitioner can't hammer Anthropic — once the Companion stops asking questions, the chain naturally closes.
+- Return payload: `companion_queued` remains the truthful "session path fired" flag. New `companion_maybe_queued` captures "followup path *might* fire" honestly — client doesn't read it today, but a future thinking-indicator UI can distinguish.
+- Decision rationale (heuristic choice, no rate limit, practitioner-only scope): docs/chat-room-plan.md §6.6 Decision A.
+
+*(B) Affirmation-count liveness — spectator-side counts tick live.*
+- `src/app/room/[id]/realtime-messages.tsx`: two additional `.on('postgres_changes', …)` handlers on the existing room channel — one for INSERT on `message_affirmations`, one for DELETE. Handlers update the matching entry in `byId` Map: INSERT increments `affirmation_count` and sets `viewer_affirmed=true` if the affirming sponsor is the current viewer; DELETE mirrors. No filter on the affirmation subscription — RLS scopes delivery to rooms the viewer is a member of. Events for unknown messages (not in `byId`) are dropped by the handler's existence check. Same retry/visibility infrastructure from Session 3.5 covers both subscriptions.
+- `src/app/room/[id]/room-message.tsx`: added `useEffect` that syncs `affirmed`/`affirmCount` local state from props when not mid-optimistic-update. Without this sync, Realtime-driven parent updates would not propagate through the child's local state. Guard on `affirming` prevents the sync from clobbering in-flight optimistic values.
+- Migration `20260421_v4_message_affirmations_realtime.sql`: adds `public.message_affirmations` to `supabase_realtime` publication. Idempotent via `pg_publication_tables` check.
+- Migration `20260421_v4_message_affirmations_replica_identity.sql`: sets `message_affirmations` to `REPLICA IDENTITY FULL` so Realtime DELETE payloads carry `message_id` and `sponsor_user_id`, not just the primary key. Without this the DELETE handler couldn't locate the target message to decrement its count.
+- Decision rationale (one-channel two-subscriptions, why REPLICA IDENTITY FULL, sync-useEffect design): docs/chat-room-plan.md §6.6 Decision B.
+
+*(C) Token streaming for Companion responses — deferred.*
+- Rationale in docs/chat-room-plan.md §6.6 Decision C. Current 3–5s Realtime delivery is within the range where a simple thinking-indicator (not yet built, not yet needed) would be sufficient polish. Streaming is a larger surface — SSE lifecycle, placeholder-row semantics, partial-render edge cases, reconnection resume-from-offset, interaction with affirmations — and deserves its own dedicated session when real use surfaces genuine latency dissatisfaction. Parked explicitly to avoid re-litigating in the next few sessions.
+
+**Validated:** `npx tsc --noEmit` clean. `npm run build` clean (same pre-existing CSS optimization warning as Session 3.5). Supabase MCP confirmed both migrations applied successfully to project `qgjyfcqgnuamgymonblj`. Publication contents verified: `room_messages` and `message_affirmations` both present. Production-side DB changes are live; the matching migration files in the repo match the applied SQL.
+
+**Deferred** (carries forward):
+
+1. **In-browser verification of the base Realtime fix from Session 3.5.** Session 4's (A) path could not proceed to implementation before this verification, but ultimately did — the implementation is architecturally additive (new subscriptions, new handler branch) and doesn't depend on the base path working, so the test is independent. David still runs the Session 3.5 verification recipe when convenient and reports the status-log line. Expected: `[realtime room:<id>:messages:<ts>] status: SUBSCRIBED` in console, Companion response appears live without refresh. Failure mode to watch for on the new subscription: a CHANNEL_ERROR on subscribe that doesn't recover within the 4-retry cap.
+
+2. **Two-browser live test of (A) and (B).** David's main browser + the sponsor walkthrough account (`dverchere+sponsor-walkthrough-1@gmail.com`, user `497d66d7-1b13-4e25-a535-a29188e110ec`, active member of room `29b52264-50be-411e-8294-2091ee28e8fb`). Test protocol:
+   - *(A)* From David's browser, post a session-mark; wait for Companion reply ending with `?`; reply non-session; confirm second Companion response appears live on both browsers.
+   - *(B)* From sponsor browser, click Affirm on a session-marked message; confirm the count ticks up on David's browser within a second without any refresh action. Click Affirm again (unaffirm); confirm the count ticks down.
+   - If either fails, check browser console on the failing side for the status callback log (Session 3.5 infrastructure).
+
+3. **Negative-case authorization test.** Still open from Session 3. Not blocking — no second room exists to test against. Lands naturally when the first multi-room scenario arrives.
+
+4. **Token streaming.** Decision C in §6.6. Own session when it matters.
+
+5. **Companion followup path rate-limiting.** Current design is self-limiting via "Companion only re-fires if its own prior reply ended with `?`". If real use surfaces a hammering case — a practitioner sending many non-session messages while the Companion keeps asking questions — revisit. Not today's problem.
+
+**State for next session**:
+
+- **The room surface now has two independently-verified live behaviors.** New messages arrive live (Session 3), affirmations tick live (Session 4), and Companion has conversational follow-through (Session 4). The foundation for Phase 10's chat UI is effectively complete at the data layer; what remains is styling, streaming, and voice input.
+
+- **The "talks at, not with" follow-up is resolved at v1 scope.** The §6.6 Decision A analysis includes a spelled-out self-limiting proof, so any future session considering a wall-clock rate limit should read that first before adding complexity. The fix path (a) from the bcd-arc.md follow-up entry shipped; path (b) (full Phase 10 chat UI) is still a separate surface and still on the roadmap.
+
+- **Session 5 is D-1 per the arc plan.** Per-file audit of the 10 dead files from the inventory in the Session 5 scope block. No code changes that session except the `src/lib/media.ts` comment fix. Session 6 executes the plan.
+
+- **Two Supabase migrations are now permanent.** The publication now includes `message_affirmations`, and the table has `REPLICA IDENTITY FULL`. Either is a breaking change to remove without also removing the subscription that depends on it — document the dependency before any future cleanup touches these.
+
+---
+
 ## Known follow-ups discovered during the arc
 
 *(Add here anything discovered mid-session that's out of current scope but
@@ -893,10 +944,18 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   ~80% of the felt problem without touching Phase 10 scope.
   (b) Full Phase 10: chat UI, persisted threads, streaming, voice.
   Already on the roadmap, intentionally deferred.
-  Recommendation: ship (a) as a Phase 9.6 or alongside C-2 if
-  Session 4 has tool-budget. Reconsider (b)'s shape afterward; it
-  may turn out (a) captures most of the value and Phase 10's
-  scope can shrink.
+
+  **RESOLVED in Session 4 (2026-04-21).** Path (a) shipped. The
+  `after()` block gained a second branch that fires on non-session
+  practitioner messages when the most recent Companion message's
+  body contains `?` in its last 200 characters. `generateCompanionRoomResponse`
+  gained a `triggerKind: 'session' | 'followup'` parameter that
+  swaps envelope text so the Companion knows it's continuing a
+  conversation rather than reflecting on a session. Self-limiting
+  — no wall-clock rate limit needed. Full rationale in
+  docs/chat-room-plan.md §6.6 Decision A. Path (b) remains Phase 10
+  scope; its shape can be reconsidered after real use of (a)
+  reveals whether the felt gap is closed.
 
 ---
 

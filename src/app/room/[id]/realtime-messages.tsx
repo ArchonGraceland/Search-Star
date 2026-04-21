@@ -160,6 +160,75 @@ export default function RealtimeMessages({
     })
   }
 
+  // Shared affirmation handlers. An affirmation INSERT or DELETE
+  // mutates the target message's affirmation_count and, if the
+  // affirming sponsor is the current viewer, their viewer_affirmed
+  // flag. Realtime delivers the full old row on DELETE because the
+  // table was set to REPLICA IDENTITY FULL in migration
+  // 20260421_v4_message_affirmations_replica_identity.sql —
+  // without that, DELETE payloads carry only the primary key and
+  // we'd have no way to locate the target message.
+  //
+  // Deduplication and the optimistic-update interaction: the affirm
+  // button in room-message.tsx optimistically increments/decrements
+  // affirmation_count before the POST/DELETE returns. When the
+  // authoritative Realtime echo arrives, naively applying it would
+  // double-count. We avoid this by letting room-message.tsx hold
+  // local state and sync from prop changes only when its own mutation
+  // is not in flight. See the syncing useEffect in room-message.tsx
+  // for the full contract.
+  const handleAffirmationInsert = (payload: { new: unknown }) => {
+    const row = payload.new as {
+      id: string
+      message_id: string
+      sponsor_user_id: string
+      affirmed_at: string
+    }
+    setById((prev) => {
+      const existing = prev.get(row.message_id)
+      if (!existing) return prev
+      const next = new Map(prev)
+      next.set(row.message_id, {
+        ...existing,
+        affirmation_count: existing.affirmation_count + 1,
+        viewer_affirmed:
+          row.sponsor_user_id === viewerUserId
+            ? true
+            : existing.viewer_affirmed,
+      })
+      return next
+    })
+  }
+
+  const handleAffirmationDelete = (payload: { old: unknown }) => {
+    const row = payload.old as {
+      id: string
+      message_id?: string
+      sponsor_user_id?: string
+      affirmed_at?: string
+    }
+    // With REPLICA IDENTITY FULL these fields are present. Defensive
+    // check anyway: if message_id is missing for any reason (a future
+    // replica-identity regression, an unexpected schema drift), we
+    // silently skip rather than break the room page.
+    if (!row.message_id) return
+    const messageId = row.message_id
+    setById((prev) => {
+      const existing = prev.get(messageId)
+      if (!existing) return prev
+      const next = new Map(prev)
+      next.set(messageId, {
+        ...existing,
+        affirmation_count: Math.max(0, existing.affirmation_count - 1),
+        viewer_affirmed:
+          row.sponsor_user_id === viewerUserId
+            ? false
+            : existing.viewer_affirmed,
+      })
+      return next
+    })
+  }
+
   // Subscription effect.
   //
   // Supabase Realtime's websocket endpoint shows intermittent failures
@@ -204,6 +273,32 @@ export default function RealtimeMessages({
             filter: `room_id=eq.${roomId}`,
           },
           handleInsert
+        )
+        // Affirmation liveness (added Session 4, 2026-04-21). The
+        // postgres_changes filter is one-column equality only, and
+        // message_affirmations has no room_id. We subscribe without
+        // a filter and rely on RLS — the SELECT policy
+        // "affirmations: members read" joins through room_memberships
+        // to scope deliveries to rooms the viewer is a member of.
+        // Incoming events for messages NOT in our local byId map are
+        // dropped by the handlers (existing check on prev.get).
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'message_affirmations',
+          },
+          handleAffirmationInsert
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'message_affirmations',
+          },
+          handleAffirmationDelete
         )
         .subscribe((status, err) => {
           // eslint-disable-next-line no-console

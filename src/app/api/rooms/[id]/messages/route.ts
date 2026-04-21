@@ -169,6 +169,28 @@ export async function POST(
   // are queryable in Vercel runtime logs by room_id / user_id /
   // message_id if a Companion invocation silently fails to produce a
   // row. The Session 2 cron handler uses the same log prefix shape.
+  //
+  // Two trigger paths, checked in order:
+  //
+  //   (a) session: is_session=true on a practitioner_post. Original
+  //       v1 behavior. Envelope frames the Companion's reply as
+  //       reflection on today's session.
+  //   (b) followup: is_session=false on a practitioner_post, BUT the
+  //       most recent companion_* message in the room ended with a
+  //       '?' in its final 200 characters. The practitioner appears
+  //       to be answering a pending Companion question. The envelope
+  //       tells the Companion so, and the response is a conversational
+  //       continuation. Added in B/C/D arc Session 4 (2026-04-21) to
+  //       fix the "talks at, not with" problem. See
+  //       docs/chat-room-plan.md §6.6.
+  //
+  // Self-limiting on path (b): once the Companion replies, its own
+  // message becomes "the most recent companion_* message". A second
+  // follow-up from the practitioner only fires another reply if THAT
+  // message also ended with '?' — i.e. genuine back-and-forth. A
+  // chatty practitioner cannot hammer Anthropic because the Companion
+  // stops asking questions when the conversation closes. No wall-clock
+  // rate limit needed.
   if (sessionFlag && resolvedCommitmentId) {
     const roomIdSnapshot = roomId
     const triggerMessageId = inserted.id
@@ -179,6 +201,7 @@ export async function POST(
           db,
           roomId: roomIdSnapshot,
           triggerMessageId,
+          triggerKind: 'session',
         })
         if (!companionMessageId) {
           console.error('[rooms/messages after] Companion returned null', {
@@ -196,10 +219,85 @@ export async function POST(
         })
       }
     })
+  } else if (messageType === 'practitioner_post') {
+    // Path (b) — non-session practitioner message. We might answer
+    // it if it looks like a reply to a pending Companion question.
+    // The DB lookup + heuristic check is inside after() so it never
+    // affects POST latency. If the check fails, we just don't invoke.
+    const roomIdSnapshot = roomId
+    const triggerMessageId = inserted.id
+    const triggerUserId = user.id
+    const triggerPostedAt = inserted.posted_at
+    after(async () => {
+      try {
+        // Find the most recent companion_* message in this room
+        // strictly before the just-inserted row. Any of the four
+        // companion message_types qualifies — all are produced by
+        // the same prompt and can legitimately end with a question.
+        const { data: lastCompanion } = await db
+          .from('room_messages')
+          .select('id, body, posted_at')
+          .eq('room_id', roomIdSnapshot)
+          .in('message_type', [
+            'companion_response',
+            'companion_welcome',
+            'companion_milestone',
+            'companion_moderation',
+          ])
+          .lt('posted_at', triggerPostedAt)
+          .order('posted_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (!lastCompanion || !lastCompanion.body) return
+
+        // Heuristic: '?' present in the last 200 characters of the
+        // Companion's most recent message. The Companion's prompt
+        // produces short messages often ending in a question, so a
+        // trailing-window check is sufficient. A '?' mid-body followed
+        // by a declarative sentence is rare in this voice and not
+        // worth a more sophisticated parse at v1.
+        const body = lastCompanion.body
+        const tail = body.slice(Math.max(0, body.length - 200))
+        if (!tail.includes('?')) return
+
+        const companionMessageId = await generateCompanionRoomResponse({
+          db,
+          roomId: roomIdSnapshot,
+          triggerMessageId,
+          triggerKind: 'followup',
+        })
+        if (!companionMessageId) {
+          console.error('[rooms/messages after] Companion followup returned null', {
+            room_id: roomIdSnapshot,
+            user_id: triggerUserId,
+            trigger_message_id: triggerMessageId,
+            last_companion_id: lastCompanion.id,
+          })
+        }
+      } catch (err) {
+        console.error('[rooms/messages after] Companion followup invocation threw', {
+          room_id: roomIdSnapshot,
+          user_id: triggerUserId,
+          trigger_message_id: triggerMessageId,
+          err,
+        })
+      }
+    })
   }
 
+  // companion_queued is a best-effort signal for the caller. We know
+  // for certain it's queued on the session path. On the followup path
+  // we can't know without repeating the heuristic synchronously, which
+  // would defeat the purpose of after(). companion_maybe_queued
+  // captures that honestly — the client doesn't branch on this today,
+  // but a future UI showing a thinking-indicator can distinguish the
+  // two.
   return NextResponse.json({
     message: inserted,
     companion_queued: sessionFlag && !!resolvedCommitmentId,
+    companion_maybe_queued:
+      !(sessionFlag && !!resolvedCommitmentId) &&
+      messageType === 'practitioner_post',
   })
 }

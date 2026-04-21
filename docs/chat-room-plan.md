@@ -747,6 +747,71 @@ Roster and history are carried even though the day 30/60/90 marker never referen
 
 **Open question carried to Session 2.** The day-90 milestone marker fires on the calendar event. The day-90 summary fires when status moves to `completed`. In Session 2's cron, these will naturally run in sequence: drop the milestone marker first (one row), then compute the summary (separate surface), then flip status. The milestone marker landing in the room is how members find out day 90 has arrived; the summary is how sponsors read the arc; the status flip is what unlocks the release button. Three distinct actions, same cron tick, in that order. Spelled out here so Session 2 doesn't re-deliberate.
 
+### 6.6 Live-decisions log — B/C/D arc, Session 4 (2026-04-21)
+
+*Session 4 opened with two decisions carried over from Session 3.5 (affirmation-count liveness and token streaming) and picked up one additional scope item surfaced during Session 3.5 (the "Companion talks at, not with" problem). Three decisions made here. Each includes the reasoning so future sessions don't re-deliberate.*
+
+#### Decision A — Ship the "talks at, not with" fix now. `?`-in-last-200-chars heuristic; no wall-clock rate limit.
+
+**The problem, recapped.** The Companion writes conversational messages that often end in a question — e.g. "What made you switch to open palm?". The practitioner replies to that question in a non-session chat message, per the natural affordance of the room surface. The POST route's `after()` block gates the Companion's reply on `if (sessionFlag && resolvedCommitmentId)`, so non-session replies never get a response. Result: practitioner asks a question, practitioner gets no reply, conversation dies. User observation from David's own room: two unanswered replies in a row on 2026-04-21 followed by an explicit meta-question — "is the companion interacting with every one of my posts?"
+
+**What shipped.** The `after()` block gains a second branch that fires when `messageType === 'practitioner_post'` and the session path didn't take. Inside that branch (wrapped by `after()` so it adds nothing to POST latency), we fetch the most recent `companion_*` message in the room strictly earlier than the just-inserted row. If that message's body contains a `?` in its last 200 characters, we invoke `generateCompanionRoomResponse({ triggerKind: 'followup' })`. The library gained a `triggerKind` parameter (default `'session'`) that swaps the user-turn envelope text: `'session'` keeps the existing "marked this message as their session for today" framing; `'followup'` uses "You asked a question in your most recent message to this room. The practitioner is replying to that question now — not marking a session, just continuing the conversation."
+
+**Why `?`-in-last-200-chars.** The Companion's voice from §6.4 produces short messages — typically two or three sentences — often ending in a question. A trailing-window check catches the normal case cleanly. Alternatives considered and rejected:
+
+- *Last-sentence parse.* More precise but requires sentence-boundary detection, which is surprisingly hard at the margin (ellipses, quoted questions, abbreviations). The marginal gain doesn't justify the complexity at v1.
+- *Anthropic tool-call to classify "is this a question that expects an answer?"* Adds an additional Anthropic call on every non-session practitioner message. Wasteful; the heuristic is cheap and close to free.
+- *Strictly-ends-with-`?`.* Too strict — the Companion sometimes ends with a period after a question ("What made you switch to open palm? Just curious about the shift.").
+
+False positives are bounded. If the Companion's prior message had a `?` in the last 200 chars but was declarative overall, firing a Companion response is still usually OK conversationally — the Companion will just respond to whatever the practitioner said, which is the right thing to do. False negatives are more costly (the bug we're fixing), so the heuristic tilts toward firing.
+
+**Why no wall-clock rate limit.** The Session 4 handoff suggested "one response per 30 minutes per room" as a safeguard against a chatty practitioner hammering Anthropic. Rejected after thinking it through: the path is *structurally* self-limiting because the Companion only fires another reply if *its own previous reply* ended with a `?`. The Companion's voice produces questions in response to practitioner material, not on autopilot — once the conversation reaches a natural close (a declarative response, a quiet acknowledgment), the chain stops. Adding a wall-clock cap solves a theoretical problem at the cost of state (cache key? DB column? Redis?) and adds a confusing silent-failure mode where a practitioner legitimately mid-conversation gets ignored for reasons they can't see. If actual abuse materializes, add the cap then.
+
+**Why `practitioner_post` only, not sponsor messages.** The reported UX problem is specifically about the practitioner being ignored after answering. Sponsor chat with the Companion is a different social dynamic — sponsors aren't expected to have conversational back-and-forth with the Companion the way a practitioner is. Keeping the path narrow reduces the surface area for unexpected behavior. If a clear case emerges where the Companion should also respond to a sponsor non-session message, widen then on evidence.
+
+**Self-limiting mechanics, fully spelled out.** Scenarios, assuming practitioner_posts are non-session unless noted:
+
+- *Session-mark → Companion asks question → practitioner non-session reply.* Followup path fires. New Companion response written. If that response also ends with `?`, and the practitioner replies again, fires again. If the response doesn't end with `?`, next practitioner message is ignored (last companion message no longer matches the heuristic). Natural conversational close.
+- *Session-mark → Companion asks question → sponsor chats (not practitioner).* Sponsor messages never trigger followup. Next practitioner non-session message still fires (last Companion message still the question).
+- *Multiple practitioners in the room.* Heuristic only looks at the most recent Companion message. Every practitioner_post competes for the same "who gets the followup" slot, which is the right behavior — Companion addresses the most recent practitioner material.
+- *Two rapid non-session messages from the practitioner, before the first Companion reply lands.* First fires. Second fires against the still-current last Companion message (the one before the first fire). Two Companion replies produced, which is a real edge case but bounded by natural human typing cadence and Anthropic latency. Acceptable.
+
+**Files touched.** `src/lib/companion/room.ts` (added `triggerKind` to `generateCompanionRoomResponse` and `buildUserContent`, branched envelope text); `src/app/api/rooms/[id]/messages/route.ts` (second `else if` branch in the `after()` block with the heuristic check).
+
+#### Decision B — Ship affirmation-count liveness. Same channel as message inserts.
+
+**The problem.** Session-marked messages show an affirmation count and an Affirm button. The button's state updates optimistically on the clicker's own page, but other room members see a stale count until page refresh. In a small room where a sponsor clicks Affirm and the practitioner is watching, the count should tick up live — it's the quietest possible "witness is paying attention" signal.
+
+**What shipped.** Two additional `.on('postgres_changes', …)` calls on the existing room channel in `realtime-messages.tsx` — one for INSERT on `message_affirmations`, one for DELETE. Both update entries in the `byId` Map in-place: INSERT increments the target message's `affirmation_count` and, if the sponsor is the current viewer, sets `viewer_affirmed = true`; DELETE mirrors. `room-message.tsx` gained a `useEffect` that syncs local `affirmed`/`affirmCount` state from props when not mid-optimistic-update, so parent updates propagate without clobbering in-flight optimistic changes.
+
+**Why one channel, not two.** A separate channel per subscription doubles the connection-setup cost and the retry bookkeeping for zero benefit. The Session 3.5 retry logic already wraps `.subscribe()` once per channel; layering multiple `.on()` calls on the same channel is the idiomatic Supabase pattern. If one of the two subscriptions experiences a delivery issue, both fail together, but they also succeed together, which is the correct failure correlation — both are "is this room's Realtime up?"
+
+**Why subscribe without filter on `message_affirmations`.** The `postgres_changes` filter is one-column equality only, and `message_affirmations` has no `room_id`. Filtering on `message_id=in.(…)` would require a dynamic filter for every message in the room — not supported. Instead: subscribe with no filter and rely on RLS. The SELECT policy "affirmations: members read" joins through `room_memberships` to scope deliveries server-side. Events for rooms the viewer isn't in never arrive. Events for messages not in the local `byId` Map are dropped by the handler's `prev.get(message_id)` guard.
+
+**Why REPLICA IDENTITY FULL on `message_affirmations`.** Default replica identity is the primary key only. On DELETE, the Realtime `payload.old` would carry only `id` — not `message_id` or `sponsor_user_id` — which means we couldn't locate the target message to decrement its count. REPLICA IDENTITY FULL gives DELETE the full old row at a small write-amplification cost. The alternative — maintaining a client-side reverse index from affirmation_id to (message_id, sponsor_user_id) — adds state that has to be kept in sync with the initial SSR payload and invalidated correctly across router.refresh() calls, for no meaningful saving. The write-amplification cost is negligible at expected scale: affirmations are small rows in a low-traffic table.
+
+**Why the sync useEffect in `room-message.tsx` guards on `affirming`.** Local state was seeded from props at mount via `useState(message.viewer_affirmed)`. Without a sync effect, subsequent prop changes (from Realtime-driven parent updates) are ignored. A naive sync would clobber optimistic state mid-click: the user clicks Affirm, optimistic update sets `affirmCount + 1` and `affirmed = true`, the POST fires, the Realtime echo of the user's own INSERT arrives before the POST response, the parent's Map updates, the child syncs from props — which at this instant match the optimistic values, so no visible glitch — but if the sync runs while the POST is in flight and the props haven't caught up yet (Realtime echo delayed), the sync writes stale values. The `if (affirming) return` guard prevents this: the optimistic window is authoritative for the clicker's own UI until the request resolves, after which prop-driven syncs take over.
+
+**Files touched.** `src/app/room/[id]/realtime-messages.tsx` (two new `.on()` handlers on the existing channel, two new handler functions); `src/app/room/[id]/room-message.tsx` (sync useEffect); `supabase/migrations/20260421_v4_message_affirmations_realtime.sql` (add to publication, idempotent); `supabase/migrations/20260421_v4_message_affirmations_replica_identity.sql` (REPLICA IDENTITY FULL).
+
+#### Decision C — Defer token streaming for Companion responses.
+
+**The question.** Should the Companion's response write incrementally to a placeholder row and stream tokens into it via SSE + Realtime, so members see text appearing character-by-character the way modern chat UIs do?
+
+**Decision: no, not now.** Deferred to a future dedicated session (tentatively Phase 10, or a "Session 4.5" if priorities shift).
+
+**Rationale.** The current Realtime pipeline delivers the final Companion message 3–5 seconds after the trigger in the typical case. That latency is within the range where a simple spinner or "Companion is thinking…" indicator — which we don't even have yet, and arguably don't need — would be sufficient polish. "Feels alive" is a real product value, but streaming is a significantly larger surface:
+
+- SSE route lifecycle (connection timeout, backpressure, reconnection with resume-from-offset).
+- Placeholder row insertion before the Anthropic call and in-place updates as tokens arrive — new write-patterns on `room_messages`, including potentially many UPDATE events per response that the current subscription would need to absorb.
+- Partial-render edge cases in RoomMessage rendering: a message body that mutates in place, possibly ending mid-word if the SSE connection drops.
+- Reconnection handling: a page load mid-stream needs a different initial state than a page load after the stream completed — the server needs to know the current streaming state of every active Companion response.
+- Interaction with affirmations: can a sponsor affirm a session message while the Companion is still streaming its response? (Yes, but the interleaving is weird to design.)
+
+None of these are hard individually; together they're enough scope that rolling them into a session that's also shipping (A) and (B) would crowd them. The right move is to prove (A) and (B) end-to-end in real use first — David's own use of the room — and then come back to streaming with clarity about whether it actually solves a felt problem or just looks cooler. If after a week of active use the 3–5s latency genuinely feels dead, streaming moves up the queue. If it feels fine, streaming stays parked.
+
+**What this commits to.** Session 4 ships (A) + (B). Streaming is explicitly parked with this rationale so it doesn't re-litigate in the next few sessions. When the time comes, it gets its own session with SSE architecture, placeholder-row schema, UPDATE-event Realtime subscription, and partial-render UI design as a combined design pass.
+
 ---
 
 ## 7. Deliberately out of scope for v1

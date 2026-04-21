@@ -1,0 +1,14 @@
+-- B/C/D arc Session 4 (C-i, 2026-04-21). Set REPLICA IDENTITY FULL on
+-- message_affirmations so Realtime DELETE events carry the full old row
+-- (message_id, sponsor_user_id), not just the primary key. The room
+-- page's affirmation-liveness subscription needs message_id and
+-- sponsor_user_id to decrement the right message's count and update
+-- viewer_affirmed for the affirmation's owner.
+--
+-- Write-amplification is bounded: affirmations are INSERT-heavy and
+-- DELETE-occasional, the rows are tiny (4 columns, ~80 bytes), and the
+-- table is low-volume. The cost is negligible at expected scale and
+-- the alternative — a client-side reverse index from affirmation_id to
+-- (message_id, sponsor_user_id) — adds complexity without saving
+-- anything meaningful.
+alter table public.message_affirmations replica identity full;

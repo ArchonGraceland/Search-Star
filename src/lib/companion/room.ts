@@ -12,10 +12,18 @@ import { buildImageBlocks, getOrFetchTranscript } from '@/lib/companion/media'
 // Everything Companion does inside a room funnels through here. Three
 // entry points today:
 //
-// - generateCompanionRoomResponse: called after a session-marked
-//   practitioner post. Reads the room's recent history, the triggering
-//   message (text + media + video transcripts), and the roster of
-//   members with their pledges. Produces a companion_response row.
+// - generateCompanionRoomResponse: called after a practitioner post
+//   that should get a Companion reply. Two modes via triggerKind:
+//     * 'session' (default): the triggering row is a session-marked
+//       post; envelope frames it as "marked session for today".
+//     * 'followup': the triggering row is a non-session practitioner
+//       message answering a question the Companion asked earlier;
+//       envelope frames it as continuing the conversation. Added in
+//       B/C/D arc Session 4 (2026-04-21). See
+//       docs/chat-room-plan.md §6.6.
+//   Reads the room's recent history, the triggering message (text +
+//   media + video transcripts), and the roster of members with their
+//   pledges. Produces a companion_response row.
 //
 // - generateCompanionRoomWelcome: called after a commitment is
 //   declared. Produces a companion_welcome row — the first message in
@@ -290,8 +298,19 @@ async function buildUserContent(args: {
     dayNumber: number
   }>
   triggerUserName: string
+  // 'session'  — the trigger row is a session-marked practitioner post.
+  //              Envelope frames the Companion as reflecting on today's
+  //              session, the original v1 behavior.
+  // 'followup' — the trigger row is a non-session practitioner message
+  //              that appears to be answering a question the Companion
+  //              asked in a prior message in the room. Envelope frames
+  //              the Companion as continuing that conversation rather
+  //              than marking a fresh session. Added 2026-04-21 in the
+  //              B/C/D arc Session 4 (C-2) to fix the "talks at, not
+  //              with" problem — see docs/chat-room-plan.md §6.6.
+  triggerKind: 'session' | 'followup'
 }): Promise<Array<Anthropic.Messages.ContentBlockParam>> {
-  const { db, triggerRow, historyText, memberLines, activeCommitments, triggerUserName } = args
+  const { db, triggerRow, historyText, memberLines, activeCommitments, triggerUserName, triggerKind } = args
 
   const imageBlocks = buildImageBlocks(triggerRow.media_urls)
   const transcript = await getOrFetchTranscript(
@@ -334,18 +353,32 @@ async function buildUserContent(args: {
 
   const textBlock: Anthropic.Messages.TextBlockParam = {
     type: 'text',
-    text: [
-      `Room members:`,
-      memberLines.length > 0 ? memberLines.join('\n') : '(no active members)',
-      '',
-      `Recent room activity (oldest first):`,
-      historyText,
-      '',
-      `A practitioner just marked this message as their session for today. Respond per your guidelines.`,
-      '',
-      `${triggerHeader} marked this session:`,
-      `"${triggerBody}"${triggerMediaLine}${triggerTranscriptLine}`,
-    ].join('\n'),
+    text: (triggerKind === 'session'
+      ? [
+          `Room members:`,
+          memberLines.length > 0 ? memberLines.join('\n') : '(no active members)',
+          '',
+          `Recent room activity (oldest first):`,
+          historyText,
+          '',
+          `A practitioner just marked this message as their session for today. Respond per your guidelines.`,
+          '',
+          `${triggerHeader} marked this session:`,
+          `"${triggerBody}"${triggerMediaLine}${triggerTranscriptLine}`,
+        ]
+      : [
+          `Room members:`,
+          memberLines.length > 0 ? memberLines.join('\n') : '(no active members)',
+          '',
+          `Recent room activity (oldest first):`,
+          historyText,
+          '',
+          `You asked a question in your most recent message to this room. The practitioner is replying to that question now — not marking a session, just continuing the conversation. Respond per your guidelines.`,
+          '',
+          `${triggerHeader} replied:`,
+          `"${triggerBody}"${triggerMediaLine}${triggerTranscriptLine}`,
+        ]
+    ).join('\n'),
   }
 
   return [...imageBlocks, textBlock]
@@ -365,8 +398,14 @@ export async function generateCompanionRoomResponse(args: {
   db: SupabaseClient
   roomId: string
   triggerMessageId: string
+  // Defaults to 'session' to preserve the v1 call shape from
+  // /api/rooms/[id]/messages when is_session=true. 'followup' is passed
+  // when the route detects the practitioner is answering a pending
+  // Companion question in a non-session message. See route comments
+  // and docs/chat-room-plan.md §6.6.
+  triggerKind?: 'session' | 'followup'
 }): Promise<string | null> {
-  const { db, roomId, triggerMessageId } = args
+  const { db, roomId, triggerMessageId, triggerKind = 'session' } = args
 
   try {
     const [{ memberLines, activeCommitments }, { historyText, triggerRow }] =
@@ -398,6 +437,7 @@ export async function generateCompanionRoomResponse(args: {
       memberLines,
       activeCommitments,
       triggerUserName,
+      triggerKind,
     })
 
     const anthropic = getAnthropic()
