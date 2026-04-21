@@ -310,12 +310,167 @@ fetch('/api/admin/companion/milestone', {
 
 ---
 
+### Session 2 (2026-04-21) — B-2: cron automation
+
+**Shipped** (commit `5c62d4d`):
+- `src/app/api/cron/companion-milestones/route.ts` — GET handler,
+  `Authorization: Bearer $CRON_SECRET` auth, `?dry_run=1` supported.
+  Scans all `status='active'` commitments, computes day-number as
+  `floor((now - started_at) / 86400s)`, filters to 30/60/90. For each
+  candidate: runs the milestone-row count idempotency guard, fires
+  `generateCompanionRoomMilestone` if needed, and at day 90
+  additionally calls `summarizeCommitment` (result discarded — see
+  "State for next session" below) and flips status to `'completed'`
+  via `UPDATE ... WHERE id=? AND status='active'` (the status-flip
+  idempotency guard, independent of the milestone-row guard because
+  the Session 1 admin endpoint is non-idempotent and can create a
+  milestone row without flipping status).
+- `vercel.json` — added `crons` array with
+  `/api/cron/companion-milestones` at `0 9 * * *` (daily 09:00 UTC
+  = 2am PST / 5am EST). No other crons defined in v4; the legacy
+  `/api/cron/deep-mode` stub-route is still in the tree (see
+  "Known follow-ups" below) but was intentionally NOT re-registered
+  in `vercel.json`.
+
+**Deployed**: `dpl_21RZ9taQNMApEBifEy4zAY8hSwDc`, state READY in ~22s
+(buildingAt → ready: 1776769918077 → 1776769940252), aliased to
+`searchstar.com`, `www.searchstar.com`, and the standard Vercel
+project aliases. Turbopack bundler; `npx tsc --noEmit` and full
+`npm run build` both clean pre-push.
+
+**Production smoke test**: unauthenticated GET to
+`https://www.searchstar.com/api/cron/companion-milestones?dry_run=1`
+returns `401 {"error":"Unauthorized"}` with
+`x-matched-path: /api/cron/companion-milestones` in the response
+headers. Proves the route is mounted, the auth gate runs before any
+DB access, and `dry_run=1` is parsed (doesn't break anything pre-
+auth). Same 401 shape as Session 1's smoke test on the admin
+endpoint — same interpretation.
+
+**Deferred**:
+- **The real authenticated end-to-end test** (valid
+  `Bearer $CRON_SECRET` producing a dry-run response body). This
+  container does not have the production `CRON_SECRET` value.
+  Leaving to David to run once from a machine where the secret is
+  available:
+  ```bash
+  curl -s -H "Authorization: Bearer $CRON_SECRET" \
+    "https://www.searchstar.com/api/cron/companion-milestones?dry_run=1" | jq
+  # Expected: {ok:true, dry_run:true, processed:[], candidate_count:0,
+  #           total_active:N, checked_at:"..."}
+  # At session time commitment f6c2a97c started 2026-04-19, so it's
+  # ~day 2 — nothing in {30,60,90}, processed[] should be empty.
+  ```
+  Then once confident, fire without `?dry_run=1` to exercise the
+  write path. On the null-result case this is a no-op — which is
+  exactly what verifies that a zero-work cron tick is safe.
+- **First automatic cron invocation at 09:00 UTC tomorrow
+  (2026-04-22).** Will land on an empty candidate set. The first
+  non-empty tick is not until a real commitment hits day 30.
+  Commitment `f6c2a97c` (started 2026-04-19) will hit day 30 around
+  2026-05-19, so that's the first natural end-to-end exercise of
+  the cron — until then, manual `?dry_run=1` is the only way to
+  observe real behavior.
+
+**Key design corrections during implementation**:
+
+1. *Initial instinct was to wrap the three day-90 steps in a
+   transaction.* Correctly rejected per the Session 1 handoff: the
+   Anthropic calls in steps 1 and 2 cannot be rolled back, and step
+   2 (`summarizeCommitment`) reads up to 400k characters of session
+   record and calls Anthropic — which at a full commitment's posts
+   could easily take 30+ seconds. A Postgres transaction held open
+   for 30+ seconds on every day-90 cron tick is a bad pattern to
+   establish. Each-step-independently-idempotent is genuinely the
+   right shape, not a compromise. Reasoning captured inline at the
+   top of the route file so Session 3+ doesn't re-deliberate.
+
+2. *Two separate idempotency guards, not one.* The milestone-row
+   guard branches on `count(message_type='companion_milestone')`
+   for the commitment; the status-flip guard branches on
+   `commitments.status='active'`. These need to be independent
+   because Session 1's admin endpoint is explicitly non-idempotent
+   and can create a duplicate milestone row without ever flipping
+   status. Using "milestone row exists" as a proxy for "status is
+   flipped" would wrongly skip the flip in exactly the recovery
+   case the guards exist to handle. Each guard is scoped to the
+   specific step it protects.
+
+**State for next session (C-1, async session-mark + Realtime)**:
+- **`summarizeCommitment` is read-only — the cron calls it and
+  discards the result.** This is the most important piece of state
+  Session 3 inherits. The sponsor completion page currently
+  recomputes the day-90 summary on every view via
+  `summarizeCommitment`, which re-runs the Anthropic call (up to
+  2000 tokens output + full context) per page load. At current
+  scale (one live user, handful of sponsors) this is tolerable.
+  Once sponsor traffic to the completion page becomes non-trivial,
+  the right fix is to persist the summary on first successful
+  generation — likely from the cron path, since the cron is where
+  the work is already being done idempotently. Possible shapes: a
+  new `completion_summary` column on `commitments`, or a separate
+  `commitment_summaries` table. Either is a small migration. Not
+  worth doing until there's a reason. Flagged inline at the bottom
+  of `src/app/api/cron/companion-milestones/route.ts`.
+- **The cron's day-90 summary call is effectively diagnostic, not
+  load-bearing.** If it fails, the cron logs it and proceeds to
+  step 3. Sponsors still see a summary when they view the page
+  (because the completion page recomputes independently). This is
+  fine — it just means Session 3's observability should watch for
+  repeated step-2 failures in Vercel runtime logs, which would
+  indicate the Anthropic API is systematically rejecting the
+  summary prompt for some commitments and the completion page is
+  silently doing the same failing work on view.
+- **Session 1's admin endpoint stays.** `POST
+  /api/admin/companion/milestone` is the escape hatch for
+  operator-triggered milestones (historical commitments, backfill,
+  dry-run verification). The cron is additive, not a replacement.
+- **Schema unchanged this session.** `companion_milestone` was
+  already in the `room_messages_message_type_check` constraint
+  from Session 1; the cron just uses it.
+
+**Three-line recipe for David's authenticated cron test** (runs
+from any machine with `CRON_SECRET` exported):
+
+```bash
+# Safe dry-run — writes nothing, reports what WOULD happen:
+curl -s -H "Authorization: Bearer $CRON_SECRET" \
+  "https://www.searchstar.com/api/cron/companion-milestones?dry_run=1" | jq
+# Once confident, exercise the write path (no-op at session time
+# because no commitment is at day 30/60/90 yet):
+curl -s -H "Authorization: Bearer $CRON_SECRET" \
+  "https://www.searchstar.com/api/cron/companion-milestones" | jq
+# Expected at session time: candidate_count=0, processed=[].
+# The first non-empty tick will be around 2026-05-19 when f6c2a97c hits day 30.
+```
+
+---
+
 ## Known follow-ups discovered during the arc
 
 *(Add here anything discovered mid-session that's out of current scope but
 shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
 
-- (none yet)
+- **`/api/cron/deep-mode` route stub (from v3) is still in the tree.**
+  `src/app/api/cron/deep-mode/route.ts` is a `GET → {ok:true,
+  retired:true}` stub left over from v3's deep-mode cron registration.
+  Its own header comment explains: Vercel's cron registry is
+  populated from target:production deployments, and until a v4
+  `vercel.json` (without the deep-mode cron) promotes to production,
+  Vercel keeps invoking the path every minute. Session 2's deploy
+  `dpl_21RZ9taQNMApEBifEy4zAY8hSwDc` is a target:production deploy
+  whose `vercel.json` has NO `/api/cron/deep-mode` registration —
+  only `/api/cron/companion-milestones`. So the registration should
+  now be cleared by this deploy's promotion. **Verification step for
+  next session:** check the Vercel cron dashboard ~24h after Session
+  2 deploys. If `deep-mode` has disappeared from the registry, the
+  stub route can be deleted in a one-line cleanup commit. If it's
+  still there, leave the stub — its comment explains why. Either
+  way, fold into D-2 (Session 6) as a cleanup candidate.
+- **`summarizeCommitment` persistence decision.** See Session 2
+  "State for next session" above. When sponsor traffic to the
+  completion page matters, persist the summary. Small migration +
+  small code change; not today's problem.
 
 ---
 
