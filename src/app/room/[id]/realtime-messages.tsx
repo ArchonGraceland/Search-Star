@@ -231,78 +231,53 @@ export default function RealtimeMessages({
 
   // Subscription effect.
   //
-  // Session 4.1 (2026-04-21). Earlier iterations of this component
-  // shipped with two narrower treatments of Realtime failure modes:
+  // Session 4.2 (2026-04-21). Session 4.1 attempted to layer custom
+  // retry logic for CLOSED events on top of the Supabase SDK's own
+  // internal reconnection. The two fought each other, producing an
+  // "Uncaught (in promise) Error: cannot add postgres_changes
+  // callbacks ... after subscribe()" error and rapid-fire SUBSCRIBED
+  // events at millisecond intervals. Symptom: liveness still broken
+  // plus a noisy console full of errors.
   //
-  //   Session 3: assume .subscribe() either succeeds or silently fails;
-  //              no retry, no observability.
-  //   Session 3.5: handle 'CHANNEL_ERROR' and 'TIMED_OUT' on initial
-  //              setup, bounded retry with backoff (1/2/4/8s, cap 4),
-  //              visibilityState fallback. Fixed the ~10% first-load
-  //              subscribe failure class.
+  // This rewrite takes a different approach: don't fight the SDK.
   //
-  // Session 4 shipped to production and David reported the practitioner
-  // browser not receiving inserts live — messages only appeared after
-  // he next submitted (which triggers router.refresh() in the composer
-  // and re-runs SSR). The desktop console log revealed the actual
-  // pattern: channels go SUBSCRIBED → CLOSED → new channel SUBSCRIBED →
-  // CLOSED repeatedly, each cycle only seconds long. The Session 3.5
-  // retry code only handled CHANNEL_ERROR and TIMED_OUT, so CLOSED was
-  // a no-op — the SDK's internal reconnect was creating fresh channels
-  // on its own but also landing in CLOSED.
+  //   1. On mount, prime auth (fire-and-forget), create the channel,
+  //      attach handlers, subscribe. Single channel for the lifetime
+  //      of the component.
   //
-  // This rewrite:
+  //   2. Listen to auth state changes. On TOKEN_REFRESHED or SIGNED_IN,
+  //      call supabase.realtime.setAuth(token). This rotates the
+  //      Realtime socket's authorization without tearing down the
+  //      channel — the SDK re-authorizes the existing channel on the
+  //      next server heartbeat.
   //
-  //   1. Treats CLOSED as a retry trigger on equal footing with
-  //      CHANNEL_ERROR and TIMED_OUT. Any non-SUBSCRIBED terminal status
-  //      tears down the current channel and reconnects with backoff.
-  //      This matches the pattern Supabase staff recommend for
-  //      post-SUBSCRIBED drops (github discussions #22153, #27513).
+  //   3. Status callback is diagnostic only. Log every transition
+  //      with time-in-SUBSCRIBED on drops, but do not attempt custom
+  //      reconnection. The SDK's internal logic handles CHANNEL_ERROR
+  //      and TIMED_OUT with its own exponential backoff; any custom
+  //      retry layered on top causes the race we saw in 4.1.
   //
-  //   2. Raises the retry cap from 4 to 10. With CLOSED now counted as
-  //      a retry reason, and with expected causes including mobile
-  //      network flips, tab backgrounding resumes, and JWT expiry,
-  //      sticking to 4 would falsely give up in common conditions.
-  //      10 consecutive failures with no SUBSCRIBED between them is
-  //      still a reasonable ceiling; the counter resets on every
-  //      SUBSCRIBED, so a flaky-but-recovering connection can retry
-  //      indefinitely over a long session.
+  //   4. The visibilityState fallback remains the ultimate safety
+  //      net. If the SDK fails to recover for any reason — and in
+  //      practice, sometimes it does — returning to the tab triggers
+  //      router.refresh() and pulls missed messages via SSR. Liveness
+  //      lost temporarily; eventual consistency preserved.
   //
-  //   3. Logs time-since-SUBSCRIBED on CLOSED events. If a channel
-  //      stays up ~60 minutes before closing, that's JWT expiry. If it
-  //      stays up seconds, it's something else. This line goes into
-  //      browser console alongside the existing status log so future
-  //      diagnosis gets both signals in one place.
-  //
-  //   4. Propagates the current auth access token to the Realtime
-  //      client via supabase.realtime.setAuth(token) both at mount
-  //      (closing a race where the channel can be created before the
-  //      auth session is loaded) and on every TOKEN_REFRESHED event
-  //      from the auth state listener. Without this, Realtime's server
-  //      evaluates RLS with whatever token the socket was opened with,
-  //      which goes stale as the session rotates and eventually causes
-  //      the server to close the channel.
-  //
-  //   5. Keeps the visibilityState safety net unchanged. Even if every
-  //      retry in (1) fails and we've given up, returning to the tab
-  //      still triggers router.refresh() and pulls missed messages via
-  //      SSR. Liveness lost; eventual consistency preserved.
-  //
-  // Channel name includes Date.now() so retried channels don't collide
-  // with the server-side channel registry entry from a prior attempt.
+  // This is a strictly simpler surface than 4.1. Diagnostic logging is
+  // richer (setAuth log lines, time-in-SUBSCRIBED on drops). Retry
+  // behavior is entirely delegated to the SDK, which is the only
+  // sensible choice after observing the 4.1 race. If SDK reconnection
+  // proves insufficient in production use, the next iteration can
+  // address that with a pattern that doesn't conflict with the SDK —
+  // e.g. tearing down and fully recreating the component via a key
+  // change on the parent, or using supabase.realtime.channels iteration.
   useEffect(() => {
-    let attempt = 0
-    let activeChannel: ReturnType<typeof supabase.channel> | null = null
-    let retryTimer: ReturnType<typeof setTimeout> | null = null
-    let subscribedAt: number | null = null
     let cancelled = false
 
-    // Propagate current auth token to Realtime before opening channel.
-    // Without this the channel opens with whatever token the SDK has
-    // cached at construction time, which can be anon (if auth session
-    // hadn't loaded yet) or stale (if the session rotated since).
-    // supabase.auth.getSession() returns the current session from the
-    // cookie storage without a server round-trip.
+    // Fire-and-forget: push the current access token to the Realtime
+    // client before the channel opens. This closes a race where the
+    // channel could otherwise open with the anon token (if the session
+    // hadn't loaded yet) or a stale token (if the session rotated).
     const primeRealtimeAuth = async () => {
       try {
         const { data } = await supabase.auth.getSession()
@@ -315,13 +290,11 @@ export default function RealtimeMessages({
         console.error('[realtime] primeRealtimeAuth failed:', err)
       }
     }
+    void primeRealtimeAuth()
 
-    // Listen for auth token rotations. When the cookie-based session
-    // refreshes (every ~55 minutes with default 1-hour JWT expiry),
-    // emit the new token to Realtime so the server sees a fresh token
-    // on its next authorization check. Without this, the server closes
-    // the socket at the original token's expiry, producing the CLOSED
-    // churn David observed.
+    // Keep the Realtime socket's auth fresh across session rotations.
+    // Without this, the server sees a token that will eventually
+    // expire and close the socket.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
@@ -335,118 +308,76 @@ export default function RealtimeMessages({
       }
     )
 
-    const connect = () => {
-      if (cancelled) return
-      const channelName = `room:${roomId}:messages:${Date.now()}`
-      const ch = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'room_messages',
-            filter: `room_id=eq.${roomId}`,
-          },
-          handleInsert
-        )
-        // Affirmation liveness (added Session 4, 2026-04-21). The
-        // postgres_changes filter is one-column equality only, and
-        // message_affirmations has no room_id. We subscribe without
-        // a filter and rely on RLS — the SELECT policy
-        // "affirmations: members read" joins through room_memberships
-        // to scope deliveries to rooms the viewer is a member of.
-        // Incoming events for messages NOT in our local byId map are
-        // dropped by the handlers (existing check on prev.get).
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'message_affirmations',
-          },
-          handleAffirmationInsert
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'message_affirmations',
-          },
-          handleAffirmationDelete
-        )
-        .subscribe((status, err) => {
-          // eslint-disable-next-line no-console
-          console.log(`[realtime ${channelName}] status: ${status}`, err ?? '')
+    // Single channel for the lifetime of this component instance.
+    // Channel name includes Date.now() so a React effect re-run (rare
+    // in production; happens in dev strict mode) gets a distinct name.
+    const channelName = `room:${roomId}:messages:${Date.now()}`
+    let subscribedAt: number | null = null
 
-          if (status === 'SUBSCRIBED') {
-            subscribedAt = Date.now()
-            // Reset backoff on success so a later drop+retry starts
-            // from the short delay again.
-            attempt = 0
-            return
-          }
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'room_messages',
+          filter: `room_id=eq.${roomId}`,
+        },
+        handleInsert
+      )
+      // Affirmation liveness (added Session 4, 2026-04-21). The
+      // postgres_changes filter is one-column equality only, and
+      // message_affirmations has no room_id. We subscribe without
+      // a filter and rely on RLS — the SELECT policy
+      // "affirmations: members read" joins through room_memberships
+      // to scope deliveries to rooms the viewer is a member of.
+      // Incoming events for messages NOT in our local byId map are
+      // dropped by the handlers (existing check on prev.get).
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'message_affirmations',
+        },
+        handleAffirmationInsert
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'message_affirmations',
+        },
+        handleAffirmationDelete
+      )
+      .subscribe((status, err) => {
+        if (cancelled) return
 
-          // Any non-SUBSCRIBED terminal status: CHANNEL_ERROR,
-          // TIMED_OUT, or CLOSED. The cause doesn't matter for the
-          // recovery action — tear down and reconnect with backoff.
-          // (Per Supabase staff guidance in github discussions
-          // #22153: "if the status is NOT subscribed then
-          // removeChannel and subscribe again. The actual reason for
-          // the error is unimportant.")
-          if (
-            status === 'CHANNEL_ERROR' ||
+        // eslint-disable-next-line no-console
+        console.log(`[realtime ${channelName}] status: ${status}`, err ?? '')
+
+        if (status === 'SUBSCRIBED') {
+          subscribedAt = Date.now()
+        } else if (
+          (status === 'CHANNEL_ERROR' ||
             status === 'TIMED_OUT' ||
-            status === 'CLOSED'
-          ) {
-            if (cancelled) return
-
-            // Diagnostic: how long were we up before the drop? Helps
-            // distinguish JWT expiry (~60min) from network blips
-            // (seconds) from server-side disconnects (minutes).
-            if (subscribedAt !== null) {
-              const upMs = Date.now() - subscribedAt
-              // eslint-disable-next-line no-console
-              console.log(
-                `[realtime ${channelName}] was SUBSCRIBED for ${Math.round(upMs / 1000)}s before ${status}`
-              )
-              subscribedAt = null
-            }
-
-            if (attempt >= 10) {
-              // eslint-disable-next-line no-console
-              console.warn(
-                `[realtime ${channelName}] giving up after ${attempt} consecutive retries; ` +
-                  `falling back to visibility-based router.refresh()`
-              )
-              return
-            }
-            // Exponential backoff capped at 8s per attempt — keeps
-            // reconnects reasonably responsive even during a long
-            // failure tail, while not hammering the server.
-            const delayMs = Math.min(8000, 1000 * Math.pow(2, attempt))
-            attempt += 1
-            supabase.removeChannel(ch)
-            retryTimer = setTimeout(() => {
-              retryTimer = null
-              // Re-prime auth on every retry. Cheap, and covers the
-              // case where the token rotated while we were between
-              // attempts.
-              primeRealtimeAuth().then(() => connect())
-            }, delayMs)
-          }
-        })
-      activeChannel = ch
-    }
-
-    // Prime auth then connect. Awaited via then() so the channel
-    // always opens with a fresh token.
-    primeRealtimeAuth().then(() => connect())
+            status === 'CLOSED') &&
+          subscribedAt !== null
+        ) {
+          const upMs = Date.now() - subscribedAt
+          // eslint-disable-next-line no-console
+          console.log(
+            `[realtime ${channelName}] was SUBSCRIBED for ${Math.round(upMs / 1000)}s before ${status}`
+          )
+          subscribedAt = null
+        }
+      })
 
     // Tab-foreground safety net. If Realtime missed anything while the
-    // tab was backgrounded — or if the channel has been dead the whole
-    // time — returning to the tab triggers an SSR refetch that fills
+    // tab was backgrounded — or if the channel has been dead at any
+    // point — returning to the tab triggers an SSR refetch that fills
     // in any gaps. Cheap and covers all channel-health failure modes.
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
@@ -459,8 +390,7 @@ export default function RealtimeMessages({
       cancelled = true
       document.removeEventListener('visibilitychange', onVisibility)
       authListener.subscription.unsubscribe()
-      if (retryTimer) clearTimeout(retryTimer)
-      if (activeChannel) supabase.removeChannel(activeChannel)
+      supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, roomId, viewerUserId, nameMap, sponsoredSet, router])
