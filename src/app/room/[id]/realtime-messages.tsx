@@ -231,33 +231,109 @@ export default function RealtimeMessages({
 
   // Subscription effect.
   //
-  // Supabase Realtime's websocket endpoint shows intermittent failures
-  // (~10% on channel setup in observed testing — CHANNEL_ERROR usually,
-  // occasionally TIMED_OUT; infra-side "DNS cache overflow" 503s on the
-  // websocket upgrade). The original Session 3 subscribe() call had no
-  // status callback, so a failed channel sat silently and liveness was
-  // lost for the entire page lifetime. This rewrite:
+  // Session 4.1 (2026-04-21). Earlier iterations of this component
+  // shipped with two narrower treatments of Realtime failure modes:
   //
-  //   1. Logs subscription status transitions with the channel name
-  //      prefix so Vercel runtime / browser console shows what happened
-  //      when Realtime breaks.
-  //   2. On CHANNEL_ERROR or TIMED_OUT, removes the current channel and
-  //      creates a fresh one after a backoff. Bounded to 4 attempts with
-  //      doubling delays (1s, 2s, 4s, 8s). After the cap we stop trying;
-  //      the visibility fallback below covers the worst case.
-  //   3. Uses a visibilityState listener: when the tab becomes visible
-  //      again (user returns to this tab after being elsewhere) we call
-  //      router.refresh(). This resyncs via SSR regardless of channel
-  //      health, so even a dead channel never means permanently-stale
-  //      messages — just no intra-tab liveness.
+  //   Session 3: assume .subscribe() either succeeds or silently fails;
+  //              no retry, no observability.
+  //   Session 3.5: handle 'CHANNEL_ERROR' and 'TIMED_OUT' on initial
+  //              setup, bounded retry with backoff (1/2/4/8s, cap 4),
+  //              visibilityState fallback. Fixed the ~10% first-load
+  //              subscribe failure class.
   //
-  // Channel name includes a timestamp so retried channels don't collide
+  // Session 4 shipped to production and David reported the practitioner
+  // browser not receiving inserts live — messages only appeared after
+  // he next submitted (which triggers router.refresh() in the composer
+  // and re-runs SSR). The desktop console log revealed the actual
+  // pattern: channels go SUBSCRIBED → CLOSED → new channel SUBSCRIBED →
+  // CLOSED repeatedly, each cycle only seconds long. The Session 3.5
+  // retry code only handled CHANNEL_ERROR and TIMED_OUT, so CLOSED was
+  // a no-op — the SDK's internal reconnect was creating fresh channels
+  // on its own but also landing in CLOSED.
+  //
+  // This rewrite:
+  //
+  //   1. Treats CLOSED as a retry trigger on equal footing with
+  //      CHANNEL_ERROR and TIMED_OUT. Any non-SUBSCRIBED terminal status
+  //      tears down the current channel and reconnects with backoff.
+  //      This matches the pattern Supabase staff recommend for
+  //      post-SUBSCRIBED drops (github discussions #22153, #27513).
+  //
+  //   2. Raises the retry cap from 4 to 10. With CLOSED now counted as
+  //      a retry reason, and with expected causes including mobile
+  //      network flips, tab backgrounding resumes, and JWT expiry,
+  //      sticking to 4 would falsely give up in common conditions.
+  //      10 consecutive failures with no SUBSCRIBED between them is
+  //      still a reasonable ceiling; the counter resets on every
+  //      SUBSCRIBED, so a flaky-but-recovering connection can retry
+  //      indefinitely over a long session.
+  //
+  //   3. Logs time-since-SUBSCRIBED on CLOSED events. If a channel
+  //      stays up ~60 minutes before closing, that's JWT expiry. If it
+  //      stays up seconds, it's something else. This line goes into
+  //      browser console alongside the existing status log so future
+  //      diagnosis gets both signals in one place.
+  //
+  //   4. Propagates the current auth access token to the Realtime
+  //      client via supabase.realtime.setAuth(token) both at mount
+  //      (closing a race where the channel can be created before the
+  //      auth session is loaded) and on every TOKEN_REFRESHED event
+  //      from the auth state listener. Without this, Realtime's server
+  //      evaluates RLS with whatever token the socket was opened with,
+  //      which goes stale as the session rotates and eventually causes
+  //      the server to close the channel.
+  //
+  //   5. Keeps the visibilityState safety net unchanged. Even if every
+  //      retry in (1) fails and we've given up, returning to the tab
+  //      still triggers router.refresh() and pulls missed messages via
+  //      SSR. Liveness lost; eventual consistency preserved.
+  //
+  // Channel name includes Date.now() so retried channels don't collide
   // with the server-side channel registry entry from a prior attempt.
   useEffect(() => {
     let attempt = 0
     let activeChannel: ReturnType<typeof supabase.channel> | null = null
     let retryTimer: ReturnType<typeof setTimeout> | null = null
+    let subscribedAt: number | null = null
     let cancelled = false
+
+    // Propagate current auth token to Realtime before opening channel.
+    // Without this the channel opens with whatever token the SDK has
+    // cached at construction time, which can be anon (if auth session
+    // hadn't loaded yet) or stale (if the session rotated since).
+    // supabase.auth.getSession() returns the current session from the
+    // cookie storage without a server round-trip.
+    const primeRealtimeAuth = async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        const token = data.session?.access_token
+        if (token) {
+          supabase.realtime.setAuth(token)
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[realtime] primeRealtimeAuth failed:', err)
+      }
+    }
+
+    // Listen for auth token rotations. When the cookie-based session
+    // refreshes (every ~55 minutes with default 1-hour JWT expiry),
+    // emit the new token to Realtime so the server sees a fresh token
+    // on its next authorization check. Without this, the server closes
+    // the socket at the original token's expiry, producing the CLOSED
+    // churn David observed.
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+          const token = session?.access_token
+          if (token) {
+            // eslint-disable-next-line no-console
+            console.log(`[realtime] setAuth on ${event}`)
+            supabase.realtime.setAuth(token)
+          }
+        }
+      }
+    )
 
     const connect = () => {
       if (cancelled) return
@@ -305,35 +381,68 @@ export default function RealtimeMessages({
           console.log(`[realtime ${channelName}] status: ${status}`, err ?? '')
 
           if (status === 'SUBSCRIBED') {
+            subscribedAt = Date.now()
             // Reset backoff on success so a later drop+retry starts
             // from the short delay again.
             attempt = 0
             return
           }
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+
+          // Any non-SUBSCRIBED terminal status: CHANNEL_ERROR,
+          // TIMED_OUT, or CLOSED. The cause doesn't matter for the
+          // recovery action — tear down and reconnect with backoff.
+          // (Per Supabase staff guidance in github discussions
+          // #22153: "if the status is NOT subscribed then
+          // removeChannel and subscribe again. The actual reason for
+          // the error is unimportant.")
+          if (
+            status === 'CHANNEL_ERROR' ||
+            status === 'TIMED_OUT' ||
+            status === 'CLOSED'
+          ) {
             if (cancelled) return
-            if (attempt >= 4) {
+
+            // Diagnostic: how long were we up before the drop? Helps
+            // distinguish JWT expiry (~60min) from network blips
+            // (seconds) from server-side disconnects (minutes).
+            if (subscribedAt !== null) {
+              const upMs = Date.now() - subscribedAt
+              // eslint-disable-next-line no-console
+              console.log(
+                `[realtime ${channelName}] was SUBSCRIBED for ${Math.round(upMs / 1000)}s before ${status}`
+              )
+              subscribedAt = null
+            }
+
+            if (attempt >= 10) {
               // eslint-disable-next-line no-console
               console.warn(
-                `[realtime ${channelName}] giving up after ${attempt} retries; ` +
+                `[realtime ${channelName}] giving up after ${attempt} consecutive retries; ` +
                   `falling back to visibility-based router.refresh()`
               )
               return
             }
-            const delayMs = 1000 * Math.pow(2, attempt)
+            // Exponential backoff capped at 8s per attempt — keeps
+            // reconnects reasonably responsive even during a long
+            // failure tail, while not hammering the server.
+            const delayMs = Math.min(8000, 1000 * Math.pow(2, attempt))
             attempt += 1
-            // Tear down the failed channel before scheduling the retry.
             supabase.removeChannel(ch)
             retryTimer = setTimeout(() => {
               retryTimer = null
-              connect()
+              // Re-prime auth on every retry. Cheap, and covers the
+              // case where the token rotated while we were between
+              // attempts.
+              primeRealtimeAuth().then(() => connect())
             }, delayMs)
           }
         })
       activeChannel = ch
     }
 
-    connect()
+    // Prime auth then connect. Awaited via then() so the channel
+    // always opens with a fresh token.
+    primeRealtimeAuth().then(() => connect())
 
     // Tab-foreground safety net. If Realtime missed anything while the
     // tab was backgrounded — or if the channel has been dead the whole
@@ -349,6 +458,7 @@ export default function RealtimeMessages({
     return () => {
       cancelled = true
       document.removeEventListener('visibilitychange', onVisibility)
+      authListener.subscription.unsubscribe()
       if (retryTimer) clearTimeout(retryTimer)
       if (activeChannel) supabase.removeChannel(activeChannel)
     }
