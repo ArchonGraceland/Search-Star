@@ -38,6 +38,21 @@ function LoginForm() {
       setError(error.message)
       setLoading(false)
     } else {
+      // Honor ?returnTo= when the caller passed one (e.g., the sponsor
+      // invite flow). Only same-origin paths are accepted to avoid an
+      // open-redirect vulnerability.
+      const returnTo = searchParams.get('returnTo')
+      const safeReturnTo =
+        returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')
+          ? returnTo
+          : null
+
+      if (safeReturnTo) {
+        router.push(safeReturnTo)
+        router.refresh()
+        return
+      }
+
       const role = data.user?.user_metadata?.role
       if (role === 'platform') {
         router.push('/platform')

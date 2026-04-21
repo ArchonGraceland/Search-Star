@@ -1,17 +1,27 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 
-export default function Signup() {
+function SignupForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Pre-fill email from ?email= when the caller supplied one (sponsor
+  // invite flow). The invitee shouldn't retype the address the invitation
+  // was sent to — and any mismatch would anyway be caught server-side at
+  // pledge time.
+  useEffect(() => {
+    const prefillEmail = searchParams.get('email')
+    if (prefillEmail) setEmail(prefillEmail)
+  }, [searchParams])
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,15 +36,25 @@ export default function Signup() {
     // at our own /auth/callback means the link, the verification, and the
     // landing experience are all inside our domain and styled by us.
     //
-    // The `{{ .ConfirmationURL }}` token in the email template will contain
-    // this URL with the Supabase token hash appended. Our /auth/confirm
-    // route then verifies that token and redirects to /start.
+    // When ?returnTo= is present (e.g. sponsor invite flow), pipe it
+    // through the confirmation URL as `next` so /auth/callback can route
+    // the confirmed user back where they started. The check in
+    // /auth/callback only accepts same-origin paths.
+    const returnTo = searchParams.get('returnTo')
+    const safeReturnTo =
+      returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')
+        ? returnTo
+        : null
+    const callbackUrl = safeReturnTo
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeReturnTo)}`
+      : `${window.location.origin}/auth/callback`
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { display_name: displayName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl,
       },
     })
 
@@ -185,5 +205,15 @@ export default function Signup() {
       </div>
 
     </div>
+  )
+}
+
+export default function Signup() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#f5f5f5' }} />
+    }>
+      <SignupForm />
+    </Suspense>
   )
 }

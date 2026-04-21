@@ -81,6 +81,16 @@ export async function middleware(request: NextRequest) {
     '/earnings', '/log',
     '/onboarding/practice', '/onboarding/profile', '/onboarding/visibility',
     '/start',
+    // v4 Decision #8: the room is the primary post-login surface.
+    // /room/[id]/page.tsx also does its own getUser() gate so this is
+    // defense-in-depth + cheaper-per-request than a server-component redirect.
+    '/room',
+    // NOTE: /sponsor/invited is deliberately NOT gated at middleware. That
+    // page has a client-side auth gate that shows an informative panel
+    // ("You've been invited to sponsor [X]") before offering sign-in /
+    // sign-up CTAs carrying ?returnTo=. A middleware-level redirect would
+    // bypass that context and drop the returnTo, breaking the return-to-
+    // pledge flow.
   ]
 
   const pathname = request.nextUrl.pathname

@@ -97,11 +97,12 @@ export async function POST(request: Request) {
         type CommitmentStripeRow = {
           id: string
           user_id: string
+          room_id: string
           practices: { name: string } | { name: string }[] | null
         }
         const { data: commitment } = await db
           .from('commitments')
-          .select('id, user_id, practices(name)')
+          .select('id, user_id, room_id, practices(name)')
           .eq('id', sponsorship.commitment_id)
           .maybeSingle<CommitmentStripeRow>()
 
@@ -123,7 +124,12 @@ export async function POST(request: Request) {
         const practitionerEmail = authUser?.user?.email
 
         const pledgeAmount = Number(sponsorship.pledge_amount ?? 0)
-        const sponsorFeedUrl = `https://www.searchstar.com/sponsor/${commitment.id}/${sponsorship.access_token}`
+        // v4 Decision #8: sponsors are room members. The email link goes
+        // to the room, not to a token-gated feed. Reaching /room/[id]
+        // requires the sponsor to be signed in — their pledge-time sign-up
+        // (or sign-in) produced a session, and middleware will route them
+        // to /login if that session has expired.
+        const roomUrl = `https://www.searchstar.com/room/${commitment.room_id}`
         const sponsorEmail = sponsorship.sponsor_email
         const sponsorName = sponsorship.sponsor_name ?? 'A sponsor'
         // v4: practice name serves as the commitment title (title column retired)
@@ -160,10 +166,10 @@ export async function POST(request: Request) {
                       </p>
                     </div>
                     <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #3a3a3a; margin: 0 0 20px;">
-                      Follow along as ${practitionerName} works through their 90 days. The link below is yours &mdash; keep it private; it gives you read-only access to the practice feed.
+                      You&rsquo;re now a member of the private room where ${practitionerName} will share their work. Session posts, your affirmations, and the Companion&rsquo;s reflections all live there.
                     </p>
-                    <a href="${sponsorFeedUrl}" style="display: inline-block; background: #1a3a6b; color: #ffffff; font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 12px 24px; border-radius: 3px; text-decoration: none; margin-bottom: 24px;">
-                      Follow the practice &rarr;
+                    <a href="${roomUrl}" style="display: inline-block; background: #1a3a6b; color: #ffffff; font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 12px 24px; border-radius: 3px; text-decoration: none; margin-bottom: 24px;">
+                      Go to the room &rarr;
                     </a>
                     <p style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #767676; margin: 0;">
                       Your pledge is recorded now. Funds are collected when ${practitionerName} completes their 90-day commitment. If they don&rsquo;t complete it, no payment is collected.
@@ -171,7 +177,7 @@ export async function POST(request: Request) {
                   </div>
                 </div>
               `,
-              text: `Your pledge of $${pledgeAmount.toFixed(2)} to support ${practitionerName}'s commitment "${commitmentTitle}" has been recorded.\n\nFollow the practice: ${sponsorFeedUrl}\n\nFunds are collected when they complete their 90-day commitment.`,
+              text: `Your pledge of $${pledgeAmount.toFixed(2)} to support ${practitionerName}'s commitment "${commitmentTitle}" has been recorded.\n\nGo to the room: ${roomUrl}\n\nFunds are collected when they complete their 90-day commitment.`,
             })
           } catch (err) {
             console.error(

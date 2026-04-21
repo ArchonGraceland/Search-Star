@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getStripe, pledgeDollarsToCents } from '@/lib/stripe'
 import { randomBytes } from 'crypto'
@@ -74,60 +74,121 @@ export async function GET(request: Request) {
   })
 }
 
-// POST — record a sponsorship pledge (no auth required)
+// POST — record a sponsorship pledge.
+//
+// v4 Decision #8: sponsors are room members. Every pledge requires:
+//   1. An invite_token referencing a pending sponsor_invitation.
+//   2. An authenticated caller (the invitee has signed up/in).
+//
+// The anonymous-pledge path (POST without invite_token, sponsor_email +
+// sponsor_name supplied in body) is retired. There is no discovery
+// surface for sponsorship; every sponsor arrives by invitation from an
+// existing room member. The 410 Gone response for tokenless POSTs is
+// the honest signal that this path no longer exists.
+//
+// Side effects on a successful pledge:
+//   - Stripe Customer + PaymentIntent (capture_method='manual') created.
+//   - sponsorships row inserted with sponsor_user_id = auth.uid().
+//   - room_memberships row inserted (or ignored on conflict) tying the
+//     sponsor to the room the commitment lives in, with state='active'.
+//     This is what lets the sponsor see the room, post sponsor_message,
+//     and affirm session-marked messages.
+//   - sponsor_invitations row flipped to 'accepted'.
 export async function POST(request: Request) {
-  const body = await request.json()
-  const { commitment_id, sponsor_email, sponsor_name, pledge_amount, message, invite_token } = body
+  const body = await request.json().catch(() => ({}))
+  const { commitment_id, pledge_amount, message, invite_token } = body as {
+    commitment_id?: string
+    pledge_amount?: number
+    message?: string
+    invite_token?: string
+  }
 
-  if (!commitment_id || !sponsor_email || !sponsor_name || !pledge_amount) {
-    return NextResponse.json({ error: 'commitment_id, sponsor_email, sponsor_name, and pledge_amount are required.' }, { status: 400 })
+  if (!invite_token || typeof invite_token !== 'string') {
+    return NextResponse.json(
+      {
+        error:
+          'Sponsorship requires an invitation. Anonymous pledging is no longer supported — ask the practitioner to invite you from their room.',
+      },
+      { status: 410 }
+    )
+  }
+
+  if (!commitment_id || !pledge_amount) {
+    return NextResponse.json(
+      { error: 'commitment_id and pledge_amount are required.' },
+      { status: 400 }
+    )
   }
 
   if (typeof pledge_amount !== 'number' || pledge_amount < 5) {
     return NextResponse.json({ error: 'Minimum pledge amount is $5.' }, { status: 400 })
   }
 
-  if (!sponsor_email.includes('@')) {
-    return NextResponse.json({ error: 'A valid email address is required.' }, { status: 400 })
+  // Authenticate the caller. The invite-accept flow on the client must
+  // route the visitor through sign-in/sign-up before submitting here.
+  const ssr = await createClient()
+  const {
+    data: { user },
+  } = await ssr.auth.getUser()
+  if (!user) {
+    return NextResponse.json(
+      { error: 'You must be signed in to complete a pledge.' },
+      { status: 401 }
+    )
   }
 
   const supabase = createServiceClient()
 
-  // If an invite_token was supplied, resolve the invitation and enforce single-use.
-  // This is the branch used by /sponsor/invited/[invite_token]; the original
-  // /sponsor/[id] flow does not send invite_token and continues to work unchanged.
-  let invitationId: string | null = null
-  if (invite_token && typeof invite_token === 'string') {
-    const { data: invitation } = await supabase
-      .from('sponsor_invitations')
-      .select('id, commitment_id, invitee_email, status')
-      .eq('invite_token', invite_token)
-      .maybeSingle()
+  // Resolve the invitation and enforce single-use + email match.
+  const { data: invitation } = await supabase
+    .from('sponsor_invitations')
+    .select('id, commitment_id, invitee_email, status')
+    .eq('invite_token', invite_token)
+    .maybeSingle()
 
-    if (!invitation) {
-      return NextResponse.json({ error: 'Invitation not found.' }, { status: 404 })
-    }
-    if (invitation.status !== 'pending') {
-      return NextResponse.json({ error: 'This invitation has already been used.' }, { status: 409 })
-    }
-    if (invitation.commitment_id !== commitment_id) {
-      return NextResponse.json({ error: 'Invitation does not match this commitment.' }, { status: 409 })
-    }
-    invitationId = invitation.id
+  if (!invitation) {
+    return NextResponse.json({ error: 'Invitation not found.' }, { status: 404 })
+  }
+  if (invitation.status !== 'pending') {
+    return NextResponse.json(
+      { error: 'This invitation has already been used.' },
+      { status: 409 }
+    )
+  }
+  if (invitation.commitment_id !== commitment_id) {
+    return NextResponse.json(
+      { error: 'Invitation does not match this commitment.' },
+      { status: 409 }
+    )
   }
 
-  // Fetch commitment and verify it's accepting pledges. v4 Decision #8: the
-  // 'launch' status is retired; only 'active' commitments accept pledges
-  // (any point between day 1 and day 90, per decision #3).
+  // The invitation was sent to a specific email. The authenticated user
+  // must match. Without this check, anyone with the invite_token could
+  // redeem it on their own account. Email comparison is case-insensitive.
+  const authEmail = user.email?.trim().toLowerCase()
+  const inviteEmail = invitation.invitee_email?.trim().toLowerCase()
+  if (!authEmail || !inviteEmail || authEmail !== inviteEmail) {
+    return NextResponse.json(
+      {
+        error:
+          'This invitation was sent to a different email address than the one you signed in with.',
+      },
+      { status: 403 }
+    )
+  }
+
+  // Load commitment. Sponsors cannot back their own commitment; catch that
+  // before Stripe fires.
   type CommitmentPOSTRow = {
     id: string
     status: string
     user_id: string
+    room_id: string
     practices: { name: string } | { name: string }[] | null
   }
   const { data: commitment, error: commError } = await supabase
     .from('commitments')
-    .select('id, status, user_id, practices(name)')
+    .select('id, status, user_id, room_id, practices(name)')
     .eq('id', commitment_id)
     .single<CommitmentPOSTRow>()
 
@@ -136,39 +197,56 @@ export async function POST(request: Request) {
   }
 
   if (commitment.status !== 'active') {
-    return NextResponse.json({ error: 'This commitment is no longer accepting pledges.' }, { status: 409 })
+    return NextResponse.json(
+      { error: 'This commitment is no longer accepting pledges.' },
+      { status: 409 }
+    )
   }
+
+  if (commitment.user_id === user.id) {
+    return NextResponse.json(
+      { error: 'You cannot sponsor your own commitment.' },
+      { status: 409 }
+    )
+  }
+
+  // Display name for the Stripe Customer description. Prefer the
+  // profile's display_name; fall back to the email local-part so Stripe
+  // has something human-readable even for users who haven't set a name.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const sponsorName =
+    profile?.display_name?.trim() || authEmail.split('@')[0] || 'Sponsor'
 
   const practiceForDesc = Array.isArray(commitment.practices)
     ? commitment.practices[0]?.name ?? 'a practice'
     : commitment.practices?.name ?? 'a practice'
 
-  // Generate a URL-safe access token. The sponsor uses this to follow the practice
-  // at /sponsor/[commitment_id]/[token] without needing a Search Star account.
+  // Generate a URL-safe access token. The release/veto email flow
+  // (/api/sponsorships/[id]/action) still uses this to authenticate a
+  // sponsor clicking through from their inbox without requiring a live
+  // browser session. Replacing that flow with authenticated release is
+  // deferred to a later commit.
   const accessToken = randomBytes(24).toString('base64url')
 
-  // Create a Stripe Customer first so the payment method attached to the
-  // pledge PI can be reused at release time to charge the optional Search
-  // Star donation off-session — no card re-entry. Customer creation is
-  // cheap and idempotent-ish (a fresh Customer per sponsorship is fine;
-  // we're not trying to unify sponsors across multiple pledges).
-  //
-  // Then create the PaymentIntent. capture_method: 'manual' authorizes and
-  // holds funds without charging — release captures; veto cancels. Setting
-  // setup_future_usage: 'off_session' saves the payment method to the
-  // Customer on authorization, enabling the donation reuse at Phase 5
-  // release time. If Stripe errors here we return 502 and do NOT insert
-  // anything, so failed pledges leave no DB artefact.
+  // Create Stripe Customer + PaymentIntent. capture_method='manual'
+  // authorizes funds without charging; setup_future_usage='off_session'
+  // saves the method to the Customer so the day-90 donation PI can
+  // reuse it without re-prompting.
   let paymentIntentId: string
   let clientSecret: string
   let stripeCustomerId: string
   try {
     const customer = await getStripe().customers.create({
-      email: sponsor_email.trim().toLowerCase(),
-      name: sponsor_name.trim(),
+      email: authEmail,
+      name: sponsorName,
       metadata: {
         commitment_id,
         source: 'searchstar_pledge',
+        sponsor_user_id: user.id,
       },
     })
     stripeCustomerId = customer.id
@@ -183,7 +261,8 @@ export async function POST(request: Request) {
       metadata: {
         commitment_id,
         intent_type: 'pledge',
-        sponsor_email: sponsor_email.trim().toLowerCase(),
+        sponsor_user_id: user.id,
+        sponsor_email: authEmail,
       },
       description: `Search Star pledge: ${practiceForDesc}`,
     })
@@ -193,21 +272,22 @@ export async function POST(request: Request) {
     paymentIntentId = pi.id
     clientSecret = pi.client_secret
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Stripe PaymentIntent creation failed'
-    console.error('Failed to create Stripe PaymentIntent:', message)
+    const msg = err instanceof Error ? err.message : 'Stripe PaymentIntent creation failed'
+    console.error('[sponsorships POST] Stripe PI creation failed:', msg)
     return NextResponse.json(
-      { error: `Payment setup failed: ${message}` },
+      { error: `Payment setup failed: ${msg}` },
       { status: 502 }
     )
   }
 
-  // Insert sponsorship — now that Stripe has confirmed the PI exists.
+  // Insert sponsorship row.
   const { data: sponsorship, error: insertError } = await supabase
     .from('sponsorships')
     .insert({
       commitment_id,
-      sponsor_email: sponsor_email.trim().toLowerCase(),
-      sponsor_name: sponsor_name.trim(),
+      sponsor_user_id: user.id,
+      sponsor_email: authEmail,
+      sponsor_name: sponsorName,
       sponsor_type: 'personal',
       pledge_amount,
       status: 'pledged',
@@ -221,40 +301,62 @@ export async function POST(request: Request) {
     .single()
 
   if (insertError || !sponsorship) {
-    console.error('Error inserting sponsorship:', insertError)
-    // Best-effort cancel of the orphaned PaymentIntent so we don't leave
-    // dangling holds in Stripe when our DB write fails.
+    console.error('[sponsorships POST] insert error:', insertError)
+    // Best-effort cancel of the orphaned PaymentIntent.
     try {
       await getStripe().paymentIntents.cancel(paymentIntentId)
     } catch (cancelErr) {
-      console.error('Failed to cancel orphaned PaymentIntent:', cancelErr)
+      console.error('[sponsorships POST] failed to cancel orphaned PI:', cancelErr)
     }
     return NextResponse.json({ error: 'Failed to record pledge.' }, { status: 500 })
   }
 
-  // If this pledge resolved an invitation, mark it accepted. Non-fatal on failure.
-  if (invitationId) {
-    try {
-      await supabase
-        .from('sponsor_invitations')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-        .eq('id', invitationId)
-    } catch (err) {
-      console.error('Failed to mark invitation accepted:', err)
-    }
+  // Insert room membership. ON CONFLICT DO NOTHING handles the case
+  // where the sponsor was already a room member (e.g., an existing
+  // practitioner in the same room who's now also sponsoring someone).
+  // Membership insert failure is logged but NOT fatal — the sponsorship
+  // is already recorded, and a later repair job can reconcile. Without
+  // the membership row the sponsor won't be able to see the room until
+  // that repair runs, but they'll keep their pledge and Stripe hold.
+  const { error: membershipError } = await supabase
+    .from('room_memberships')
+    .upsert(
+      {
+        room_id: commitment.room_id,
+        user_id: user.id,
+        state: 'active',
+      },
+      { onConflict: 'room_id,user_id', ignoreDuplicates: true }
+    )
+
+  if (membershipError) {
+    console.error(
+      '[sponsorships POST] room_memberships insert failed — sponsor pledged but not in room:',
+      membershipError
+    )
+    // Do not return an error to the client; the pledge succeeded. A
+    // human can reconcile from logs if needed.
   }
 
-  // Pledge and practitioner notification emails are NOT sent from here.
-  // They are dispatched from the Stripe webhook's
-  // payment_intent.amount_capturable_updated branch — which only fires once
-  // the sponsor's card has been genuinely authorized (funds are held,
-  // ready to capture at release).
-  //
-  // Rationale: at this point in the flow the sponsorship row is inserted
-  // but the card may not yet have been authorized. If we emailed here and
-  // the sponsor then abandoned the Stripe Elements step, we'd have a
-  // "pledge confirmed!" email sitting in their inbox for a pledge that
-  // never actually landed. The webhook is the honest signal.
+  // Mark the invitation accepted. Non-fatal.
+  try {
+    await supabase
+      .from('sponsor_invitations')
+      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+      .eq('id', invitation.id)
+  } catch (err) {
+    console.error('[sponsorships POST] failed to mark invitation accepted:', err)
+  }
 
-  return NextResponse.json({ id: sponsorship.id, client_secret: clientSecret })
+  // Pledge and practitioner notification emails are dispatched from the
+  // Stripe webhook's payment_intent.amount_capturable_updated branch,
+  // which fires once the card has been genuinely authorized. Sending
+  // from here would produce "pledge confirmed" emails for pledges the
+  // sponsor then abandoned at the Stripe Elements step.
+
+  return NextResponse.json({
+    id: sponsorship.id,
+    client_secret: clientSecret,
+    room_id: commitment.room_id,
+  })
 }
