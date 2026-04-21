@@ -706,6 +706,47 @@ One register discipline. Avoid the therapized phrasings that sound warm but carr
 Write as prose. A sentence or two is often the whole response. A short paragraph is a long response. Welcomes are short; milestone markers are shorter; accompaniment responses to a session are a sentence of reflection and one question. No lists, no headers, no bolded words, no emoji. You sound like a teacher who cares about the work of this group and does not need to perform that caring.
 ```
 
+### 6.5 Milestone context envelope — B/C/D arc, Session 1 (2026-04-21)
+
+*Completed 2026-04-21 as part of B/C/D arc Session 1. The milestone surface — Companion-authored day-30/60/90 markers dropped into a room — does not need a new system prompt. §6.4 already contains authoritative guidance for both the milestone-day event (`"Mark it in as few words as the number itself. 'Day sixty.' That is the whole message."`) and the distinct final-session-on-day-90 event (`"End by returning the room to the sponsors: 'Tom, Sarah, Mike — the record is in front of you.'"`). What the milestone surface needs is a **context envelope** — a user-turn prompt — that steers the existing voice onto the right branch. Three candidates were drafted along that axis and dry-run at day 30, day 60, and day 90 against the real commitment `f6c2a97c-b8d7-45aa-984c-2e062834638e` (room `29b52264-50be-411e-8294-2091ee28e8fb`, practitioner David, one sponsor at $25, three messages of prior history). Nine calls via `claude-sonnet-4-6`.*
+
+**Candidate A — Bare.** Envelope says only "Day N has been reached in the room. Mark the milestone per your guidelines."
+
+**Candidate B — Context-named.** Envelope names the practitioner and practice, and for day 90 explicitly disambiguates: "Day 90 has been reached for David Verchere's commitment to 'Workout'. The practitioner has not yet marked a final session today; this is the milestone-day marker, not the completion marker."
+
+**Candidate C — Explicit-terse.** Envelope echoes the system prompt's own terseness language ("in as few words as the number itself", "the room knows what sixty means") and for day 90 adds detailed framing about the separate day-90 summary surface.
+
+**Dry-run results:**
+
+| | Day 30 | Day 60 | Day 90 |
+|---|---|---|---|
+| **A (bare)** | `Day thirty.` | `Day sixty.` | `Day ninety.\n\nDavid, the record is in front of you.` |
+| **B (context-named)** | `Day thirty.` | `Day sixty.` | `Day ninety.` |
+| **C (explicit-terse)** | `Day thirty.` | `Day sixty.` | `Day ninety.\n\ndverchere+sponsor-walkthrough-1 — the record is in front of you.` |
+
+**Observations at day 30 and day 60.** All three candidates produce the ideal output identically. The envelope choice does not matter here; the system prompt is dominant. Any of the three would ship.
+
+**Observations at day 90 — where the candidates separate.** Candidate A got the direction of the sponsor-handoff wrong, addressing the practitioner ("David, the record is in front of you") rather than the sponsors. Without the envelope disambiguating, the model conflated the milestone-marker event with the final-session-marker event and reached for the completion template — but reached for it poorly. Candidate C got the direction right but still produced the completion-style handoff (to the sponsor by username), which is a failure mode of a different kind: it treats arrival at day 90 as the same event as marking a final session, which it isn't. A practitioner can reach day 90 without yet marking their final session; the completion handoff belongs to the final-session event, not to the calendar event. Candidate B got it right: bare `Day ninety.` and nothing more. The envelope's explicit "this is the milestone-day marker, not the completion marker" disambiguation did exactly what it was meant to do.
+
+**What the dry-runs revealed.** A correction against the pre-experiment intuition: I had assumed day 90 should echo the completion handoff. The dry-runs made the division of responsibility honest. There are three separate surfaces here, each with its own trigger and its own copy contract:
+
+- **The milestone marker** (this work): triggered by the calendar reaching day 30/60/90 in a room with an active commitment. Copy is `"Day N."` — nothing more. One `companion_milestone` row in `room_messages`.
+- **The final-session-marked event**: triggered when a practitioner marks a session on day 90. Copy includes the "the record is in front of you" handoff. Separate code path — runs through `generateCompanionRoomResponse`, which already branches on the session-marked event type. Not changed by this session.
+- **The day-90 sponsor summary**: triggered when the commitment moves to `completed` status. Produces the longform summary via `summarizeCommitment` in `day90.ts`. Rendered for sponsors on the completion page, not posted into the room. Also not changed by this session.
+
+The milestone prompt's job is to stay inside its lane. When the envelope makes that lane explicit — which B does and A/C do not — the model produces the right copy without improvisation.
+
+**Chosen envelope — B, adopted verbatim.** The Companion's milestone user-turn, constructed by `generateCompanionRoomMilestone`, contains: the room member roster (same format as the session-response envelope), the recent room history (up to 50 messages, same as the session-response envelope), and a trailing line that names the event:
+
+- At day 30 or 60: `Day ${n} has been reached for ${practitionerName}'s commitment to "${practiceName}". Mark the milestone per your guidelines.`
+- At day 90: `Day 90 has been reached for ${practitionerName}'s commitment to "${practiceName}". The practitioner has not yet marked a final session today; this is the milestone-day marker, not the completion marker. Mark the milestone per your guidelines.`
+
+Roster and history are carried even though the day 30/60/90 marker never references them. Two reasons: (1) the model gets to confirm for itself that this is indeed the practitioner's commitment in this room, which reduces the small chance of confused output when multiple commitments are ever active in one room; (2) it keeps the envelope shape consistent with `generateCompanionRoomResponse` and `generateCompanionRoomWelcome`, which makes the library legible. The cost is trivial — a few hundred tokens, one-time, only on milestone events.
+
+**Non-idempotency is by design.** The admin endpoint does not check whether a `companion_milestone` row already exists for this `(commitment_id, day_number)` pair before inserting. That check belongs in Session 2's cron — the cron will retry, and duplicate milestones are a real problem there. For the admin surface, double-inserts are a feature: they're visible in the room, they're deletable, and they let the operator re-run a dry-run against production. The cron in Session 2 will add the idempotency guard.
+
+**Open question carried to Session 2.** The day-90 milestone marker fires on the calendar event. The day-90 summary fires when status moves to `completed`. In Session 2's cron, these will naturally run in sequence: drop the milestone marker first (one row), then compute the summary (separate surface), then flip status. The milestone marker landing in the room is how members find out day 90 has arrived; the summary is how sponsors read the arc; the status flip is what unlocks the release button. Three distinct actions, same cron tick, in that order. Spelled out here so Session 2 doesn't re-deliberate.
+
 ---
 
 ## 7. Deliberately out of scope for v1

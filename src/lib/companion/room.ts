@@ -9,7 +9,7 @@ import { buildImageBlocks, getOrFetchTranscript } from '@/lib/companion/media'
 
 // src/lib/companion/room.ts
 //
-// Everything Companion does inside a room funnels through here. Two
+// Everything Companion does inside a room funnels through here. Three
 // entry points today:
 //
 // - generateCompanionRoomResponse: called after a session-marked
@@ -21,10 +21,16 @@ import { buildImageBlocks, getOrFetchTranscript } from '@/lib/companion/media'
 //   declared. Produces a companion_welcome row — the first message in
 //   the room from the Companion, naming the commitment and the moment.
 //
-// Both use COMPANION_ROOM_SYSTEM_PROMPT and claude-sonnet-4-6. Context
-// assembly is shared. The library is deliberately small: it writes
-// rows with message_type set appropriately so existing room-scoped
-// reads pick them up without schema changes.
+// - generateCompanionRoomMilestone: called when a commitment crosses
+//   day 30, 60, or 90 (manual admin trigger today; cron in B/C/D arc
+//   Session 2). Produces a companion_milestone row marking the day.
+//   Envelope design and dry-run rationale in
+//   docs/chat-room-plan.md §6.5.
+//
+// All three use COMPANION_ROOM_SYSTEM_PROMPT and claude-sonnet-4-6.
+// Context assembly is shared. The library is deliberately small: it
+// writes rows with message_type set appropriately so existing
+// room-scoped reads pick them up without schema changes.
 //
 // The functions do not throw; callers treat a returned null as "no
 // message produced, move on." This keeps the session-post write path
@@ -547,6 +553,166 @@ export async function generateCompanionRoomWelcome(args: {
     return inserted.id
   } catch (err) {
     console.error('[companion/room] generateCompanionRoomWelcome error:', err)
+    return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public: mark a day-30 / day-60 / day-90 milestone
+// ---------------------------------------------------------------------------
+
+/**
+ * Called when a commitment's started_at is exactly 30, 60, or 90
+ * calendar days ago. Writes a companion_milestone row whose copy is
+ * "Day thirty." / "Day sixty." / "Day ninety." — the room prompt's
+ * own contract for milestone markers.
+ *
+ * The envelope this sends to the model is deliberate: roster + recent
+ * history + a single trailing line naming the event. For day 90, that
+ * line explicitly disambiguates that this is the milestone-day marker,
+ * not the completion marker — otherwise the model reaches for the
+ * "return the room to the sponsors" completion template, which belongs
+ * to the distinct final-session-marked-on-day-90 event. Full rationale
+ * and dry-run results in docs/chat-room-plan.md §6.5.
+ *
+ * Non-idempotent by design. The admin endpoint that calls this does
+ * not check for an existing milestone row at this day — double-inserts
+ * are visible in the room and deletable. Session 2's cron will add the
+ * idempotency guard.
+ *
+ * Returns the new row's ID or null on failure.
+ */
+export async function generateCompanionRoomMilestone(args: {
+  db: SupabaseClient
+  roomId: string
+  commitmentId: string
+  dayNumber: 30 | 60 | 90
+}): Promise<string | null> {
+  const { db, roomId, commitmentId, dayNumber } = args
+
+  try {
+    type MilestoneCommitment = {
+      id: string
+      user_id: string
+      room_id: string
+      status: string
+      started_at: string
+      practices: { name: string } | { name: string }[] | null
+    }
+    const { data: commitment } = await db
+      .from('commitments')
+      .select('id, user_id, room_id, status, started_at, practices(name)')
+      .eq('id', commitmentId)
+      .maybeSingle<MilestoneCommitment>()
+
+    if (!commitment) {
+      console.error('[companion/room] milestone: commitment not found', {
+        commitmentId,
+      })
+      return null
+    }
+
+    // Guard against a caller passing a mismatched (roomId, commitmentId)
+    // pair. The admin endpoint derives roomId from the commitment, so
+    // this is defense-in-depth for future callers (Session 2 cron in
+    // particular will query both and we want a hard failure if they
+    // diverge).
+    if (commitment.room_id !== roomId) {
+      console.error('[companion/room] milestone: commitment/room mismatch', {
+        commitmentId,
+        expectedRoomId: commitment.room_id,
+        providedRoomId: roomId,
+      })
+      return null
+    }
+
+    const practiceJoin = pickSingle(commitment.practices)
+    const practiceName = practiceJoin?.name ?? 'their practice'
+
+    const { data: profile } = await db
+      .from('profiles')
+      .select('display_name')
+      .eq('user_id', commitment.user_id)
+      .maybeSingle()
+    const practitionerName = profile?.display_name ?? 'the practitioner'
+
+    // Roster + history, same shape as the session-response envelope.
+    // The milestone copy doesn't reference these, but carrying them
+    // keeps the envelope consistent across all three Companion entry
+    // points and gives the model a moment of self-orientation before
+    // the trailing event line.
+    const [{ memberLines }, { historyText }] = await Promise.all([
+      loadRoomContext(db, roomId),
+      loadRoomHistory(db, roomId),
+    ])
+
+    const eventLine =
+      dayNumber === 90
+        ? `Day 90 has been reached for ${practitionerName}'s commitment to "${practiceName}". The practitioner has not yet marked a final session today; this is the milestone-day marker, not the completion marker. Mark the milestone per your guidelines.`
+        : `Day ${dayNumber} has been reached for ${practitionerName}'s commitment to "${practiceName}". Mark the milestone per your guidelines.`
+
+    const contextText = [
+      `Room members:`,
+      memberLines.length > 0 ? memberLines.join('\n') : '(no active members)',
+      '',
+      `Recent room activity (oldest first):`,
+      historyText,
+      '',
+      eventLine,
+    ].join('\n')
+
+    const anthropic = getAnthropic()
+    const response = await anthropic.messages.create({
+      model: COMPANION_MODEL,
+      // Milestone copy is measured in words, not paragraphs. 200 is
+      // more than enough headroom for "Day ninety." plus a stray
+      // sentence; anything longer would be a prompt failure worth
+      // seeing rather than silently truncating.
+      max_tokens: 200,
+      system: COMPANION_ROOM_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: contextText }],
+    })
+
+    const textBlock = response.content.find((b) => b.type === 'text')
+    if (!textBlock || textBlock.type !== 'text') {
+      console.error('[companion/room] milestone: unexpected response shape', {
+        roomId,
+        commitmentId,
+        dayNumber,
+        types: response.content.map((b) => b.type),
+      })
+      return null
+    }
+
+    const responseText = textBlock.text.trim()
+    if (!responseText) return null
+
+    // Same row-authoring pattern as generateCompanionRoomWelcome: the
+    // Companion has no user account, so we use the practitioner's
+    // user_id as the row's user_id. message_type='companion_milestone'
+    // is what the UI and the future cron idempotency check branch on.
+    const { data: inserted, error: insertErr } = await db
+      .from('room_messages')
+      .insert({
+        room_id: roomId,
+        user_id: commitment.user_id,
+        commitment_id: commitment.id,
+        message_type: 'companion_milestone',
+        body: responseText,
+        media_urls: [],
+        transcript: null,
+        is_session: false,
+      })
+      .select('id')
+      .single()
+
+    if (insertErr || !inserted) {
+      console.error('[companion/room] milestone insert failed:', insertErr)
+      return null
+    }
+    return inserted.id
+  } catch (err) {
+    console.error('[companion/room] generateCompanionRoomMilestone error:', err)
     return null
   }
 }
