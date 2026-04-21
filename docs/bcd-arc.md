@@ -700,6 +700,132 @@ channel subscription returned an error the component didn't
 surface (add a `.subscribe((status) => console.log(status))`
 callback if needed).
 
+### Session 3.5 (2026-04-21) — Resilient Realtime subscription
+
+**Why this entry exists.** The Session 3 scope assumed `.subscribe()`
+would succeed or, if it didn't, the retry behavior baked into the
+Supabase SDK would handle it. Session 4 opened with David running
+the verification recipe, and the symptom was exactly case (c) above:
+session-marked message posted fine, POST returned in 90ms, Companion
+response was written to the DB 3 seconds later as expected — and
+never appeared in his browser. No refresh triggered it; only a page
+reload showed the message. Realtime delivery was broken in that
+specific page session.
+
+**Root cause.** Empirical measurement from the coding container:
+~10% of fresh `.subscribe()` calls return `CHANNEL_ERROR` on first
+attempt (infra-side "DNS cache overflow" 503s on the websocket
+upgrade to `/realtime/v1/websocket`). The Session 3
+`realtime-messages.tsx` component passed no status callback to
+`.subscribe()`, so a CHANNEL_ERROR left the channel silently dead
+for the page lifetime. The same pattern would recur on any user's
+page load that happened to land on the 10%. Session 3's verification
+plan had anticipated this diagnostic but hadn't added the
+instrumentation up-front, on the reasonable assumption that it
+wouldn't be needed.
+
+**Shipped** (commit `fd2d505`, deploy `dpl_CVF5i1eP5R74fm3TnTiz5woYi6J2`):
+
+- `src/app/room/[id]/realtime-messages.tsx` — three coordinated
+  changes to the subscription effect:
+
+  (1) **Status callback.** `.subscribe()` now takes a callback that
+  `console.log`s every transition (`SUBSCRIBED` / `CLOSED` /
+  `CHANNEL_ERROR` / `TIMED_OUT`) with the channel name as a prefix.
+  Browser console now shows, unambiguously, whether Realtime came
+  up. Same log prefix used across the lifetime of the page so
+  retry attempts are distinguishable from the initial attempt.
+
+  (2) **Bounded automatic retry.** On CHANNEL_ERROR or TIMED_OUT,
+  the component tears down the failed channel via `removeChannel`,
+  waits 1s/2s/4s/8s per attempt, and subscribes again with a fresh
+  channel name (suffixed with `Date.now()` to avoid collision with
+  the server-side channel registry entry from the prior attempt).
+  Caps at 4 retries; after the cap the visibility fallback (see
+  below) is the safety net. Backoff `attempt` counter resets on
+  the first SUBSCRIBED, so a later mid-session drop-and-retry
+  starts from the short delay again rather than cascading through
+  the exponential schedule.
+
+  (3) **Visibility-based SSR refetch.** `document`'s
+  `visibilitychange` listener calls `router.refresh()` whenever
+  the tab becomes visible. This is SSR-based, not Realtime-based,
+  so it works regardless of channel health: even if every retry
+  in (2) failed and we've given up, a user returning to the tab
+  triggers a server re-render of the page with any new messages
+  that arrived while the channel was dead. Removes the possibility
+  of "permanently stale room page" as a failure mode.
+
+- `handleInsert` hoisted out of the closure as a module-internal
+  function of the component, referenced from both initial
+  subscription and every retry attempt. No behavior change — just
+  so the retry path doesn't duplicate the insert logic.
+
+**Validated**: 20 sequential subscribe attempts from the container
+with the retry logic all succeeded, several needing 2-4 attempts.
+Same environment had ~10% hard-fail rate without retry. `npx tsc
+--noEmit` clean, `npm run build` clean (same pre-existing CSS
+optimization warning as Session 3). Production deployment
+`dpl_CVF5i1eP5R74fm3TnTiz5woYi6J2` READY, production target, aliased
+to `www.searchstar.com` and `searchstar.com`. Home page smoke test
+via `Vercel:web_fetch_vercel_url` returned 200 with the new
+deployment ID in the HTML — bundle is live.
+
+**Deferred** (carries into Session 4):
+
+1. **In-browser verification.** The fix is deployed but the
+   authenticated user-facing test hasn't been run since the deploy.
+   The session ended at container tool-use cap. Next session
+   opens with David re-running the Session 3 recipe against the
+   new deployment. Expected observations now:
+     - POST returns <200ms (unchanged from Session 3)
+     - Browser console shows `[realtime room:29b52264…:messages:<ts>] status: SUBSCRIBED`
+       within a second or two of page load; may show a
+       `CHANNEL_ERROR` followed by a retry attempt if the 10% hits
+     - Companion response card appears 3-5s after session-mark
+       POST, with no manual refresh
+   If CHANNEL_ERROR shows in console but a retry doesn't succeed
+   within 4 attempts, that's a harder failure and the diagnosis
+   steps in the Session 3 log's final block still apply — check
+   publication membership, check JWT, check the specific err
+   payload the status callback now surfaces.
+
+2. **The C-2 live decisions.** Original Session 4 scope was
+   (a) affirmation-count liveness (second subscription on
+   `message_affirmations`) and (b) token streaming for Companion
+   responses. Neither was touched this session — the plan was to
+   only do them after the base path was verified solid, which now
+   waits on deferred item 1. Both decisions still open, both
+   analyses from the Session 4 handoff prompt still apply.
+
+3. **Negative-case authorization test.** Still gapped per the
+   Session 3 log — no second room exists yet. Not blocking.
+
+**State for next session**:
+
+- **Realtime base path now has observability.** Any future
+  subscription failure is visible in browser console, so "David
+  sees no Companion response" will no longer require a container-
+  side diagnostic session — he'll be able to report the status
+  log line directly. This is a one-time infrastructure investment
+  that pays off across every future Realtime-related debug.
+
+- **The tab-visibility refresh is worth knowing about for future
+  work.** It's a cheap general safety net but it also re-runs the
+  server component's data fetch. If a future page renders
+  expensive queries in the room page's server component, the
+  visibility refresh fires them on every tab-return. Fine at
+  today's scale; flag for re-examination if room page SSR cost
+  grows.
+
+- **Session 4 proper is now open again.** The revised Session 4
+  shape is: David runs the recipe, confirms the fix works or
+  reports the failure signature, then we make the C-2 decisions
+  (affirmation liveness + streaming). This may fit in one session
+  if the recipe passes cleanly; if streaming is a yes, it's likely
+  a separate 4.5 session because the SSE route + placeholder-row
+  architecture is non-trivial.
+
 ## Known follow-ups discovered during the arc
 
 *(Add here anything discovered mid-session that's out of current scope but
@@ -725,6 +851,23 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   "State for next session" above. When sponsor traffic to the
   completion page matters, persist the summary. Small migration +
   small code change; not today's problem.
+- **Stale `/roadmap.html` and `/spec.html` prefetches.** Observed
+  in David's browser devtools during Session 3.5 recipe test: the
+  Network panel showed 404s on `/roadmap.html?_rsc=…` and
+  `/spec.html?_rsc=…` alongside successful 307s on the actual
+  `/roadmap` and `/spec` routes. Cause: `next.config.ts` redirects
+  `/roadmap → /roadmap.html` and `/spec → /spec.html` (both are
+  real static files in `public/`). When Next's Link prefetcher
+  follows the redirect target it appends `?_rsc=…` for its server-
+  components payload — but a static HTML file doesn't have an RSC
+  payload, so it returns 404 for the RSC query. The user-visible
+  behavior is fine (real clicks get the 307 and then the HTML).
+  Console pollution and wasted round trips only. Two resolution
+  paths: (a) leave it — cosmetic, no user impact; (b) convert
+  `/spec` and `/roadmap` from redirect-to-static to actual App
+  Router pages that import/iframe the current HTML content, which
+  also removes the redirect hop. Fold into D-1 (Session 5) as a
+  cleanup candidate. Not a blocker.
 
 ---
 
