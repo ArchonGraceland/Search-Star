@@ -1,7 +1,10 @@
-// Shared media URL classifiers. Previously duplicated inline in
-// src/app/log/client.tsx and src/app/sponsor/[commitment_id]/[token]/page.tsx;
-// centralized here so the Companion's image-passthrough + video-transcription
-// logic stays consistent with the classifiers the UI uses for rendering.
+// Shared media URL classifiers. Imported by the Companion's image-passthrough
+// and video-transcription logic (src/lib/companion/media.ts,
+// src/lib/companion/day90.ts, src/app/api/companion/reflect/route.ts) so URL
+// classification stays consistent across every place a practitioner's media
+// is read. The room message renderer (src/app/room/[id]/room-message.tsx)
+// inlines its own copies today — a follow-up cleanup could fold those back
+// to this module, but that is out of scope for the B/C/D arc.
 //
 // Both helpers are tolerant: extensions are matched case-insensitively, and
 // the Cloudinary transformation paths (/video/upload/, /image/upload/) are

@@ -930,6 +930,79 @@ Why this was safe: every `from('room_memberships')` call site in the app uses `c
 
 **Carries to Session 5:** unchanged. D-1 scope (per-file audit of 10 dead files). The RLS simplification is purely additive — nothing from that work affects the cleanup phase.
 
+### Session 5 (2026-04-21) — D-1: per-file audit
+
+**Shipped** (commit `<to be written in this commit>`):
+- One comment fix in `src/lib/media.ts`. The previous comment claimed the shared `isVideoUrl`/`isImageUrl` helpers were "previously duplicated inline in `src/app/log/client.tsx` and `src/app/sponsor/[commitment_id]/[token]/page.tsx`." Both clauses are stale — `log/client.tsx` is obsolete (it is file #1 in the D-1 inventory) and the sponsor-token page no longer uses media classifiers (verified by grep: neither `isVideoUrl`, `isImageUrl`, nor any Cloudinary path string appears in that file). Rewrote the comment to describe the current call graph honestly: the helpers are imported by `src/lib/companion/media.ts`, `src/lib/companion/day90.ts`, and `src/app/api/companion/reflect/route.ts`. Also flagged `src/app/room/[id]/room-message.tsx` as a place where the classifiers are inlined rather than imported — that's a follow-up, not in scope.
+- No other code changes. No file deletions. No migrations. `npx tsc --noEmit` clean after the edit.
+
+**Audit inputs gathered.**
+
+*Resend email-template grep* — scanned every file that sends via `getResend().emails.send`: `src/lib/resend.ts`, `src/app/api/sponsors/invite/route.ts`, `src/app/api/stripe/webhook/route.ts`, `src/app/api/sponsorships/[id]/action/route.ts`, `src/app/api/rooms/[id]/invite/route.ts`. **Zero retired-path links in any email body.** All outbound links resolve to live surfaces: `/sponsor/invited/{invite_token}`, `/room/{id}`, `/commit/{id}/sponsors`. No email template is a risk surface for Session 6's deletions.
+
+*Vercel runtime logs* — production environment, 7-day window (the billing-limit ceiling for query ranges; 30d hit `ExceedsBillingLimitError`). One text-search query per retired path:
+
+| Path | Hits (7d, production) | Notes |
+|---|---|---|
+| `/log` | Multiple hit-clusters, including today (`19:31`, `19:40`, `19:43`) | Mix of 200 SSR and 307 redirect. **Live-reached.** |
+| `/start/launch` | 0 | No entries matched |
+| `/start/ritual` | 0 | No entries matched |
+| `/start/active` | 0 | No entries matched |
+| `/start/sponsor` | 0 | No entries matched |
+| `/start/companion` | 0 | No entries matched |
+| `/api/profiles/sponsor-step-seen` | 0 | No entries matched |
+| `/api/profiles/companion-step-seen` | 0 | No entries matched |
+| `step-seen` (broad probe) | 0 | Confirms both step-seen APIs are dead |
+
+The single live signal is `/log`. Interpretation: David (or a device/bookmark/PWA shortcut belonging to David — he is the only user) is actively hitting `/log`. The page is already a thin router that sends him to his room when a commitment is active. Deleting it would break that flow; keeping it is cheap. **Decision: `/log/page.tsx` and `/log/layout.tsx` stay as live routes, unchanged.** Only `/log/client.tsx` (the old 494-line session-logging component) is a deletion candidate — it has zero importers and existed only as orphaned code once the page was rewritten.
+
+*Schema check against production.* `profiles.sponsor_step_seen` and `profiles.companion_step_seen` both still exist in the `qgjyfcqgnuamgymonblj` database. Nothing reads either column — only the two step-seen API routes write them, and those routes have zero traffic. Session 6 should pair the route deletions with a single migration dropping both columns, so the post-deletion schema has no orphan columns tied to retired flows.
+
+**Decision table — what Session 6 (D-2) executes.**
+
+| # | File | Decision | Reasoning |
+|---|---|---|---|
+| 1 | `src/app/log/client.tsx` | **delete** | 494 lines of pre-#8 session-logging UI. Zero importers. Its only external reference was the stale comment in `src/lib/media.ts`, fixed this session. `log/page.tsx` and `log/layout.tsx` are live (see runtime log analysis) and out of scope for deletion. |
+| 2 | `src/app/start/launch/[id]/page.tsx` | **keep as thin router** | Already a thin router (31 lines) that looks up `commitments.room_id` and redirects to `/room/{room_id}` or `/dashboard`. Zero traffic in 7d, but thin routers for retired paths are the right cover for any old link that surfaces from outside the repo (SMS link from a pre-#8 invite, an offline bookmark, a screenshot OCR). Cheap to keep. |
+| 3 | `src/app/start/ritual/[id]/page.tsx` | **delete** | Full 117-line pre-#8 client UI. Not a router. References `/api/commitments/[id]/start` (a 410 Gone stub; sole caller) and `/start/active/[id]` (also dead). Of all retired `/start/*` pages, this is the only one that still looks like a working flow, making its survival the most confusing. Zero traffic. |
+| 4 | `src/app/start/active/[id]/page.tsx` | **rewrite as thin router (keep path)** | Currently `redirect('/log')` — a double-hop because `/log` then re-resolves to `/room/{id}`. Zero traffic. Cheaper to rewrite as a direct resolve (look up `commitments.room_id` by `params.id`, redirect to `/room/{room_id}`) so the redirect chain is one hop not two. Matches the `/start/launch/[id]` pattern. |
+| 5 | `src/app/start/sponsor/page.tsx` | **keep as thin router** | Already a router (27 lines). Same pattern and same reasoning as #2. |
+| 6 | `src/app/start/sponsor/sponsor-step-form.tsx` | **delete** | 157-line client component. No importer (the parent page is now the thin router at #5 and doesn't reference it). Pure dead code. |
+| 7 | `src/app/start/companion/page.tsx` | **rewrite as thin router** | Currently a server component that renders the Stage-4-of-6 "Meet your Companion" UI if a commitment with `status='launch'` exists. Under #8 the `launch` status was migrated to `active` and no new rows can reach `launch` — so the `if (!commitment) redirect('/start')` branch on line 23 always fires in practice. The dead render path is misleading. Rewrite body to the same thin-router pattern as #2 (look up active commitment → redirect to room). |
+| 8 | `src/app/start/companion/companion-continue-button.tsx` | **delete** | Only consumer is #7, which loses the import when rewritten. Posts to `/api/profiles/companion-step-seen` (dead per #10) and navigates to `/start/launch/{id}` (which is now a thin router to the room — fine behavior, but this component is no longer reachable). |
+| 9 | `src/app/api/profiles/sponsor-step-seen/route.ts` | **delete + column drop** | Zero traffic. Only writer of `profiles.sponsor_step_seen`. Column exists in prod, nothing reads it. Session 6 migration drops the column. |
+| 10 | `src/app/api/profiles/companion-step-seen/route.ts` | **delete + column drop** | Same pattern as #9, for `profiles.companion_step_seen`. Session 6 bundles both drops into a single migration. |
+
+**Session 6 orientation notes.**
+
+- **`src/lib/stage.ts` is already Decision-#8-shaped.** The Session 6 scope block says "Simplify `src/lib/stage.ts` if its comment-flagged 'Retired: step 4/5/6' branches can go." They're already gone — the file is three steps (`{step:1} | {step:2} | {step:3; commitmentId; roomId}`) with no retired branches. The comment on lines 10–13 describes what was retired but the code no longer has the retired logic. Session 6 should confirm this with a view and cross the item off the scope list rather than re-examining.
+
+- **`/log/page.tsx` and `/log/layout.tsx` must stay.** Only `client.tsx` is a dead-file candidate. The directory becomes `page.tsx + layout.tsx` after deletion — which matches the Session 6 scope block's "Done when: `src/app/log/` is just `page.tsx` + `layout.tsx`."
+
+- **Column-drop migration pattern.** Migration name suggestion: `20260422_v4_drop_retired_step_seen_columns.sql`. Single `ALTER TABLE public.profiles DROP COLUMN ...` for each of the two columns. Session 6 should apply via Supabase MCP `apply_migration` with project `qgjyfcqgnuamgymonblj`, confirm via `information_schema.columns` read, then commit the matching migration file.
+
+- **Batch typecheck strategy.** The Session 6 scope says "Typecheck in batches of 2–3 file changes, not all at once" — good discipline. Suggested batches:
+  1. Delete `client.tsx`, `ritual/[id]/page.tsx`, `sponsor-step-form.tsx` (typecheck — all have zero importers, should be clean).
+  2. Rewrite `active/[id]/page.tsx` and `companion/page.tsx` to thin routers; delete `companion-continue-button.tsx` (typecheck — last one loses its consumer here).
+  3. Delete the two step-seen API routes; apply + commit the column-drop migration (typecheck — no consumers to break).
+  4. Full `npm run build` per scope (not just `tsc --noEmit` — the Session 6 scope flags turbopack boundary surprises that `tsc` misses).
+
+- **Resend templates have been verified no-risk.** No email template references any of the deletion-candidate paths; Session 6 does not need to re-verify.
+
+- **Follow-up worth adding to the "Known follow-ups" list:** `src/app/room/[id]/room-message.tsx` inlines its own copies of `isVideoUrl`/`isImageUrl` (lines 38–46) rather than importing from `@/lib/media`. Not a D-1 target (the inlined copies aren't dead code, they're working code that duplicates the shared helpers). Good post-D-2 cleanup candidate.
+
+**Deferred**: none. The scope block required a written decision table and the one comment fix — both done. Actual execution is Session 6's job, by design.
+
+**State for next session (Session 6, D-2 execute)**:
+
+- Read this entry's decision table first; it's the full plan.
+- The four deletion files are `log/client.tsx`, `start/ritual/[id]/page.tsx`, `start/sponsor/sponsor-step-form.tsx`, `start/companion/companion-continue-button.tsx`, plus the two step-seen API routes.
+- The two rewrite files are `start/active/[id]/page.tsx` and `start/companion/page.tsx` — pattern to copy is `start/launch/[id]/page.tsx`.
+- One migration drops two columns on `profiles`.
+- Typecheck in batches. Full `npm run build` before push.
+- Post-deploy verification: `Vercel:web_fetch_vercel_url` against each retired path to confirm clean 307 or 404 per plan. Particular attention to `/log` — it has real traffic and should keep resolving correctly.
+
+
 ---
 
 ## Known follow-ups discovered during the arc
