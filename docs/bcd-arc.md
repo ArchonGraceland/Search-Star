@@ -446,6 +446,260 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" \
 
 ---
 
+### Session 3 (2026-04-21) — C-1: async session-mark + Realtime
+
+**Shipped** (commit `5353372`):
+
+- `supabase/migrations/20260421_v4_room_messages_realtime.sql` —
+  adds `public.room_messages` to the `supabase_realtime`
+  publication. Wrapped in a `DO $$ … IF NOT EXISTS …` guard so the
+  migration is idempotent against re-runs. Applied to production
+  via Supabase MCP ahead of code push; verified by querying
+  `pg_publication_tables`. REPLICA IDENTITY stays `DEFAULT` —
+  sufficient for the INSERT-only subscription this session adds.
+  If a later session adds UPDATE/DELETE subscriptions (e.g.
+  affirmation count liveness in C-2), REPLICA IDENTITY FULL is
+  the right upgrade at that point.
+
+- `src/app/api/rooms/[id]/messages/route.ts` — rewritten to queue
+  `generateCompanionRoomResponse` via `after()` from `next/server`
+  rather than awaiting it before returning. The practitioner's row
+  insert stays synchronous (needed so the POST response carries the
+  persisted ID for the client's router.refresh path); only the
+  Companion call — which dominated latency at 3–5s — moves to
+  after(). Closure snapshots `roomId`, `triggerMessageId`, and
+  `user.id` before after() fires. Response body shape changes from
+  `{ message, companion_message_id }` to
+  `{ message, companion_queued }` — the old field is gone, so any
+  consumer that was reading `companion_message_id` will now see
+  `undefined`. The composer was the only consumer (it only reads
+  `res.ok`, not the body), so this is safe in practice.
+
+- Structured error logging inside the after() callback catches both
+  the null-return case (Anthropic responded but we couldn't parse /
+  insert) and the thrown-error case (Anthropic call itself failed,
+  though note `generateCompanionRoomResponse` is already null-safe
+  so thrown paths should be rare). Log prefixes are
+  `[rooms/messages after]` to distinguish from the synchronous
+  `[rooms/messages POST]` prefix in remaining `console.error` call
+  sites (the row-insert failure path). Both structured logs include
+  `room_id`, `user_id`, `trigger_message_id` for correlation in
+  Vercel's runtime log search.
+
+- `src/app/room/[id]/realtime-messages.tsx` — new client component.
+  Subscribes to `postgres_changes` with
+  `{ event: 'INSERT', schema: 'public', table: 'room_messages',
+  filter: 'room_id=eq.<roomId>' }` via a single Supabase channel
+  named `room:<roomId>:messages`. Authorization delegates to the
+  existing `"room_messages: members read"` SELECT RLS policy —
+  Supabase Realtime evaluates that policy against the subscribing
+  client's JWT before delivering any row, so a JWT that can't
+  SELECT the row can't subscribe-to it either. This is the
+  security property the C-1 scope called out for explicit
+  verification.
+
+  State is a `Map<id, RoomMessageData>` seeded from the server-
+  rendered `initialMessages` prop and upserted from three sources:
+    (a) initialMessages prop changes (router.refresh() re-SSRs the
+        page and passes fresh data including refreshed affirmation
+        counts);
+    (b) Realtime INSERT echoes of the client's own just-POSTed
+        row (dedup: if the id is already in the Map from (a), the
+        richer SSR-shaped version wins);
+    (c) Realtime INSERTs from other clients in the room (the
+        Companion, other sponsors).
+  Rendered sorted by `posted_at` ascending, matching the server's
+  ORDER BY in the room page's data fetch.
+
+- The empty-state ("The room is quiet. …") moved from the server
+  page into the client component, conditioned on `ordered.length`
+  rather than `initialMessages.length`. This matters: if SSR
+  renders with zero messages and then a Realtime row arrives, the
+  old conditional would have kept the empty-state visible
+  alongside the new message. With the new conditioning the
+  empty-state disappears the moment any message (SSR-seeded or
+  Realtime-delivered) exists.
+
+- `src/app/room/[id]/page.tsx` — drops the `RoomMessage` import in
+  favor of `RealtimeMessages`. Builds a `nameMap:
+  Record<user_id, display_name>` from the profiles query result
+  and passes it to the client component (so Realtime-delivered
+  messages from known room members render with the right author
+  name; unknown authors fall back to "A member"). Passes the
+  `mySponsoredCommitmentIds` set as an Array prop so the client
+  can rebuild its own Set for the `viewer_can_affirm` predicate.
+
+**Deployed**: `dpl_CixVh33bsyu4G2aMm77o1AuWXxAn`, state READY,
+production target, turbopack bundler, aliased to `searchstar.com`.
+`npx tsc --noEmit` and full `npm run build` both clean pre-push
+(one pre-existing CSS optimization warning; no errors). Deployment
+smoke test via `Vercel:web_fetch_vercel_url` against
+`/room/29b52264-…` returned 200 and middleware-redirected to
+`/login` for the unauthenticated fetcher — proves the route is
+mounted and the bundle shipped without client-component boundary
+errors. Runtime-log scan on the new deployment and across
+production in the last hour returned zero errors. 24h scan for
+`summarize`-keyed errors (the Session 2 concern about the sponsor
+completion page silently re-running failing Anthropic calls on
+every view) also returned zero — no backlog to fix.
+
+**Verified with Supabase MCP before coding**:
+- `pg_publication` has `supabase_realtime` with insert/update/
+  delete enabled and `puballtables=false` (so the migration-added
+  table entry is the authorization surface, not a catch-all).
+- `room_messages` REPLICA IDENTITY is `d` (default); adequate for
+  INSERT-only subscriptions.
+- `room_messages: members read` SELECT policy is in place as
+  expected from Phase 2 — `room_id IN (SELECT room_id FROM
+  room_memberships WHERE user_id = auth.uid())`. Note: it does
+  NOT filter on `room_memberships.state = 'active'`. A user whose
+  membership state transitions to something other than `active`
+  would still receive messages via Realtime, though they couldn't
+  post. Not a C-1 concern (no flow today produces a non-active
+  membership mid-session), flagged for future awareness.
+- Only one room exists in production (`29b52264-…`); the sponsor
+  walkthrough account `497d66d7-…` is an active member of it.
+
+**Deferred**:
+
+1. **The real authenticated in-browser verification of Realtime
+   delivery.** The coding container cannot acquire David's session
+   cookie or open a browser, and `Vercel:web_fetch_vercel_url`
+   does a single HTTP fetch and cannot hold a WebSocket open to
+   observe Realtime events. The test is laid out in the recipe
+   below; David runs it once and the result feeds the Session 4
+   opening state. Expected observations:
+     - POST returns in <200ms (devtools Network → POST
+       `/api/rooms/<id>/messages` → Timing tab). Under the old
+       synchronous path this was 3–5s.
+     - Client-side the practitioner's own message appears
+       immediately from `router.refresh()` (the existing path).
+     - ~3–5s after POST return, a second message card appears
+       without any interaction — the Companion response,
+       delivered via Realtime.
+
+2. **Negative-case verification of Realtime authorization.** The
+   C-1 scope called for explicit proof that a sponsor's JWT does
+   NOT receive a different room's messages. Production currently
+   has only one room (`29b52264-…`) so the test can't be set up
+   without creating a second room first. Per the session prompt's
+   explicit guidance — "if there isn't an easy way to verify the
+   negative case, document it as a gap in the Session 3 completion
+   log and defer the second room's creation until it's needed for
+   natural reasons" — this is gapped rather than forced.
+
+   The authorization itself is structurally solid even without the
+   empirical test. Realtime consults the RLS SELECT policy on
+   every delivery; the existing policy filters on
+   `room_memberships.user_id = auth.uid()`. The worst case for
+   leakage would require a misconfigured policy rather than a
+   subscription-filter bypass, because the filter is advisory and
+   the policy is authoritative. When a second room appears
+   naturally — the first time David onboards a second practitioner
+   into a distinct room — the negative test should be run at that
+   point as a cheap side-check.
+
+3. **Two-browser live test with the sponsor walkthrough account.**
+   Deferred to Session 4 (C-2), which is the session where sponsor
+   side also gets Realtime on all message types and benefits from
+   having both browsers actively subscribed to the same room.
+
+**State for next session (C-2, full Realtime + optional streaming)**:
+
+- **Realtime infrastructure is live.** The subscription, filter,
+  RLS gating, and dedup pattern are established. Extending to
+  additional message types is additive — no new server work, no
+  new DB migration. Session 4's scope of "extend Realtime
+  subscription to all `room_messages` inserts, not just Companion
+  responses" is already ostensibly done at the subscription level
+  (the filter is `event: 'INSERT'`, not `message_type: 'companion_*'`);
+  Session 4's real work there is sponsor-side client coverage,
+  which this session didn't touch.
+
+- **Affirmation count liveness is NOT live.** Session 3 subscribes
+  to `room_messages` inserts only. `message_affirmations` is a
+  separate table and its inserts don't propagate. The result:
+  when a sponsor affirms a session-marked message from a different
+  browser, the practitioner's view still shows the old count
+  until their next page load. The RoomMessage component already
+  does optimistic local updates for the affirmer's own click, so
+  this only affects spectators. C-2 is the right session to
+  decide whether spectator-side liveness is worth the additional
+  subscription — probably yes because the "affirmation arrives"
+  moment is one of the most meaningful live events in the room.
+
+- **REPLICA IDENTITY upgrade considerations for C-2.** If C-2
+  subscribes to UPDATE or DELETE events on `room_messages`
+  (unlikely for the message table — inserts are the primary event
+  — but possible for `message_affirmations` DELETEs when a
+  sponsor un-affirms), those tables will need `REPLICA IDENTITY
+  FULL` to get the old row in the payload. Easy migration, worth
+  flagging before writing subscription code.
+
+- **router.refresh() from the composer is still in place.** It
+  handles "my own message appears immediately" (SSR fetch of the
+  just-inserted row). After Session 3, the composer's POST
+  returns in <200ms so the refresh is cheap. If C-2 or later adds
+  fully-optimistic client-side message insertion (append my
+  message to state at submit time, reconcile with Realtime echo
+  via id dedup), the refresh could be removed. Not pressing.
+
+- **Token streaming decision for C-2.** The scope question flagged
+  in the original BCD-arc plan is: should Companion responses
+  stream token-by-token? Argument in favor: it makes the Companion
+  feel alive; the 3–5s pause between "Session marked" and "full
+  Companion response appears" is the single worst UX moment in the
+  room. Argument against: partial renders, reconnection edge
+  cases, and final-message persistence all introduce complexity
+  that doesn't exist today. The right shape if implemented is
+  likely Server-Sent Events from a new route that the Companion
+  writes into as it streams, with the final row written on stream
+  completion — i.e. the persisted record is the final text, not
+  the stream. Deferred to C-2 as a live decision.
+
+**Three-line recipe for David's authenticated Realtime test**
+(runs in any logged-in browser; opens the room, session-marks a
+message, observes response latency and Realtime delivery):
+
+```
+# 1. Open https://www.searchstar.com/room/29b52264-50be-411e-8294-2091ee28e8fb
+#    Keep devtools Network tab open, filtered to "Fetch/XHR".
+# 2. Compose a message, toggle "Mark as today's session", click "Post as session".
+#    Observe: POST /api/rooms/29b52264.../messages returns with status 200 in
+#    <200ms. The response body contains {message, companion_queued: true}.
+#    router.refresh() completes shortly after, displaying the posted message.
+# 3. Wait 3-5 seconds without refreshing or interacting. A second card —
+#    a Companion response in the navy-tinted style — should appear under your
+#    session message. Its timestamp will be a few seconds after yours. No
+#    manual refresh was required; that's Realtime working.
+```
+
+If step 2 still takes 3–5s: the after() wrapping didn't fire, most
+likely because the import was resolved to the wrong `after` symbol
+(`next/server` vs the legacy `next/after` path). Check the
+Network tab's timing breakdown — "Waiting for server response"
+should be <150ms, not 3–5s.
+
+If step 3 never shows the Companion response: either the
+Anthropic call failed silently (check Vercel runtime logs for
+`[rooms/messages after]` error lines with the session's
+`trigger_message_id`), or the Realtime subscription failed
+(check browser console for Supabase channel connection errors —
+search for `phx_reply` failures or the channel name
+`room:29b52264...:messages`).
+
+If step 3 requires a manual refresh to see the Companion: the
+insert happened but Realtime didn't deliver. Most likely causes
+in rough order: (a) the migration adding `room_messages` to the
+publication didn't actually take effect on the realtime service
+(check that a fresh `pg_publication_tables` query via Supabase
+MCP still shows `public.room_messages`); (b) the client's JWT
+doesn't match the RLS policy for some reason (rare in this flow
+— the practitioner is definitionally a room member); (c) the
+channel subscription returned an error the component didn't
+surface (add a `.subscribe((status) => console.log(status))`
+callback if needed).
+
 ## Known follow-ups discovered during the arc
 
 *(Add here anything discovered mid-session that's out of current scope but
