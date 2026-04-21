@@ -875,6 +875,61 @@ deployment ID in the HTML — bundle is live.
 
 - **Two Supabase migrations are now permanent.** The publication now includes `message_affirmations`, and the table has `REPLICA IDENTITY FULL`. Either is a breaking change to remove without also removing the subscription that depends on it — document the dependency before any future cleanup touches these.
 
+### Session 4.1 / 4.2 / 4.3 (2026-04-21) — the Realtime delivery bug hunt
+
+*Three commits, one diagnostic arc. The outcome that mattered shipped in 4.3 as a one-migration RLS fix. 4.1 and 4.2 were misdirected client-side work under a wrong theory. This log captures both the fix and the lesson so the next time this class of problem shows up, the first move is the right one.*
+
+**What happened.** Session 4's two-browser test opened with David trying to verify the followup-path and affirmation-liveness features. He reported messages only appearing after a tab-switch-and-back. Desktop browser console log revealed Realtime channels going `SUBSCRIBED → CLOSED → new channel SUBSCRIBED → CLOSED` in a ~34s loop.
+
+**The wrong theory (Session 4.1).** Diagnosis was "Session 3.5's retry logic doesn't handle CLOSED; add CLOSED to the retry trigger list and propagate auth tokens via `supabase.realtime.setAuth()`." Shipped commit `52a3b02`. Symptom: an `Uncaught (in promise) Error: cannot add postgres_changes callbacks ... after subscribe()` with rapid-fire SUBSCRIBED events at millisecond intervals. My custom retry layer raced with the SDK's internal reconnection.
+
+**The second wrong theory (Session 4.2).** "Stop fighting the SDK; rip out custom retry, just prime auth and listen for token rotations." Shipped commit `2f1cff5`. Console went clean: one SUBSCRIBED, no errors, no churn. But the liveness symptom was unchanged — messages still only appeared on tab-switch. Concluded the client is correct and the problem is server-side.
+
+**The real bug (Session 4.3, commit `7602757`).** Pulled Realtime server logs via Supabase MCP. Every delivery attempt since 2026-04-20 was erroring:
+
+```
+PoolingReplicationError: infinite recursion detected in policy for
+  relation "room_memberships"  (pg_code: 42P17)
+```
+
+The `room_memberships` SELECT policy was self-referential:
+
+```
+qual: (room_id IN (SELECT room_id FROM room_memberships
+                   WHERE user_id = auth.uid()))
+```
+
+Postgres handles this fine in ordinary query evaluation (rule-rewriter sees the recursion and unfolds it), but Supabase Realtime's `walrus_rls_stmt` path does NOT. Every INSERT decoded from WAL through `realtime.apply_rls` hit the recursion, errored, and was dropped. **Silently.** No client-visible signal except the liveness just not working.
+
+Fix: replace with a non-recursive policy — `user_id = auth.uid()`. A user can see their own memberships. That's all the outer `room_messages` SELECT policy needs (it only asks "is MY membership in room X present?"). Migration `20260421_v4_simplify_room_memberships_select_policy.sql`.
+
+Why this was safe: every `from('room_memberships')` call site in the app uses `createServiceClient()` (bypasses RLS) or filters to `user_id = current user`. Verified via grep before shipping. No call site depended on the recursive subquery. The old policy was vestigial — it was breaking the one thing it touched (Realtime) and protecting nothing used.
+
+**The lesson, plainly.** Four things the server knew that the client couldn't:
+
+1. The recursion error was in the Realtime logs from day one. Accessible via `Supabase:get_logs` MCP tool. I never queried it in sessions 4 or 4.1 or 4.2.
+2. The error code `42P17` is specific and Google-able. Would have saved two wrong iterations.
+3. Session 3.5's `visibilitychange → router.refresh()` safety net was so effective at hiding the bug that it looked like Realtime was working. Every "verified" Realtime behavior from 2026-04-20 through 2026-04-21 morning was actually SSR covering for a completely broken Realtime delivery path.
+4. This bug had been live in production for ~36 hours at commit `ee8e307` (rooms schema ship). Every user who tried the room surface during that window experienced it, invisibly.
+
+**The rule going forward.** When liveness or async delivery is broken and the client-side signals are clean, **query the server logs before rewriting client code**. `Supabase:get_logs` with `service: 'realtime'` is one tool call. It would have saved today's 4.1 and 4.2 work. Captured in userMemories entry #17.
+
+**Shipped in 4.3** (commit `7602757`):
+- Migration `20260421_v4_simplify_room_memberships_select_policy.sql` — replaces the recursive SELECT policy on `public.room_memberships` with a direct `user_id = auth.uid()` policy.
+- Applied to production via Supabase MCP before commit; repo migration file matches.
+
+**Validated:** David's desktop browser now receives sponsor messages live without tab-switching. First time Realtime has worked end-to-end on this project.
+
+**What's working as of 4.3:**
+- Real-time message delivery (Session 3, finally actually live)
+- Followup Companion responses on non-session practitioner messages (Session 4A)
+- Live affirmation counts on session-marked messages (Session 4B)
+- Resilient subscription retry for transient CHANNEL_ERROR at setup (Session 3.5)
+
+**What's NOT shipped:** Session 4.1's custom CLOSED retry and explicit `setAuth()` propagation. 4.2 simplified those out. The lesson from 4.1 was that the SDK's own reconnection logic is the right layer; don't layer custom retry on top. If real production use surfaces CLOSED-drop issues that the SDK can't recover from, the right fix is a different shape (e.g. component-key-based remount), not a custom retry loop racing the SDK.
+
+**Carries to Session 5:** unchanged. D-1 scope (per-file audit of 10 dead files). The RLS simplification is purely additive — nothing from that work affects the cleanup phase.
+
 ---
 
 ## Known follow-ups discovered during the arc
@@ -956,6 +1011,18 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   docs/chat-room-plan.md §6.6 Decision A. Path (b) remains Phase 10
   scope; its shape can be reconsidered after real use of (a)
   reveals whether the felt gap is closed.
+- **Audit other RLS policies for self-referential subqueries.** The
+  `room_memberships` recursive SELECT policy that broke Realtime
+  delivery for ~36 hours was not unique-in-kind — it's the most
+  obvious case of a general pattern where a "members can read
+  members" style policy trips Realtime's `walrus_rls_stmt` path
+  even though it works fine in normal Postgres. If any other table
+  in the schema has a policy whose USING clause queries that same
+  table, it will have the same silent-delivery-failure behavior
+  the moment we add a Realtime subscription that joins through it.
+  Low-priority sweep: `SELECT tablename, policyname, qual FROM
+  pg_policies WHERE schemaname='public' AND qual LIKE '%' || tablename
+  || '%'` finds candidates. Fold into a future cleanup session.
 
 ---
 
