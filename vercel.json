@@ -3,5 +3,11 @@
     "src/app/api/**": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/companion-milestones",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }
