@@ -1003,6 +1003,81 @@ The single live signal is `/log`. Interpretation: David (or a device/bookmark/PW
 - Post-deploy verification: `Vercel:web_fetch_vercel_url` against each retired path to confirm clean 307 or 404 per plan. Particular attention to `/log` — it has real traffic and should keep resolving correctly.
 
 
+### Session 6 (2026-04-21) — D-2: execute the D-1 plan
+
+**Shipped** (three commits on `main`, executing the decision table from Session 5 verbatim):
+
+- **Batch 1 — `66c8560`**: deleted three dead files with zero importers.
+  - `src/app/log/client.tsx` (494 lines)
+  - `src/app/start/ritual/[id]/page.tsx` (117 lines)
+  - `src/app/start/sponsor/sponsor-step-form.tsx` (157 lines)
+  - Net: 767 deletions. `tsc --noEmit` clean.
+
+- **Batch 2 — `f4924b6`**: rewrote two retired `/start/*` pages as thin routers, deleted the orphaned continue button.
+  - `src/app/start/active/[id]/page.tsx`: was `redirect('/log')` (double-hop). Now looks up `commitments.room_id` by `:id` with a `user.id` ownership check and redirects directly to `/room/{room_id}`, falling back to `/dashboard`. Pattern copied from `src/app/start/launch/[id]/page.tsx`.
+  - `src/app/start/companion/page.tsx`: was a server component rendering the Stage-4-of-6 "Meet your Companion" UI for `commitments` with `status='launch'` — a render path Decision #8 made unreachable. Now a thin router mirroring `src/app/start/sponsor/page.tsx`: looks up the user's most recent active commitment and redirects to its room.
+  - `src/app/start/companion/companion-continue-button.tsx`: deleted. Only consumer was the rewritten `companion/page.tsx`; its POSTs to the now-deleted `/api/profiles/companion-step-seen` would have been broken anyway.
+  - Net: 157 deletions, 49 insertions. `tsc --noEmit` clean.
+
+- **Batch 3 — `f92ab7f`**: deleted the two retired step-seen API routes and shipped the column-drop migration.
+  - `src/app/api/profiles/sponsor-step-seen/route.ts`: deleted.
+  - `src/app/api/profiles/companion-step-seen/route.ts`: deleted.
+  - `supabase/migrations/20260422_v4_drop_retired_step_seen_columns.sql`: new file. Drops `profiles.sponsor_step_seen` and `profiles.companion_step_seen` via `DROP COLUMN IF EXISTS` (idempotent — safe to re-apply in fresh environments). Applied to production via `Supabase:apply_migration` against project `qgjyfcqgnuamgymonblj` prior to commit; `information_schema.columns` read after apply confirms both columns gone (0 rows returned for the filter).
+  - `tsc --noEmit` clean.
+
+**Build**: full `npm run build` passed in 40s. Turbopack compile clean; route manifest in build output confirms the expected state — `/start/active/[id]`, `/start/companion`, `/start/launch/[id]`, `/start/sponsor` all present (thin routers); `/start/ritual/[id]` absent; `/api/profiles/sponsor-step-seen` and `/api/profiles/companion-step-seen` absent. The explicit `npm run build` (not just `tsc`) matters per Session 6 scope — commit 19ac621 is the reference for turbopack boundary bugs tsc misses.
+
+**Deployed**: `dpl_6KtNnfEeGZneGeh8nbvd4kSbjbYb`, state READY, aliased to `www.searchstar.com` and `searchstar.com`. Build 23s (1776812940158 → 1776812966002 from `get_deployment`). Runtime logs on the new deployment at error/fatal level: **zero**.
+
+**Production verification** (all via `Vercel:web_fetch_vercel_url` against `www.searchstar.com`):
+
+| Path | Result | `x-matched-path` | Interpretation |
+|---|---|---|---|
+| `/log` | 200 | `/login` | Thin router intact; middleware sends unauthenticated fetch to login, preserving David's live-reached flow. |
+| `/start/launch/00000000-0000-0000-0000-000000000000` | 200 | `/login` | Thin router (unchanged from before). |
+| `/start/active/00000000-0000-0000-0000-000000000000` | 307 → `/login` | — | New direct-resolve thin router firing; Vercel runtime log confirms `GET /start/active/... 307`. |
+| `/start/ritual/00000000-0000-0000-0000-000000000000` | 200 | `/login` | See "middleware precedence" note below. |
+| `/start/sponsor` | 307 → `/login` | — | Thin router (unchanged). |
+| `/start/companion` | 307 → `/login` | — | New thin router; runtime log confirms `GET /start/companion 307`. |
+| `/api/profiles/sponsor-step-seen` | 404 | `/404` | Route deleted. |
+| `/api/profiles/companion-step-seen` | 404 | `/404` | Route deleted. |
+
+**Middleware precedence note.** `/start/ritual/{uuid}` was expected to 404 (the decision-table deletion) but returns the login-redirected shell. Reading `src/middleware.ts` lines 77–105 clarifies: the protected-prefix list includes `/start`, so for *any* `/start/*` path the middleware redirects unauthenticated callers to `/login` *before* Next.js's route resolver would emit a 404. This is working as designed — the 404 only manifests for an authenticated caller. Confirmed equivalent for `/start/sponsor/sponsor-step-form.tsx` too (no route, but also never reachable as a URL since client components aren't file-routed). Not a regression; David can spot-check from his logged-in browser if he wants to see the 404 directly.
+
+**Schema migration verification**:
+
+```sql
+-- pre-apply
+SELECT column_name FROM information_schema.columns
+WHERE table_schema='public' AND table_name='profiles'
+  AND column_name IN ('sponsor_step_seen','companion_step_seen');
+-- → [{"column_name":"companion_step_seen","data_type":"boolean"},
+--    {"column_name":"sponsor_step_seen","data_type":"boolean"}]
+
+-- post-apply
+-- → []
+```
+
+**"Done when" confirmation** (Session 6 scope block lines 189–191):
+
+- ✅ `src/app/log/` contains only `page.tsx` + `layout.tsx` — verified with `ls src/app/log/` post-Batch-1.
+- ✅ `src/app/start/` contains only live routes — the tree is now `active/[id]/page.tsx`, `commitment/`, `companion/page.tsx`, `launch/[id]/page.tsx`, `page.tsx`, `practice/`, `sponsor/page.tsx`. The two rewritten files (`active/[id]/page.tsx`, `companion/page.tsx`) and the two unchanged thin routers (`launch/[id]/page.tsx`, `sponsor/page.tsx`) all redirect old links to current surfaces. The dead `ritual/` subdirectory, `companion-continue-button.tsx`, and `sponsor-step-form.tsx` are gone. No dead render paths remain.
+- ✅ Build clean — `npm run build` exit 0, 40s, zero errors, zero warnings.
+- ✅ No retired routes leak through in production — the verification matrix and runtime log scan both confirm.
+
+**Also confirmed (Session 6 scope list item)**: `src/lib/stage.ts` is already Decision-#8-shaped. Session 5's orientation note was correct — the file has no retired branches to remove. Cross off the scope list item without further action. The header comment's "Retired: step 4/5/6" language describes what *was* retired, not what is still there.
+
+**Deferred**: none. The D-2 scope is fully executed. Migration is live, routes and files are deleted or rewritten, production is verified.
+
+**New follow-up discovered mid-session** (per Session 6 scope: "If you find more dead code while cleaning, note it in 'Known follow-ups' — don't expand mid-session"): added below.
+
+**The B/C/D arc is complete.**
+
+- B (milestone Companion infrastructure): Sessions 1–2 shipped the lib function, admin endpoint, and daily cron.
+- C (async session-mark Companion response + Realtime delivery): Sessions 3 → 3.5 → 4 → 4.1 → 4.2 → 4.3 shipped after()-based Companion invocation, resilient Realtime subscription, Companion followup responses, affirmation liveness, and the non-recursive RLS fix that made Realtime actually deliver.
+- D (dead-code cleanup): Sessions 5–6 audited, decided, and executed — 9 files deleted or rewritten, 2 columns dropped, one stale comment fixed.
+
+
 ---
 
 ## Known follow-ups discovered during the arc
@@ -1096,6 +1171,17 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   Low-priority sweep: `SELECT tablename, policyname, qual FROM
   pg_policies WHERE schemaname='public' AND qual LIKE '%' || tablename
   || '%'` finds candidates. Fold into a future cleanup session.
+
+- **`src/app/room/[id]/room-message.tsx` inlines its own copies of
+  `isVideoUrl` / `isImageUrl`** (lines 38–46 as of commit `f92ab7f`)
+  rather than importing from `@/lib/media`. Not dead code — the
+  inlined copies are actively used by the message renderer — but it
+  duplicates the shared helpers that `src/lib/companion/media.ts`,
+  `src/lib/companion/day90.ts`, and `src/app/api/companion/reflect/
+  route.ts` import properly. First flagged in Session 5's D-1
+  orientation notes as a good post-D-2 cleanup. Swap inlines for
+  the import, add a typecheck, done in ~5 minutes. Fold into a
+  future cleanup session.
 
 ---
 
