@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { isImageUrl, isVideoUrl } from '@/lib/media'
 import type { RoomMessageData } from './types'
 
 // RoomMessage renders one message bubble. It branches on message_type
@@ -33,15 +34,6 @@ function formatTimestamp(iso: string): string {
     minute: '2-digit',
   })
   return `${dateStr} · ${timeStr}`
-}
-
-function isVideoUrl(u: string): boolean {
-  const lower = u.toLowerCase().split('?')[0]
-  return /\.(mp4|mov|webm|m4v)$/.test(lower)
-}
-function isImageUrl(u: string): boolean {
-  const lower = u.toLowerCase().split('?')[0]
-  return /\.(png|jpg|jpeg|gif|webp|avif|heic)$/.test(lower)
 }
 
 export default function RoomMessage({ message, roomId, viewerUserId }: Props) {
