@@ -1078,6 +1078,93 @@ WHERE table_schema='public' AND table_name='profiles'
 - D (dead-code cleanup): Sessions 5–6 audited, decided, and executed — 9 files deleted or rewritten, 2 columns dropped, one stale comment fixed.
 
 
+### Post-arc cleanup (2026-04-22) — follow-ups list drain
+
+Not a B/C/D session — the arc closed at Session 6. This entry logs a
+dedicated session that resolved the accumulated follow-ups list.
+
+**Scope decision at session start**: 5 items + a spec/roadmap content
+pass. David chose to split — resolve all 5 cleanup items + do the
+*structural* fix for /spec and /roadmap this session, defer the v4
+*content* rewrite to a dedicated editorial session. Rationale: doing
+the structural conversion and the content rewrite together risks
+introducing content errors inside a structural change, and makes
+reverting harder.
+
+**Shipped**:
+
+- Commit `4bf988a` — two cleanups bundled:
+  - Deleted `/api/cron/deep-mode` stub route after verifying zero
+    Vercel runtime-log invocations over a 48h window. V3 cron
+    registration has been cleared by cumulative v4 target:production
+    deploys; the stub no longer serves any purpose.
+  - Unified media URL classifiers. The `room-message.tsx` inlined
+    copies of `isVideoUrl`/`isImageUrl` had *diverged* from the
+    shared `@/lib/media` versions — inlined supported `heic`/`avif`/
+    `m4v` extensions but missed Cloudinary path recognition; shared
+    supported Cloudinary paths but missed those extensions. Unified
+    in `@/lib/media.ts` with the union of both extension sets plus a
+    regex-anchor hardening fix (`foo.mp4.zip` no longer matches), then
+    imported from the room renderer. Real behavior improvement: HEIC
+    iPhone uploads now render as images instead of falling through to
+    the plain-link fallback.
+
+- Commit `1fb2823` — `/spec` and `/roadmap` prefetch 404 fix.
+  Switched `next.config.ts` from `redirects()` to `rewrites()`.
+  Rewrites are transparent to the browser, so Next's Link prefetcher
+  sees `/spec` as the canonical URL and no longer follows a 307
+  redirect to `/spec.html` and appends `?_rsc=...` to a static HTML
+  file. HTML files in `public/` are served unchanged — this is
+  structural only, v3 content preserved. V4 content rewrite
+  explicitly deferred to a dedicated editorial session (see
+  follow-ups below). All in-code callers already use the clean URLs,
+  so no call-site changes needed.
+
+**Audited, no code change needed**:
+
+- **RLS self-referential subquery audit**. Ran the loose query
+  `qual LIKE '%' || tablename || '%'`: four matches (donations,
+  institution_memberships ×2, sponsorships). All four are
+  `tablename.column` references inside subqueries against *other*
+  tables — not self-referential joins. Tighter query matching
+  `FROM <tablename>` returned zero results. Spot-checked
+  `room_memberships` SELECT policy; it's still the simple
+  `(user_id = auth.uid())` non-recursive form that Session 4.3 put
+  in place. Schema is clean. The Session 4.3 incident was
+  unique-in-kind, not a pattern with other victims waiting.
+
+**Deferred with clearer rationale**:
+
+- **`summarizeCommitment` persistence**. Re-examined today. Deferral
+  is correct: zero real sponsor traffic in production means the
+  "sponsor completion page recomputes on every view" concern is
+  invisible. Deferral trigger updated: revisit when (a) first real
+  sponsor lands, or (b) day-90-summary calls start showing up as a
+  meaningful line item in the Anthropic billing dashboard.
+
+**Added to follow-ups**:
+
+- **v4 editorial pass on `public/spec.html` and `public/roadmap.html`
+  content.** The structural conversion done this session preserved v3
+  content exactly. The spec is titled "Specification v3.0" and still
+  contains the retired 14-day launch period, start ritual, four-way
+  mentor split, Mentor/Coach/Community Builder/Practice Leader roles,
+  validator-as-distinct-role, and platform-scale-stages living-wage
+  table. The roadmap is even staler (pre-v3, references "Validator
+  Cooperative"). This is a dedicated editorial session — not a
+  cleanup — and should be prompt-drafted against Decision #8 as
+  source-of-truth before any rewriting.
+
+**State for the next session**: Full v4 editorial pass on spec + roadmap.
+Source-of-truth documents to read: `docs/v4-decisions.md` (Decision #8
+and all earlier decisions), `docs/chat-room-plan.md` (operational plan
+for the room surface). Target: rewrite `public/spec.html` as v4.0 and
+`public/roadmap.html` aligned with current Phase numbering. The rewrites
+in `next.config.ts` can be retired in the same commit set if the
+content is moved to App Router pages at that time; alternatively, the
+rewrites can stay and only the HTML file contents change.
+
+
 ---
 
 ## Known follow-ups discovered during the arc
@@ -1085,68 +1172,49 @@ WHERE table_schema='public' AND table_name='profiles'
 *(Add here anything discovered mid-session that's out of current scope but
 shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
 
-- **`/api/cron/deep-mode` route stub (from v3) is still in the tree.**
-  `src/app/api/cron/deep-mode/route.ts` is a `GET → {ok:true,
-  retired:true}` stub left over from v3's deep-mode cron registration.
-  Its own header comment explains: Vercel's cron registry is
-  populated from target:production deployments, and until a v4
-  `vercel.json` (without the deep-mode cron) promotes to production,
-  Vercel keeps invoking the path every minute. Session 2's deploy
-  `dpl_21RZ9taQNMApEBifEy4zAY8hSwDc` is a target:production deploy
-  whose `vercel.json` has NO `/api/cron/deep-mode` registration —
-  only `/api/cron/companion-milestones`. So the registration should
-  now be cleared by this deploy's promotion. **Verification step for
-  next session:** check the Vercel cron dashboard ~24h after Session
-  2 deploys. If `deep-mode` has disappeared from the registry, the
-  stub route can be deleted in a one-line cleanup commit. If it's
-  still there, leave the stub — its comment explains why. Either
-  way, fold into D-2 (Session 6) as a cleanup candidate.
-- **`summarizeCommitment` persistence decision.** See Session 2
-  "State for next session" above. When sponsor traffic to the
-  completion page matters, persist the summary. Small migration +
-  small code change; not today's problem.
-- **Stale `/roadmap.html` and `/spec.html` prefetches.** Observed
-  in David's browser devtools during Session 3.5 recipe test: the
-  Network panel showed 404s on `/roadmap.html?_rsc=…` and
-  `/spec.html?_rsc=…` alongside successful 307s on the actual
-  `/roadmap` and `/spec` routes. Cause: `next.config.ts` redirects
-  `/roadmap → /roadmap.html` and `/spec → /spec.html` (both are
-  real static files in `public/`). When Next's Link prefetcher
-  follows the redirect target it appends `?_rsc=…` for its server-
-  components payload — but a static HTML file doesn't have an RSC
-  payload, so it returns 404 for the RSC query. The user-visible
-  behavior is fine (real clicks get the 307 and then the HTML).
-  Console pollution and wasted round trips only. Two resolution
-  paths: (a) leave it — cosmetic, no user impact; (b) convert
-  `/spec` and `/roadmap` from redirect-to-static to actual App
-  Router pages that import/iframe the current HTML content, which
-  also removes the redirect hop. Fold into D-1 (Session 5) as a
-  cleanup candidate. Not a blocker.
-- **Companion "talks at, not with" problem.** Surfaced by David
-  during Session 3.5 via screenshot of his real room use. The
-  Companion asked him "What made you switch to open palm?" on a
-  session mark; he answered it in a subsequent non-session message
-  ("Switch to open Palm because i think it's going to make my
-  biceps grow faster"); the Companion did not reply because the
-  gating in `src/app/api/rooms/[id]/messages/route.ts` is
-  `if (sessionFlag && resolvedCommitmentId)` — only session-marked
-  posts trigger a Companion response. Visually the Companion reads
-  as a conversational participant (bubble styling, questions
-  asked); under the hood it's one-shot reflection. User expectation
-  vs implementation mismatch.
-  The Companion DOES read up to 50 recent room messages as context
-  when it eventually fires (see `src/lib/companion/room.ts` lines
-  203-269), so the non-session replies aren't lost — they just
-  don't get an immediate acknowledgment. The conversation happens
-  across session marks, latency-shifted by up to a day.
-  Two fix paths, in ascending scope:
-  (a) Widen the gating: if the most recent Companion message in
-  the room ended with a `?`, the next practitioner message fires a
-  Companion response even if not session-marked. ~1hr implementation,
-  reuses the entire existing after() + Realtime pipeline. Solves
-  ~80% of the felt problem without touching Phase 10 scope.
-  (b) Full Phase 10: chat UI, persisted threads, streaming, voice.
-  Already on the roadmap, intentionally deferred.
+- **`/api/cron/deep-mode` route stub (from v3).**
+
+  **RESOLVED in post-arc cleanup (2026-04-22, commit `4bf988a`).**
+  The stub existed because Vercel's cron registry was populated from
+  the last v3 target:production deployment, which kept invoking
+  `/api/cron/deep-mode` every minute even after v4 dropped the
+  feature. Session 2's `dpl_21RZ9taQNMApEBifEy4zAY8hSwDc` (and every
+  subsequent target:production deploy) has had NO deep-mode entry in
+  `vercel.json`, so the registration should have been cleared by the
+  first v4 promotion. Verification: runtime log query for "deep-mode"
+  over a 48h window returned zero invocations. Registry is clean.
+  Stub deleted in a one-line cleanup.
+
+- **`summarizeCommitment` persistence decision.** When sponsor traffic
+  to the completion page matters, persist the day-90 summary so the
+  page doesn't recompute on every view. Today the sponsor completion
+  page calls `summarizeCommitment` on every load, and the day-90 cron
+  also calls it (discarding the result — its call is diagnostic-only
+  per Session 2). Small migration (add `day_90_summary text` and
+  `day_90_summary_generated_at timestamptz` on `commitments`) + small
+  code change (day-90 cron persists; completion page reads the column
+  with a fallback to live recomputation for pre-migration rows).
+  **Explicitly deferred 2026-04-22.** Current state: zero sponsors in
+  production (David is the sole user), so the completion page has no
+  real traffic and the inefficiency is invisible. Re-evaluate when
+  (a) first real sponsor lands, or (b) Anthropic costs start showing
+  day-90-summary calls as a meaningful line item in the Anthropic
+  billing dashboard, whichever comes first.
+
+- **Stale `/roadmap.html` and `/spec.html` prefetches.**
+
+  **RESOLVED in post-arc cleanup (2026-04-22, commit `1fb2823`).**
+  Switched `next.config.ts` from `redirects()` to `rewrites()` for
+  both paths. A rewrite serves the destination content without
+  changing the browser-visible URL, so Next's Link prefetcher sees
+  `/spec` as the canonical URL (rather than following the redirect
+  to `/spec.html` and appending `?_rsc=...` to a static HTML file
+  that has no RSC payload). No 404s, no wasted prefetch round trips.
+  The HTML files in `public/` are served unchanged. V3 content
+  preserved exactly. Full v4 content rewrite tracked as a separate
+  follow-up below.
+
+- **Companion "talks at, not with" problem.**
 
   **RESOLVED in Session 4 (2026-04-21).** Path (a) shipped. The
   `after()` block gained a second branch that fires on non-session
@@ -1156,32 +1224,76 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   swaps envelope text so the Companion knows it's continuing a
   conversation rather than reflecting on a session. Self-limiting
   — no wall-clock rate limit needed. Full rationale in
-  docs/chat-room-plan.md §6.6 Decision A. Path (b) remains Phase 10
-  scope; its shape can be reconsidered after real use of (a)
-  reveals whether the felt gap is closed.
-- **Audit other RLS policies for self-referential subqueries.** The
-  `room_memberships` recursive SELECT policy that broke Realtime
-  delivery for ~36 hours was not unique-in-kind — it's the most
-  obvious case of a general pattern where a "members can read
-  members" style policy trips Realtime's `walrus_rls_stmt` path
-  even though it works fine in normal Postgres. If any other table
-  in the schema has a policy whose USING clause queries that same
-  table, it will have the same silent-delivery-failure behavior
-  the moment we add a Realtime subscription that joins through it.
-  Low-priority sweep: `SELECT tablename, policyname, qual FROM
-  pg_policies WHERE schemaname='public' AND qual LIKE '%' || tablename
-  || '%'` finds candidates. Fold into a future cleanup session.
+  docs/chat-room-plan.md §6.6 Decision A. Path (b) (full Phase 10
+  chat UI with streaming) remains on the roadmap; its shape can be
+  reconsidered after real use of (a) reveals whether the felt gap
+  is closed.
+
+- **Audit other RLS policies for self-referential subqueries.**
+
+  **RESOLVED in post-arc cleanup (2026-04-22, audit only — no code
+  change needed).** Ran the loose query `SELECT tablename, policyname,
+  qual FROM pg_policies WHERE schemaname='public' AND qual LIKE '%' ||
+  tablename || '%'`: four matches (donations, institution_memberships
+  ×2, sponsorships). All four are `tablename.column` references inside
+  subqueries against *other* tables (e.g., `donations` policy queries
+  `commitments` and uses `donations.commitment_id` as the join key) —
+  not self-referential joins. Ran a tighter query matching
+  `FROM <tablename>` specifically: zero results. The `room_memberships`
+  SELECT policy — which was the Session 4.3 root cause — is still
+  the simple non-recursive `(user_id = auth.uid())` the fix put in
+  place. Schema is clean.
 
 - **`src/app/room/[id]/room-message.tsx` inlines its own copies of
-  `isVideoUrl` / `isImageUrl`** (lines 38–46 as of commit `f92ab7f`)
-  rather than importing from `@/lib/media`. Not dead code — the
-  inlined copies are actively used by the message renderer — but it
-  duplicates the shared helpers that `src/lib/companion/media.ts`,
-  `src/lib/companion/day90.ts`, and `src/app/api/companion/reflect/
-  route.ts` import properly. First flagged in Session 5's D-1
-  orientation notes as a good post-D-2 cleanup. Swap inlines for
-  the import, add a typecheck, done in ~5 minutes. Fold into a
-  future cleanup session.
+  `isVideoUrl` / `isImageUrl`.**
+
+  **RESOLVED in post-arc cleanup (2026-04-22, commit `4bf988a`).**
+  Swap went further than a blind refactor: the two implementations
+  had *diverged*. Inlined recognized `heic`/`avif`/`m4v` (important
+  for iPhone captures) but did NOT recognize Cloudinary transformation
+  paths (`/video/upload/`, `/image/upload/`). Shared `@/lib/media`
+  recognized Cloudinary paths but did NOT recognize those extensions.
+  Given the project uses Cloudinary for uploads AND iPhone is a
+  primary capture device, both are legitimately wanted in both call
+  sites. Unified in `@/lib/media.ts` with the union of extension sets
+  (`mp4|mov|avi|webm|mkv|m4v` for video; `jpg|jpeg|png|gif|webp|avif|heic`
+  for image) + a regex-anchor hardening fix so `foo.mp4.zip` no longer
+  matches. Room renderer now correctly displays HEIC iPhone uploads
+  as images (was falling through to the plain-link fallback).
+
+- **v4 editorial pass on `public/spec.html` and `public/roadmap.html`
+  content.** The post-arc cleanup on 2026-04-22 did the structural
+  fix for `/spec` and `/roadmap` (switched to rewrites to eliminate
+  prefetch 404s) but preserved v3 content exactly. The actual
+  content is now significantly out of date vs Decision #8:
+
+  - `public/spec.html` is titled "Specification v3.0" and contains
+    the retired 14-day launch period (§4.2), start ritual (§4.3),
+    four-way mentor split with 23.75% × 4 economics (§9.7), Mentor/
+    Coach/Community Builder/Practice Leader roles (§7.3), validator-
+    as-distinct-role (throughout §6), Trust-derived-from-validators,
+    and the platform-scale-stages living-wage table.
+  - `public/roadmap.html` is an older pre-v3 document referencing
+    "Validator Cooperative" and "Specification v1.4.0-draft" — even
+    more stale than the spec.
+
+  Target shape: spec rewritten as v4.0, describing the Decision-#8
+  architecture (rooms as primary, streak begins at declaration,
+  sponsors as witnesses with no separate validator role, AI
+  Companion with no authority, Mentor economy fully retired, Trust
+  as a record of completed commitments validated by room-member
+  sponsors). Roadmap aligned to the current Phase numbering
+  (Phase 9.5 rooms-as-primary is shipped and live).
+
+  This is a dedicated editorial session, not a cleanup: ~1200 lines
+  of spec content + ~270 lines of roadmap content to rewrite. Should
+  be prompt-drafted with the updated Decision-#8 architecture as
+  source-of-truth (docs/v4-decisions.md + docs/chat-room-plan.md),
+  dry-run reviewed for technical accuracy against live code behavior,
+  and designed such that the new App Router pages can swap in
+  alongside the rewrite (the current rewrites in `next.config.ts`
+  can be retired in the same commit set).
+
 
 ---
 
