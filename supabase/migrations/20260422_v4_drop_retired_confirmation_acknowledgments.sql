@@ -1,0 +1,24 @@
+-- Drop confirmation_acknowledgments: v3 validator-economy leftover.
+--
+-- This table was part of the retired v3 validator-confirmation flow where
+-- practitioners acknowledged confirmations posted by their validators. It
+-- referenced post_confirmations (already dropped in the v4.1 "Atomic Role
+-- Excision" migration) and profiles.practitioner_user_id. The v4.1 excision
+-- missed this table, leaving it as a zombie: no v4 code path reads or writes
+-- it, its confirmation_id column was a dangling reference to a non-existent
+-- table, and RLS was never enabled on it.
+--
+-- Supabase security linter flagged this on 2026-04-19 ("Table publicly
+-- accessible, rls_disabled_in_public"). Resolved on 2026-04-22 by dropping
+-- rather than enabling RLS on dead code — fixing the cause not the symptom.
+--
+-- Post-wipe state at time of drop: table was empty (all rows CASCADE-deleted
+-- by the full user-data wipe earlier the same day). No code references exist
+-- in src/ (verified via grep). The only textual reference was in
+-- docs/next-session-companion-v2.md which is already marked deprecated.
+--
+-- IF EXISTS makes this idempotent: safe in fresh environments where the
+-- table never existed, and safe to re-run on environments that already
+-- applied it.
+
+DROP TABLE IF EXISTS public.confirmation_acknowledgments;
