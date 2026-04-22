@@ -1167,7 +1167,163 @@ rewrites can stay and only the HTML file contents change.
 
 ---
 
-## Known follow-ups discovered during the arc
+### v4 editorial pass (2026-04-22) — spec Decision #8 propagation + roadmap subhead
+
+Not a B/C/D session — resolves the last remaining follow-up from the
+post-arc cleanup list, namely the "v4 editorial pass on `public/spec.html`
+and `public/roadmap.html` content" entry added immediately above.
+
+**Finding that changed the session's scope**: the follow-up list entry
+describing the two files' state was itself stale by the time this
+session opened. The file audit done at session start:
+
+- `public/roadmap.html` was *not* pre-v3. No "Validator Cooperative"
+  string, no "v1.4.0-draft" string, footer already at "Specification
+  v4.0", header already labeled "The v4 Build", completed grid already
+  listed Phases 0–9.5 as shipped with explicit Phase 9.5 entry covering
+  Decision #8. Only drift: the header subhead prose still read "Phases
+  0–7.1 have shipped", one sentence behind the completed grid it sat
+  next to.
+- `public/spec.html` was *partially* v4. Title, spec-meta, footer all
+  already at v4.0. §0 Terminology already marked validator / Mentor /
+  Coach / Community Builder / Practice Leader as retired. §8 already
+  was "The AI Companion". §14 already referenced "v4 decisions". What
+  was genuinely stale: Decision #8 specifically. §4.2 "The 14-Day Launch
+  Period" and §4.3 "The Start Ritual" were still presented as live
+  mechanics; §5.4 was "The Sponsor Feed" framed as per-commitment
+  witness circle; §7 still spoke of sponsors pledging during launch
+  windows; §8.1 lacked room-level framing; §14 API tables listed routes
+  that no longer existed in the code (`/api/sponsors/release`,
+  `/api/sponsors/veto` — actual code uses `/api/sponsorships/[id]/action`
+  with action body parameter). §3.1 onboarding table described a
+  six-stage resolver; actual `src/lib/stage.ts` is three-stage (practice
+  → commit → room).
+
+Scope adjusted from "rewrite ~1500 lines" to "surgical Decision-#8
+propagation" and logged with a pre-start flag to David. Executed the
+smaller edit.
+
+**Shipped**:
+
+- Commit `75c7d0b` — `docs(spec,roadmap): propagate Decision #8 through v4 public docs`
+  - `public/spec.html`: 142 insertions, 103 deletions. Deleted §4.2 and
+    §4.3; rewrote §4.1 to state "streak begins at declaration"; new §4.2
+    "Commitments Happen Inside Rooms" (membership states table, room
+    lifecycle, invitation model, room disjointness, solo-practice
+    clarification); new §4.3 "Sessions, Session-Marks, and Affirmations"
+    (the two chat-stream mechanics with the no-engagement-metric
+    discipline); §4.4 annual cycle without the launch-period table.
+    Rewrote §5.4 from Sponsor Feed to Room Chat Stream. Dropped launch
+    framing in §7.1 / §7.2 / §7.4 / §7.5; rewrote §7.2 so any room
+    member (not only the practitioner) can invite. §8.1 got the
+    room-level moderator-first/accompanier-second framing from
+    chat-room-plan §3. Replaced §3.1 six-stage table with the actual
+    three-stage resolver from `src/lib/stage.ts`. Updated §14 API tables
+    to match code (`/api/sponsorships/[id]/action`, `/api/rooms/[id]/*`,
+    `/room/[id]`, and HTTP 410 note on the retired start ritual
+    endpoint). Replaced the §14.3 "Launch period as cutoff" decision
+    row with a Decision #8 row + three new rows (Primary social surface /
+    Session-mark mechanic / Sponsor affirmation mechanic); removed the
+    now-obsolete "Launch period length" row. TOC regenerated with new
+    §4.2 and §4.3 anchors and §5.4 renamed. §0 Terminology updates:
+    retired Launch period and Start ritual rows, added Room, Room
+    member, Session mark, Affirmation rows, amended Commitment and
+    Sponsor and Sponsor circle and Completed-sponsored-streak rows.
+    §1 core-loop callout rewritten around rooms.
+  - `public/roadmap.html`: single-line subhead updated from "Phases 0–7.1
+    have shipped" to "Phases 0–9.5 have shipped" with a one-sentence
+    expansion naming what 9.5 added.
+
+- **Pre-commit discipline verified**: ran `npm install` (shallow clone
+  had no `node_modules`), then `npx tsc --noEmit` — exit 0, clean. Then
+  `git restore package.json package-lock.json` to prevent npm install
+  leaking into the commit. `git status --short` before commit showed
+  exactly the two intended files modified.
+
+- **Deploy**: `dpl_7b4CNGepua8rLLnGPWGCshvMTDGe` READY, promoted to
+  `www.searchstar.com`. Verification via `Vercel:web_fetch_vercel_url`:
+  - `https://www.searchstar.com/spec` → 200, `x-matched-path: /spec.html`,
+    title "Specification v4.0", TOC shows new §4.2 + §4.3, content is
+    the rewritten Decision-#8 version.
+  - `https://www.searchstar.com/roadmap` → 200,
+    `x-matched-path: /roadmap.html`, subhead reads "Phases 0–9.5 have
+    shipped…live in production. What remains is content and Companion
+    v2."
+
+- **Rewrites still working**: the post-arc `1fb2823` rewrite-based fix
+  from `next.config.ts` continues to serve `/spec` and `/roadmap` from
+  their `public/` HTML files. No App Router pages created, no
+  `next.config.ts` changes. Per prompt instructions.
+
+**What was NOT done** (intentionally):
+
+- §14 "Product as Built" section still includes references to shipped
+  state at earlier points in time (the retired six-stage-resolver
+  description in §14.1, the "then-live" 14-day launch window note in
+  the v4.6.1 roadmap row, the retired three-jobs section re-worded).
+  These are explicit history markers and accurate-as-of-their-ship-date
+  — see new follow-up below. Deleting them would erase the archaeology
+  of the product's evolution; keeping them is correct; structuring the
+  section better is a future tidying task, not this session's scope.
+- Design chrome (CSS, header/footer/TOC/callout components) preserved
+  verbatim in both files.
+- No build changes. No App Router migration of `/spec` or `/roadmap` —
+  the prompt said that pivot was optional and the rewrites path was
+  simpler; kept it.
+
+**Resolves**: the "v4 editorial pass on `public/spec.html` and
+`public/roadmap.html` content" follow-up entry added by the 2026-04-22
+post-arc cleanup.
+
+**Added to follow-ups**:
+
+- **§14 "Product as Built" is accumulating stale-by-design entries.**
+  Each decision row and historical paragraph was accurate at the
+  moment it was written, but the section as a whole is becoming an
+  archaeological stratigraphy: v3 → v4.1 role excision → v4.3 sponsor-
+  step-seen → Decision #8 room migration. Worth a design call: either
+  prune aggressively to just the current state, or formally split §14
+  into "Currently shipped" and "Historical, superseded" subsections.
+  Not urgent — the section is labeled as history and the content is
+  accurate. Flagging so this doesn't quietly become a readability
+  problem over the next two or three architectural shifts. Touch on
+  next major spec pass or whenever §14 gets rewritten for any other
+  reason.
+
+- **`docs/bcd-arc.md` "Known follow-ups" list itself needs a staleness
+  audit.** Root observation: the "v4 editorial pass" follow-up entry
+  as written on 2026-04-22 described both target files in terms that
+  were already out of date at the moment the entry was committed (the
+  roadmap had been rewritten in `23c3cea`; the spec had been partially
+  updated in some earlier pass). The list is an append-only structure
+  whose entries are never revalidated against the repo. Suggests other
+  entries may describe current state inaccurately too. One pass
+  cross-checking each remaining follow-up against the live code/docs
+  would catch this before wasting a future session's scope-framing.
+  Probably 20-30 minutes of work; worth doing before the next session
+  that picks a follow-up off this list.
+
+**Commit & deploy**:
+- Local commit → `git push origin main` → `75c7d0b12680e76d8cdab56a680e05067a8e37ce`
+- Vercel deploy `dpl_7b4CNGepua8rLLnGPWGCshvMTDGe` — state READY, target production, region iad1
+- Alias hits: `www.searchstar.com`, `searchstar.com`, and all branch/preview aliases
+- Build time: ~23s from push to READY
+
+**Session mechanics notes** (for the "how the session itself went"
+meta-log, not blocking anything):
+- Session ran in two tool-budget segments with an interruption between
+  them. First segment finished the spec surgery up through §10 + §14.2
+  + committed locally but hit the budget before pushing. Second segment
+  picked up, finished §14.3 rewrite (including API table updates), final
+  stale-reference sweep, push, deploy verify, this log entry. Clean
+  continuation — the first segment had left a complete summary of state
+  that made the second segment's orientation essentially free.
+- The finding that the follow-up entry was itself stale was flagged to
+  David pre-edit (first segment's end-of-segment summary) and confirmed
+  by the surgical scope adjustment. No content-rewriting work was
+  duplicated against already-correct copy.
+
+
 
 *(Add here anything discovered mid-session that's out of current scope but
 shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
@@ -1262,7 +1418,26 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   as images (was falling through to the plain-link fallback).
 
 - **v4 editorial pass on `public/spec.html` and `public/roadmap.html`
-  content.** The post-arc cleanup on 2026-04-22 did the structural
+  content.**
+
+  **RESOLVED in dedicated editorial session (2026-04-22, commit
+  `75c7d0b`, deploy `dpl_7b4CNGepua8rLLnGPWGCshvMTDGe`).** See the
+  "v4 editorial pass" session entry above for the full writeup.
+
+  **Note on this follow-up's own accuracy:** the premise described
+  below ("pre-v3 Validator Cooperative roadmap", "Specification v3.0
+  spec with the full mentor economy still live") was already stale
+  when this entry was written on 2026-04-22. The roadmap had been
+  rewritten to v4 phase structure in `23c3cea` and the spec had been
+  partially updated for Decisions #1-#7 in an earlier pass. The
+  genuinely stale content was Decision #8 specifically. The editorial
+  session scoped down to a surgical ~142-insertion/103-deletion
+  Decision-#8 propagation rather than the ~1500-line rewrite this
+  entry anticipated. Original entry preserved below for archaeology:
+
+  ---
+
+  The post-arc cleanup on 2026-04-22 did the structural
   fix for `/spec` and `/roadmap` (switched to rewrites to eliminate
   prefetch 404s) but preserved v3 content exactly. The actual
   content is now significantly out of date vs Decision #8:
@@ -1293,6 +1468,32 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   and designed such that the new App Router pages can swap in
   alongside the rewrite (the current rewrites in `next.config.ts`
   can be retired in the same commit set).
+
+- **§14 "Product as Built" is accumulating stale-by-design entries.**
+  Discovered during the 2026-04-22 v4 editorial pass. Each decision
+  row and historical paragraph was accurate at the moment it was
+  written, but the section as a whole is becoming an archaeological
+  stratigraphy: v3 → v4.1 role excision → v4.3 sponsor-step-seen →
+  Decision #8 room migration. Worth a design call: either prune
+  aggressively to just the current state, or formally split §14 into
+  "Currently shipped" and "Historical, superseded" subsections. Not
+  urgent — the section is labeled as history and the content is
+  accurate. Flagging so this doesn't quietly become a readability
+  problem over the next two or three architectural shifts. Touch on
+  next major spec pass or whenever §14 gets rewritten for any other
+  reason.
+
+- **`docs/bcd-arc.md` "Known follow-ups" list itself needs a
+  staleness audit.** Discovered during the 2026-04-22 v4 editorial
+  pass. The "v4 editorial pass" follow-up entry (directly above) as
+  written described both target files in terms that were already out
+  of date at the moment the entry was committed. The Known follow-ups
+  list is an append-only structure whose entries are never revalidated
+  against the repo. Suggests other entries may describe current state
+  inaccurately too. One pass cross-checking each remaining follow-up
+  against the live code/docs would catch this before wasting a future
+  session's scope-framing. Probably 20-30 minutes of work; worth
+  doing before the next session that picks a follow-up off this list.
 
 
 ---
