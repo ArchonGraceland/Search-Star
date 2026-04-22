@@ -1495,6 +1495,107 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   session's scope-framing. Probably 20-30 minutes of work; worth
   doing before the next session that picks a follow-up off this list.
 
+- **Companion followup path mis-fires in multi-practitioner rooms.**
+  Discovered 2026-04-22 in live production from a real user screenshot.
+  Companion V2 scope item — do NOT patch in Companion V1.
+
+  **What happened.** Rick (a practitioner, not the session's primary)
+  posted a session-marked message about running out of strength. The
+  Companion replied with a question addressed to Rick: "How many sets
+  did you do before the one that stopped at 13?" Before Rick answered,
+  David posted a side-chat reply to Rick: "13 is pretty good Rick.
+  That's impressive." The Companion fired its followup path and
+  produced: "That's David, not Rick — Rick is the one answering about
+  sets." David replied "Yeah but I'm talking to Rick." Rick then
+  answered the original question normally. Companion's interjection
+  was unnecessary and broke the social frame of two humans talking
+  to each other.
+
+  **Root cause (two-part).** Both in the C-2 followup infrastructure
+  shipped 2026-04-21 (commit `c0eadc1`).
+
+  (a) **Trigger detection doesn't check addressee.** Code at
+  `src/app/api/rooms/[id]/messages/route.ts` lines 228-285 fires the
+  followup path whenever: (i) a practitioner posts a non-session
+  message, AND (ii) the most recent `companion_*` message in the
+  room has a `?` in its last 200 chars. The check has no notion of
+  "who was the Companion asking." In a room with exactly one
+  practitioner — which was the room when this path was designed —
+  that's fine because the only possible human replier IS the
+  addressee. In a multi-practitioner room it mis-fires every time
+  someone other than the addressee speaks next.
+
+  (b) **Followup envelope assumes the trigger user IS the
+  addressee.** `src/lib/companion/room.ts` lines 369-380 (the
+  `triggerKind: 'followup'` branch) frames the prompt as: "You
+  asked a question in your most recent message to this room. The
+  practitioner is replying to that question now — not marking a
+  session, just continuing the conversation." This prose gives the
+  model no way to detect "this person isn't the one I was asking."
+  The model then does the sensible thing: it notices the name
+  mismatch and tries to correct it, producing the awkward
+  meta-message David saw.
+
+  **Three fixes are plausible, ranked by scope and how much they
+  fit Companion V2's shape:**
+
+  1. **Narrowest fix (V1-compatible, but don't patch V1).** Detect
+  addressee: when the last `companion_*` message contains a
+  name-mention that maps to a room member, only fire followup if
+  the trigger user is that member. Names in the Companion's prose
+  would have to be matched against `profiles.display_name` of the
+  room members. Imperfect — the Companion sometimes asks questions
+  without naming the target — but catches the common case. Cost:
+  small. Risk: brittle string matching.
+
+  2. **Middle fix (V2-native).** Track the addressee explicitly.
+  When the Companion writes a message that ends with a question,
+  store the intended addressee's `user_id` as a column on the
+  `companion_*` row. Then the followup path fires only when the
+  trigger user matches that column. Cost: migration + prompt tweak
+  + route change. Risk: requires the Companion's prompt to name
+  its addressee reliably, which needs a system-prompt update to
+  instruct it to always identify who it's asking.
+
+  3. **Broadest fix (genuinely V2).** Stop using the followup path
+  as a unitary concept. Move to a conversation-aware model where
+  the Companion receives every room message and decides whether
+  to speak, based on addressing, recency, and topic — not on
+  per-message rule fires. This is what the chat-room-plan §6
+  "Companion-as-steady-participant" model points at, and what
+  Companion V2 Stage B (Phase 10 in the roadmap) is meant to
+  deliver. Cost: meaningful architectural change. Risk: Companion
+  becomes chatty if the gating isn't right.
+
+  **Scope call.** Fix (3) is the right target, because the underlying
+  architectural assumption — "the Companion reacts to one triggering
+  message at a time, and must decide what kind of trigger it is from
+  flags" — breaks the moment more than one human is in the room. Any
+  multi-voice chat environment will expose more bugs in the same
+  shape (a question that spans two messages, a Companion reply that
+  crosses with a human reply, a reply that references a message 12
+  deep in the stream). Patching (1) or (2) buys time but defers the
+  real fix. V1 stays as-shipped; V2 design should absorb this.
+
+  **Until V2 ships, the workaround is social.** Room members should
+  know the Companion can get confused when two humans talk directly
+  and a question from the Companion is pending. Option to suppress
+  the followup path entirely via a feature flag is available if the
+  misfires get disruptive — remove the `triggerKind: 'followup'`
+  invocation at `route.ts:264-269` and the Companion reverts to
+  session-only replies. Not recommended yet; the C-2 fix solved a
+  real "talks at, not with" failure mode and reverting loses that.
+
+  **Where this sits in docs/chat-room-plan.md.** §6 of the plan
+  already sketches "Companion-as-steady-participant" as the target
+  voice for multi-member rooms. §6.6 specifically called out the
+  C-2 followup path as "v1 scope — V2 will supersede." This
+  screenshot is the first concrete evidence of the V1-to-V2 gap
+  biting in production and should be cited when the V2 design session
+  opens. Suggested citation: bcd-arc.md Known-follow-ups,
+  "Companion followup path mis-fires in multi-practitioner rooms,"
+  2026-04-22.
+
 
 ---
 
