@@ -302,3 +302,153 @@ The spec defines the trigger as session-marking, not as session-mark-at-insert-t
 
 See Cluster 4. `'network'` is v3 residue; no v4 predicate for it exists. Drop the value and the reader simplifies to binary.
 
+### F31. `/api/account/delete` does not check profile-delete result before calling `auth.admin.deleteUser`
+
+**Pass 1 severity:** Concerning
+**Pass 2 verdict:** GENUINE-BUG
+**Spec anchor:** None directly; general data-integrity principle
+
+The spec doesn't describe account deletion in detail, but orphaned profile rows are a data-integrity problem regardless: every downstream query joining on `user_id` silently drops them, and no repair job exists. Pass 3 fix is mechanical — check the profile-delete result; on failure, return 500 and do not proceed to auth deletion.
+
+### F32. Admin side nav references `/feed` route that doesn't exist
+
+**Pass 1 severity:** Nit
+**Pass 2 verdict:** GENUINE-BUG (nit-level)
+**Spec anchor:** `docs/v4-build-plan.md` "What gets retired" list (the v3 feed is retired)
+
+Dead link in admin chrome. Also flags the broader emoji-in-chrome drift against the userMemories design rule ("no emojis in UI chrome"). Pass 3 removes the link; the emoji audit is separately captured as a styling cleanup to defer.
+
+### F33. `is_admin()` Postgres function reads `profiles.role` — a column that doesn't exist
+
+**Pass 1 severity:** Blocking (extends F11 into the DB layer)
+**Pass 2 verdict:** GENUINE-BUG
+**Cluster:** 2 (admin role schema)
+
+See Cluster 2. Adding the `profiles.role` column repairs both F11 and F33 atomically — `is_admin()` starts working immediately.
+
+### F34. Four more admin-detection surfaces using `user_metadata.role==='admin'`, none of which agree with F11 or F27
+
+**Pass 1 severity:** Concerning (extends F27)
+**Pass 2 verdict:** GENUINE-BUG
+**Cluster:** 3 (role-check consolidation)
+
+See Cluster 3. All migrate to the single `isAdmin(supabase)` helper after Cluster 2 provides the canonical source.
+
+### F35. `POST /api/admin/create-test-users` has zero auth gate
+
+**Pass 1 severity:** Blocking
+**Pass 2 verdict:** GENUINE-BUG — ALREADY FIXED (resolved out-of-band 2026-04-24)
+**Cluster:** None
+
+Deleted in commit `93f8214` before Pass 2 opened. Preamble banner at Block D findings records this. Preserved here for audit trail; Pass 3 has no further action.
+
+### F36. `/admin/donations/page.tsx` selects `commitments.title` — no such column
+
+**Pass 1 severity:** Concerning
+**Pass 2 verdict:** GENUINE-BUG
+**Spec anchor:** `v4-decisions.md` decision #8 (practice name is the commitment statement; there is no separate title)
+
+Under Decision #8 the commitment statement IS the practice name — there's no `commitments.title` column because no such field exists as a v4 concept. The code is asking for a column that never existed in this schema iteration. Fix direction: join through `practices.name` instead. The empty donations table hides the visible failure today; the bug becomes visible the first time a donation lands.
+
+### F37. `profiles.select('id', ...)` recurs across admin + dashboard support pages — `profiles` has no `id` column
+
+**Pass 1 severity:** Concerning
+**Pass 2 verdict:** GENUINE-BUG
+**Spec anchor:** None directly; schema-level drift
+
+Four call sites selecting a column that doesn't exist. Pass 1's runtime behavior note is interesting — the selects don't visibly error, which suggests PostgREST lenience or undocumented behavior. Pass 3 should probe the runtime behavior once during the fix session, then replace all four call sites with `select('user_id', ...)` and adjust downstream. If Cluster 2 adds a surrogate `id uuid` PK to profiles this becomes moot — but Cluster 2 as currently scoped adds only `role`, not a new PK shape. Handle F37 independently.
+
+### F38. Admin API writes via the anon client hit RLS and silently no-op
+
+**Pass 1 severity:** Concerning (compounds F11/F33)
+**Pass 2 verdict:** GENUINE-BUG
+**Cluster:** 2 + 3 (admin role schema + role-check consolidation), plus independent fix
+
+F38's diagnosis has two layers. First: fixing Cluster 2 (adding `profiles.role`) makes `is_admin()` work, which unblocks the RLS-gated ticket writes. Second, and separately: the `/api/admin/users` path updates `profiles` and `trust_records` — tables with owner-only RLS — so even a correct `is_admin()` doesn't authorize an admin to write to another user's profile. That fix is orthogonal to Cluster 2: switch the admin writes to `createServiceClient()` post-auth, matching the pattern every other admin surface should already use. Pass 3 ordering: Cluster 2 first (unblocks the ticket path); then migrate `/api/admin/users` to service client; then audit all admin writers for the same pattern.
+
+### F39. `/institution/signup` creates an institution row without creating an auth user
+
+**Pass 1 severity:** Concerning
+**Pass 2 verdict:** DEFENSIBLE-DIVERGENCE (repo updates; institutional portal is spec-deferred)
+**Spec anchor:** `docs/v4-build-plan.md` "Omitted from this plan: Spec §13's v4.8 (Institutional Sponsorship experimental) and v4.9 (Portable Trust Export). Both are 'Future' in the spec."; `v4-decisions.md` deferred question #7 ("What the Institutional Portal becomes without Practice Leader placement")
+
+The institutional portal is explicitly deferred in every v4 doc. The current code is a v3-era implementation that survived the v4 pivot without being retired or completed. The broken flow F39 describes (institution row without auth user, "sign in with this email" copy that doesn't work) is a real bug — but it's a bug in a surface the v4 plan has parked. Pass 3 has two defensible options: (a) fix the flow (magic-link on signup), matching the pre-v4 intent, or (b) take the signup page down / put it behind a feature flag until the institutional portal's v4 shape is designed. Recommend option (b). The cost of fixing a flow whose downstream product surface is still undefined is wasted work; the cost of an available-but-broken signup form is ongoing reputational drag. Pass 3 can surface this as a ship-decision to the principal.
+
+### F40. `/api/institution/[id]/enroll` updates `profiles.institution_id` via anon client — blocked by owner-only RLS
+
+**Pass 1 severity:** Concerning (F38 cousin)
+**Pass 2 verdict:** GENUINE-BUG (conditional on F39 disposition)
+**Spec anchor:** Same as F39 — institutional portal is deferred
+
+Same shape as F38 — anon client UPDATE blocked by owner-only RLS. If F39 is resolved via option (a) (fix the flow), F40 is a routine service-client migration. If F39 is resolved via option (b) (take it down), F40 disappears with the rest of the institutional portal code. Bundle the disposition.
+
+### F41. `/api/institution/[id]/analytics` is orphan — zero callers in the codebase
+
+**Pass 1 severity:** Nit
+**Pass 2 verdict:** GENUINE-BUG (orphan cleanup, conditional on F39)
+**Spec anchor:** Same as F39
+
+Same conditional treatment as F40. If the institutional portal stays (F39 option a), delete the unused analytics endpoint and let the dashboard continue to use inline queries (or wire the dashboard to call the endpoint — Pass 1 notes both options). If the portal is taken down (F39 option b), the endpoint goes with it. Bundle.
+
+### F42. Login routes `user_metadata.role==='platform'` to `/platform`, which doesn't exist
+
+**Pass 1 severity:** Concerning
+**Pass 2 verdict:** GENUINE-BUG
+**Cluster:** 3 (role-check consolidation)
+
+See Cluster 3. The `/platform` branch is dead code pointing at a retired v3 surface; collapse the login redirect to `router.push(returnTo ?? '/dashboard')`. This is the one piece of Cluster 3 that doesn't need the new helper — it's a pure delete.
+
+### F43. StageBar hardcodes 6 stages but only 3 are live post-Decision #8
+
+**Pass 1 severity:** Nit
+**Pass 2 verdict:** GENUINE-BUG
+**Spec anchor:** `v4-decisions.md` decision #8; `chat-room-plan.md` §5 ("Onboarding does NOT fork. First-time practitioners see the same simple flow — declare a commitment, name the practice, invite a first sponsor")
+
+Decision #8 reduced onboarding to a minimal flow. The stage bar and "Stage N of 6" body copy still advertise the v3 six-step shape. Pass 3 fix is small: reduce STAGES to `[Practice, Commitment]` (the room itself isn't a /start stage), update body-copy strings, and optionally hide the bar on stage 2 since the next landing is the room. "Nit" severity is right at the impact level but the visible drift is a small UX lie Pass 3 should clear.
+
+### F44. `/start/commitment` form collects 5 fields that `/api/commitments` silently drops
+
+**Pass 1 severity:** Nit (parallels F25)
+**Pass 2 verdict:** GENUINE-BUG
+**Spec anchor:** Same as F25 — decision #8
+
+Same problem as F25 at a different URL. Same fix direction: simplify the form to match the v4 declaration shape. The `/start/commitment` form and the `/commit` form (F25) should either share a component or both collapse to the minimum viable declaration UX.
+
+### F45. Root `layout.tsx` renders `<PublicFooter/>` globally, including on logged-in surfaces
+
+**Pass 1 severity:** Nit
+**Pass 2 verdict:** GENUINE-BUG (presentation bug)
+**Spec anchor:** None directly; design-system consistency
+
+The footer is scoped for marketing chrome but rendered globally. It appears under the room, the dashboard, and the admin sidebar where it doesn't belong. Pass 1's option (a) (move the footer back into the specific marketing pages) is the smaller diff. Option (b) (route-group layout for marketing) is cleaner but larger. Pass 3 picks at fix time.
+
+---
+
+## Summary
+
+Of 45 Pass 1 findings, Pass 2 verdicts reconcile as:
+
+- **GENUINE-BUG: 33 findings.** Most of the catalog is code drift against the v4 spec — the v3→v4 transition left real gaps that accumulated quietly. Four cluster decisions consolidate 10 of these (F1/F10/F21, F11/F33, F26/F30, F27/F34/F42). F35 is counted here and separately noted as already fixed out-of-band before Pass 2 opened (commit `93f8214`); Pass 3 has no further action on it.
+- **DEFENSIBLE-DIVERGENCE: 8 findings.** F3 (cosmetic column name), F5 (consolidation-defer), F12 (spec should document enum-value reservation), F14 (V2 absorbs), F15 (defer; becomes moot under F16/F23), F17 (explicit spec defer), F19 (userMemories drift only), F39 (institutional portal conditionally defensible — pending a ship-decision). F40 and F41 carry GENUINE-BUG verdicts conditional on F39's disposition and appear in the GENUINE-BUG tally.
+- **MATCHES-SPEC: 4 findings.** F6 (email routing split), F8 (access-token model is spec-intended), F9 (Stripe defaults), F18 (non-idempotent admin surface is documented).
+
+Total: 33 + 8 + 4 = 45.
+
+### Cluster roll-up
+
+| Cluster | Findings | Verdict | Pass 3 direction (one sentence) |
+|---|---|---|---|
+| 1 — Sponsorship state machine | F1, F10, F21 (+F22 depends-on, +F7 related) | GENUINE-BUG | Release owns the `active → completed` flip; cron writes milestone + summary only; `'paid'` retired; optionally `'vetoed'` vs `'abandoned'` properly distinguished per F7. |
+| 2 — Admin role schema | F11, F33 | GENUINE-BUG | Add `profiles.role text` column with CHECK; repairs F11 app-layer and F33 DB-layer together. |
+| 3 — Role-check consolidation | F27, F34, F42 (+F38 depends-on) | GENUINE-BUG | Single `isAdmin(supabase)` helper reading `profiles.role` through service client; migrate all 13 call sites; delete `/platform` branch outright. |
+| 4 — Visibility enum | F26, F30 | GENUINE-BUG | Drop `'network'` from CHECK; reader simplifies to binary; verify onboarding UI offers only two options. |
+
+### Pass 3 ordering suggestion
+
+Front-load the blocking set: Cluster 2 first (unblocks admin surfaces at both app and DB layers), then Cluster 1 (the money path is structurally dead from day 90 forward today), then F2 (sponsor financially committed, socially invisible — rare but realized exposure). Then the orphan cleanup wave (F16/F23, F28, F41 if institutional portal stays), then the concerning set grouped by surface (admin writes F38 + F37; institution flow F39/F40/F41 as a unit; visibility Cluster 4 + Cluster 3's `/platform` delete). Then Cluster 3's thirteen call sites as a single consolidating commit. Then the nits.
+
+One decision Pass 3 cannot make without principal input: F39/F40/F41 institutional portal disposition (fix forward vs. take down). Recommend surfacing as a ship-decision at Pass 3's session open; everything else can execute without further design input.
+
+### Not a fix list
+
+This document's verdicts are reconciliation, not patches. Each GENUINE-BUG names a direction; each DEFENSIBLE-DIVERGENCE names what should change (spec or repo) without prescribing the patch. Pass 3 executes; Pass 3 is where the code lands.
