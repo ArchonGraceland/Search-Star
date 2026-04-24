@@ -495,6 +495,38 @@ Grepped `api/institution.*analytics` across `src/`: no results. The dashboard pa
 
 ---
 
+### Orphan files (reachable from no live route)
+
+Files accumulated across Blocks A–D that have no live caller and can be deleted in Pass 3 cleanup. Grouped by the cleanup finding that authorizes the deletion.
+
+**F16 + F23 — the reflect/panel/prompt chain.** The per-commitment Companion reflection surface predates Decision #8 and the room-based Companion. Grepping `companion-panel` / `CompanionPanel` across `src/` returns zero consumers. Chain:
+- `src/components/companion-panel.tsx` (380 LOC)
+- `src/app/api/companion/reflect/route.ts` (361 LOC) — the reflect endpoint itself plus the UTC-hour rate limiter
+- `src/lib/anthropic.ts :: COMPANION_SYSTEM_PROMPT` — exported but only consumed by `/api/companion/reflect`
+- `src/lib/anthropic.ts :: COMPANION_LAUNCH_SYSTEM_PROMPT` — exported, zero importers anywhere (launch period was retired entirely, not just the Companion surface)
+- `companion_rate_limit` table (0 rows in production) — only writer is the reflect route
+
+Deleting the chain removes ~750 LOC plus one DB table. Net risk: zero — the surface is unreachable from any live route.
+
+**F28 — v3 session-log endpoint.** `src/app/api/commitments/[id]/posts/route.ts`. The only historical caller was `/log/page.tsx` which is now a pure redirect router (covered in Block C). Session writes now flow through `/api/rooms/[id]/messages` (Block B). The old endpoint writes to `room_messages` directly but without the session-mark Companion trigger — a Pass 3 delete is both cleaner and removes a second incoherent write path.
+
+**F41 — unused institution analytics endpoint.** `src/app/api/institution/[id]/analytics/route.ts`. The institution dashboard page duplicates its logic against the service client inline. Either the API was intended for a polling widget that was never built, or the dashboard was migrated to direct queries and the API was forgotten. Deletion is safe; the dashboard loses nothing.
+
+**Intentional redirect stubs (NOT orphans — keep).** The `/start/sponsor`, `/start/companion`, `/start/launch/[id]`, `/start/active/[id]` pages look like deletion candidates at first glance but are reachable from stale bookmarks, email links, and screenshot OCR. Each one is a clean server-component redirect that resolves the user's active commitment and lands them on the correct room (or /dashboard). Keep; they are v4 migration affordances.
+
+**Partial-file deletions.** `src/lib/anthropic.ts` would remain after the F16/F23 constants are removed — the file still exports `COMPANION_MODEL`, `DAY90_SUMMARY_SYSTEM_PROMPT`, and the shared `anthropic` client, all of which are live. Pass 3 should delete the two retired constants without touching the file as a whole.
+
+**Summary of Pass 3 cleanup scope under these findings.**
+
+| Finding | Delete | LOC | Tables |
+|---|---|---|---|
+| F16 + F23 | `companion-panel.tsx`, `/api/companion/reflect/route.ts`, 2 constants in `anthropic.ts` | ~750 | `companion_rate_limit` (0 rows) |
+| F28 | `/api/commitments/[id]/posts/route.ts` | ~85 | — |
+| F41 | `/api/institution/[id]/analytics/route.ts` | 71 | — |
+| **Total** | — | **~906** | 1 |
+
+---
+
 ## Pass 2 reconciliation — scope-correction note
 
 **Date:** 2026-04-24
