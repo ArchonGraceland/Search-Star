@@ -49,9 +49,81 @@ Key patterns:
 
 Below, every route file grouped by user-facing flow. For each: purpose, auth gate, DB reads/writes, external calls, what renders or returns.
 
-*(Not yet written. Pass 1 committed at `1fd87a2` explicitly as partial — infra
-layer + schema only. Route flows, API inventory, lib modules, and components
-remain.)*
+### Block A — Sponsor flow + Stripe
+
+Nine files: two sponsor-facing pages, five API routes, the Stripe webhook, and `src/lib/stripe.ts`. This block is the money path — from an invitation email through pledge authorization, the 90-day hold, release-or-veto at day 90, and the optional 5% voluntary donation on release.
+
+**Lib — `src/lib/stripe.ts` (53 lines).** Lazy factory `getStripe()` that throws if `STRIPE_SECRET_KEY` is unset. Exports `MIN_PLEDGE_USD = 5`, `DEFAULT_DONATION_RATE = 0.05`, `pledgeDollarsToCents()`, `coerceDonationRate()` (clamps 0..1, returns default on NaN), `donationDollarsToCents()`. No Stripe API calls from here — this file is only the client factory plus money arithmetic.
+
+| File | Purpose | Auth gate | DB reads | DB writes | External calls | Returns |
+|---|---|---|---|---|---|---|
+| `src/app/sponsor/[commitment_id]/[token]/page.tsx` | Grace-period redirect for the retired anonymous sponsor-feed surface. Resolves `access_token` → commitment → `room_id` and 307s to `/room/[id]`. | None (token-gated via DB lookup); downstream `/room/[id]` is auth-gated | `sponsorships (commitment_id, access_token)`, `commitments.room_id` | none | none | `redirect(/room/[id])` or `notFound()` |
+| `src/app/sponsor/invited/[invite_token]/page.tsx` (917 LOC, client) | Invited-sponsor landing surface. Four-step flow: `auth_gate` → `details` → `payment` → `success`. Fetches invitation metadata (no auth), checks Supabase session, POSTs `/api/sponsorships`, mounts `StripePaymentForm` with returned `client_secret`. | Page itself is public (token is the gate). Middleware deliberately excludes `/sponsor/invited` from protected prefixes so the client-side auth-gate with `?returnTo=` works (see middleware.ts comment). The POST to `/api/sponsorships` is auth-gated server-side. | via API only | via API only | `/api/sponsors/invite/lookup`, `/api/sponsorships` | Rendered UI only |
+| `src/app/api/sponsorships/route.ts` GET (362 LOC file) | Public commitment snapshot for the sponsor landing page. `service_role` client. Returns practice name, status, computed `streak_ends_at = started_at + 90d`, `total_pledged`, `pledge_count`. **`launch_ends_at` is hardcoded `null` — field retained as a legacy-caller compat key.** | None | `commitments.{id,status,started_at,user_id, practices(name)}`, `profiles.display_name`, `sponsorships.pledge_amount WHERE status IN ('pledged','paid')` | none | none | 200 JSON or 400/404 |
+| `src/app/api/sponsorships/route.ts` POST | **The invitation-only pledge creator.** Tokenless POSTs return 410 Gone. Validates invite → matches authed email (case-insensitive) → creates Stripe Customer + manual-capture PaymentIntent with `setup_future_usage='off_session'` → inserts `sponsorships` row → upserts `room_memberships` (sponsor joins the room) → marks `sponsor_invitations` accepted. **Pledge confirmation emails are NOT sent here** — fired from the webhook when the card actually authorizes. | SSR `getUser()` + `invite_token` email match | `sponsor_invitations`, `commitments(id,status,user_id,room_id,practices(name))`, `profiles.display_name` | `sponsorships INSERT status='pledged'`, `room_memberships UPSERT state='active'` (non-fatal on failure), `sponsor_invitations UPDATE status='accepted'` (non-fatal) | `stripe.customers.create`, `stripe.paymentIntents.create(capture_method='manual')`, on insert failure `stripe.paymentIntents.cancel` | `{ id, client_secret, room_id }` or 401/403/404/409/410/502 |
+| `src/app/api/sponsorships/[id]/route.ts` GET | Practitioner-only listing of sponsors on a commitment. SSR `getUser()` then `createServiceClient()` for reads (per the `0710ce4` writeup noted inline). | SSR `getUser()` + ownership check | `commitments WHERE id=$1 AND user_id=auth.uid`, `sponsorships WHERE commitment_id=$1` | none | none | `{ commitment_id, commitment_title, sponsorships[], total_pledged }` |
+| `src/app/api/sponsorships/[id]/action/route.ts` POST (440 LOC) | **The release/veto action.** Authenticated by `sponsorship.access_token` — sponsors don't need SS accounts to release. **Release branch:** guards `commitment.status='active'` + `now >= started_at+90d`. Captures the held PI (fails hard if capture fails), updates sponsorship `status='released', released_at=now`, checks remaining `status='pledged'` rows, if none flips commitment to `'completed'` and invokes `computeAndPersistTrust()` (wrapped; failure doesn't roll back release), then optionally fires off-session donation PI + inserts `donations` row. **Veto branch:** cancels the held PI (non-fatal on failure), updates sponsorship `status='vetoed'`, flips commitment to `'abandoned'`, notifies practitioner + other still-pledged sponsors via Resend. Idempotent on already-terminal status. | `access_token` match | `sponsorships, commitments(user_id,started_at,practices(name)), profiles.display_name, auth.users` | `sponsorships UPDATE status/released_at OR status/vetoed_at/veto_reason`, `commitments UPDATE status='completed'` or `'abandoned'`, `donations INSERT` | `stripe.paymentIntents.capture` (release), `stripe.paymentIntents.retrieve` + `stripe.paymentIntents.create` (donation), `stripe.paymentIntents.cancel` (veto), `resend.emails.send` | `{ok,action,released,donated,donation_amount}` or 400/404/409/502 |
+| `src/app/api/sponsors/invite/route.ts` POST | Practitioner invites a sponsor by email. Mints 24-byte base64url `invite_token`, inserts `sponsor_invitations` row, sends Resend email with link to `/sponsor/invited/[invite_token]`. Guards `commitment.status='active'` + ownership + no pending duplicate to same email. | SSR `getUser()` + ownership | `commitments, sponsor_invitations (dedupe), profiles.display_name` | `sponsor_invitations INSERT status='pending'` | `resend.emails.send` (non-fatal; row persists) | `{ id, invite_token, pledge_url }` or 400/401/404/409/500 |
+| `src/app/api/sponsors/invite/route.ts` GET | Practitioner lists invitations for a commitment. | SSR `getUser()` + ownership | `commitments`, `sponsor_invitations` | none | none | `{ invitations: [...] }` |
+| `src/app/api/sponsors/invite/lookup/route.ts` GET | Public token lookup used by the invited-sponsor page to pre-fill copy. | None (token is the gate) | `sponsor_invitations, commitments, profiles.display_name` | none | none | Flat JSON with `commitment_title = practice_name`, computed `streak_ends_at`, `launch_ends_at: null` (retired compat key) |
+| `src/app/api/stripe/webhook/route.ts` POST (423 LOC) | Stripe webhook handler. Verifies signature against `STRIPE_WEBHOOK_SECRET` using raw body. Handles four event types, dispatched by `metadata.intent_type` ∈ `{'pledge','donation'}`. Forward-only transitions; replay-safe. Nodejs runtime, force-dynamic. | Stripe signature verification | `sponsorships`, `donations`, `commitments`, `profiles`, `auth.users` | `sponsorships UPDATE pledged_notified_at` and `status='paid', paid_at=...` and `status='refunded'`; `donations UPDATE status` | `resend.emails.send` (sponsor confirmation + practitioner notification on authorization) | `{received:true}` or 400/500 (500 triggers Stripe retry) |
+
+**Sponsorship status state machine (as built).** The allowed statuses per the DB check constraint are `{pledged, released, vetoed, refunded}`. Transitions:
+
+```
+(insert POST /api/sponsorships)
+        │
+        ▼
+    pledged ─────────┬───────────────┬─────────────────┐
+        │            │               │                 │
+   action/release    action/veto     webhook.canceled  webhook.succeeded
+        │            │               │ (status=pledged)│ (requires status=
+        ▼            ▼               ▼                  released; see F1)
+    released ─┐     vetoed        refunded           ↓ no-op
+      │        │
+      │        └─ webhook.succeeded ──▶ status='paid' ←── NOT IN CHECK CONSTRAINT
+      │                                                       (F1 — blocking)
+      │
+      └─ idempotent replay returns {already:true, status}
+```
+
+**Donation status state machine.** Allowed: `{pending, succeeded, failed, canceled}`. Inserted as `'succeeded'` if Stripe confirmed synchronously in the release path, otherwise `'pending'`; webhook advances pending → succeeded / failed / canceled.
+
+**Commitment status state machine (as observed from Block A writes).** Allowed per check constraint: `{active, completed, vetoed, abandoned}`. Action route writes `'completed'` (final release) or `'abandoned'` (veto). The enum contains `'vetoed'` but nothing in Block A writes it — only `'abandoned'` on veto. This is documented more fully when Block C inventories `/api/commitments`.
+
+---
+
+#### Block A — Findings
+
+**F1. `sponsorship.status='paid'` is written by the webhook but rejected by the CHECK constraint. Blocking.**
+`src/app/api/stripe/webhook/route.ts:307–310` updates `status: 'paid', paid_at: now()` on `payment_intent.succeeded` for pledges. The DB constraint `sponsorships_status_check` allows only `{pledged, released, vetoed, refunded}` — `'paid'` is not in the list. Any real release will silently fail this update (Postgres 23514); `sponsorship.status` will stay `'released'` and `paid_at` will stay NULL forever. Evidence: no row currently exists in `'paid'` status in production (`SELECT status, count(*) FROM sponsorships` → only `pledged:1`) — the path has never been exercised. Two compounding consequences:
+- `src/app/api/sponsorships/[id]/route.ts:45` selects `paid_at`, and `src/app/(dashboard)/commit/[id]/sponsors/page.tsx:14` types it — the sponsors-list UI will render `null` for every released sponsorship.
+- The webhook also guards `status='refunded'` transition with `terminal = ['paid', 'refunded', 'vetoed']` (`route.ts:360`). `'paid'` in the terminal set is dead logic because no row ever reaches it, and conversely a released row would incorrectly be eligible for regression to `'refunded'` since `'released'` is not in `terminal`.
+Pass 3 disposition: fix. Either extend the CHECK to include `'paid'` (migration) and leave the code alone, or retire `'paid'` entirely (release IS the terminal state once capture completes; the webhook's role becomes purely a replay-safety audit and the `paid_at` column is dropped). The latter matches what the v4 spec §7 actually describes.
+
+**F2. `room_memberships` upsert failure on pledge is non-fatal — sponsor pays and cannot see the room. Concerning.**
+`src/app/api/sponsorships/route.ts:321–339`. The sponsorship row and Stripe PI are committed; the room_memberships upsert is best-effort with a console.error and no user-visible error. A sponsor whose membership insert fails (transient DB error, race, etc.) has authorized a card hold on a commitment they cannot see, read, affirm on, or veto. Pass 3 disposition: fix. Either make the membership insert part of the same transactional window (it's not currently — these are sequential Supabase calls), or surface a specific follow-up state to the client and add an idempotent repair cron. The comment in the code acknowledges this: "a later repair job can reconcile" — no such repair job exists in Block A or in any cron.
+
+**F3. `donations.sponsor_id` is actually a `sponsorship_id`. Nit (naming).**
+`src/app/api/sponsorships/[id]/action/route.ts:264` — `sponsor_id: sponsorship.id` inserts a sponsorship UUID into a column whose name suggests it references `profiles.user_id` or similar. The foreign key (if one exists) presumably points at `sponsorships.id`. Column name is misleading for anyone reading the DB without the code at hand. Pass 3 disposition: document in the schema snapshot; renaming requires a migration + code change and is not worth it.
+
+**F4. `donation_rate` column defaults to 0.05 but the action-route insert does not set it. Concerning.**
+Schema probe shows `donations.donation_rate` defaults to `0.05`, but `src/app/api/sponsorships/[id]/action/route.ts:262–270` does NOT include `donation_rate` in the insert payload. The insert relies on the DB default. That works — but any future sponsor who picked a custom rate (e.g. 0.10 or 0.03 via the `donation_rate` body param) will have their rate silently overridden to 0.05 in the persisted `donations` row. The `rate` variable is computed on line 207 and used for `donationDollarsToCents()` on line 236 to derive the Stripe charge amount, so the charge is correct; only the persisted rate is wrong. This makes donation analytics structurally misleading. Pass 3 disposition: fix. Add `donation_rate: rate` to the insert.
+
+**F5. Release branch computes `streak_ends_at = started_at + 90d` per-caller, in three routes. Nit.**
+`src/app/api/sponsorships/route.ts:60`, `src/app/api/sponsorships/[id]/action/route.ts:104`, `src/app/api/sponsors/invite/lookup/route.ts:52` all repeat the same arithmetic. No shared helper. Drift risk is low (90d is fixed), but if the streak duration ever becomes per-commitment or per-tier, four sites need coordinated edits. Pass 3 disposition: defer or consolidate into a single helper (`computeStreakEndsAt(startedAt)` in `src/lib/commitments.ts`).
+
+**F6. Practitioner notification email uses `/commit/${commitment.id}/sponsors` while the sponsor email uses `/room/${room_id}`. Nit — consistency.**
+`src/app/api/stripe/webhook/route.ts:213` directs the practitioner to the dashboard sponsors page (fine). `route.ts:171` directs the sponsor to `/room/${commitment.room_id}` (also fine — Decision #8). Just noting the split audience is intentional. No action.
+
+**F7. `commitment.status='abandoned'` is written but the CHECK also allows `'vetoed'`. Concerning — documented drift.**
+`src/app/api/sponsorships/[id]/action/route.ts:352` writes `status: 'abandoned'` on veto; `src/app/api/sponsorships/route.ts:199` rejects pledges if `commitment.status !== 'active'` — so an 'abandoned' commitment correctly stops taking pledges. But the CHECK enum includes `'vetoed'` as a valid commitment status and nothing writes it. Either `'vetoed'` is dead (remove from the enum in a migration, retire the idea of the commitment-level "vetoed" distinction) or there's an intended design where a veto-during-active distinguishes from a natural abandonment (never implemented). The spec §7 uses "veto" for the sponsor action and "abandoned" as the resulting commitment state, so the code matches the spec — the CHECK has a stranded value. Pass 3 disposition: drop `'vetoed'` from the commitments status enum, OR wire it in and document where the distinction matters. Defer until Pass 2 confirms v4 spec §7 is explicit on this.
+
+**F8. Access-token release flow has no replay-window guard beyond the idempotent status check. Concerning (security hygiene).**
+The `access_token` is a 24-byte secret mailed to the sponsor. Lines 63–68 of the action route treat it as bearer auth and return `{already:true, status}` on a repeat release. There is no check for (a) link age (a token from a leaked 2024 email still works), (b) IP/UA change, or (c) a one-time nonce. For a flow that captures money, this is worth flagging even though the current UX requires it. Pass 3 disposition: document as intentional v4 behavior (spec does not require a nonce), note that a stolen inbox is equivalent to a stolen release signature, consider expiring `access_token` after 30 days post-release.
+
+**F9. Stripe signature verification tolerance is Stripe's default. Nit.**
+`src/app/api/stripe/webhook/route.ts:38` uses `constructEvent(rawBody, signature, secret)` without a tolerance override. Stripe's default is 300s. Non-issue in practice; flagging only because webhook hardening reviews sometimes ask. No action.
 
 ---
 
