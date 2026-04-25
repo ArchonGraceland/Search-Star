@@ -1079,3 +1079,144 @@ Q3: Visibility — clean DROP/ADD (no backfill) + remove `'network'` UI option +
 Q4: Single commit.
 
 PAUSE before executing.
+
+### §5 — Completion note
+
+**Status: COMPLETE.** Landed at commit `dd1807e` on `main`,
+deploy `dpl_FKwnPmYX3MJGoFqURbDzhnsQcWVd` READY in production.
+
+**Migration note.** `visibility_shrink_to_binary` was applied as
+a separate Supabase MCP operation in an earlier session (the
+original Task 3, executed before the §5 plan was written). The
+migration is recorded in the Supabase migration history under
+that name. At Task 1 sanity check this session, the constraint
+was already in place: `CHECK ((visibility = ANY (ARRAY
+['private'::text, 'public'::text])))`. No DDL ran during the
+code-execution session that landed `dd1807e`.
+
+**Code changes (10 files, +26/−53, single commit `dd1807e`):**
+
+| Cluster | File | Disposition |
+|---|---|---|
+| F36 | `src/app/admin/donations/page.tsx` | `CommitmentRow.title: string \| null` → `practice: { name: string } \| null`; SELECT switched from `'id, title'` to `'id, practice:practices(name)'`; render switched from `cm?.title` to `cm?.practice?.name`. |
+| F37 site 1 | `src/app/admin/tickets/page.tsx` | Dropped `id` from `ProfileName` interface; SELECT shrunk from `'id, user_id, display_name'` to `'user_id, display_name'`. |
+| F37 sites 2+3 | `src/app/admin/tickets/[id]/page.tsx` | Dropped `createClient` import; deleted `await createClient()` call; rewrote the leading comment to point at `requireAdminPage()` (Pass 3d) as the gate; SELECT shrunk from `'id, display_name'` to `'display_name'`; deleted the entire admin-user-id block (`auth.getUser()` + adminProfile SELECT); JSX for `<AdminTicketActions>` no longer passes `adminProfileId`. |
+| F37 site 4 | `src/app/(dashboard)/support/page.tsx` | Deleted profile SELECT block; JSX for `<TicketForm>` no longer passes `profileId`. |
+| F37 site 5 | `src/app/(dashboard)/support/[id]/page.tsx` | **DEVIATION 1.** Fifth F37 site, not in the §5 plan inventory. Same shape as sites 1–4: deleted profile SELECT block; JSX for `<TicketReplyForm>` no longer passes `authorId`. `user` retained — still referenced by the ticket SELECT at line 49. |
+| F37 components | `src/components/admin-ticket-actions.tsx` | Dropped `adminProfileId` from prop interface and parameter destructure; removed `author_id: adminProfileId,` from the POST body to `/api/admin/tickets`. |
+| F37 components | `src/components/ticket-form.tsx` | Dropped `profileId` from prop interface and parameter destructure; removed `author_id: profileId,` from the POST body to `/api/tickets`. |
+| F37 components | `src/components/ticket-reply-form.tsx` | Dropped `authorId` from prop interface and parameter destructure; removed `author_id: authorId,` from the PATCH body to `/api/tickets`. |
+| F37b + Q3 | `src/app/onboarding/visibility/page.tsx` | Type narrowed from `'private' \| 'network' \| 'public'` to `'private' \| 'public'`; the `network` `OPTIONS` entry removed (two options remain); fetch URL changed from `/api/profiles` (which silently dropped `visibility` — only `display_name`/`location`/`bio` are whitelisted) to `/api/profiles/visibility`. |
+| Deviation 2 | `src/app/api/admin/tickets/route.ts` | **DEVIATION 2.** Added `const adminUser = guard` after the `requireAdminApi()` short-circuit; relaxed validation from `!ticket_id \|\| !msgBody \|\| !author_id` to `!ticket_id \|\| !msgBody`; insert payload changed from `author_id,` to `author_id: author_id \|\| adminUser.id,`; comment updated to mirror the wording on `/api/tickets`. The §5 plan claimed both `/api/tickets` and `/api/admin/tickets` already had this fallback. Only `/api/tickets` did. Without this fix, dropping `author_id` from `<AdminTicketActions>`'s POST body would 400 every admin reply. |
+
+**Verification (Task 5):**
+
+- `npx tsc --noEmit`: clean on first run, exit 0, no output. (No
+  TS7016 cache spam this session — the cache was already warm from
+  earlier `npm install` runs in the same container.)
+- Vercel deploy state `READY`; build clean (`turbopack`,
+  `nodejs:3`); commit SHA `dd1807e9ee648912ae332cfde3aadd317a73d32f`
+  matches HEAD. Vercel's build runs tsc as part of every deploy —
+  `READY` is a second tsc verification.
+- Runtime logs (15-minute window post-deploy, error+fatal levels):
+  zero results.
+- Endpoint verification against `https://www.searchstar.com`:
+  - `GET /api/trust/c5370edf-8505-441a-a60e-4d9a5ef0d7e0` → **404**
+    (David, visibility=private — trust route returns 404 for
+    private profiles)
+  - `PATCH /api/profiles/visibility` (no auth) → **401**
+    (route exists; auth-gated as expected)
+  - `GET /admin/donations` (no auth) → **307** (helper redirects to `/login`)
+  - `GET /admin/tickets` (no auth) → **307** (helper redirects to `/login`)
+  - `curl /onboarding/visibility | grep -c value="network"` → **0**
+    (the `network` option no longer renders)
+- Verification greps at tip `dd1807e`:
+  - `grep -rn "'network'" src/` → zero hits
+  - `grep -n "title" src/app/admin/donations/page.tsx` → zero hits
+  - `grep -rn "adminProfileId\|profileId\|authorId" src/` → zero
+    hits except the comment in `src/app/api/admin/tickets/route.ts`
+    documenting the prop drop (intentional, per the commit
+    message and the rewritten comment block).
+- Production data state re-queried at session close (matches
+  Task 1 sanity check exactly — nothing drifted during Task 4):
+  - `profiles`: 1 admin (David), 27 NULL, 28 total — unchanged
+  - `profiles.visibility`: `{private: 28}` — unchanged (CHECK
+    constraint binary, distribution unchanged)
+  - `commitments`: 2 active, 0 completed, 0 abandoned — unchanged
+  - `sponsorships`: 1 pledged, 0 paid, 0 released — unchanged
+  - `support_tickets`: 0, `ticket_messages`: 0 — unchanged
+  - `donations`: 0 — unchanged
+
+**Deviations from §5 plan worth recording:**
+
+(1) **Fifth F37 site discovered.** Pass 1's F37 inventory listed
+four sites (`admin/tickets/page.tsx`, `admin/tickets/[id]/page.tsx`
+×2, `(dashboard)/support/page.tsx`). A grep audit at Task 4
+execution surfaced a fifth site at
+`src/app/(dashboard)/support/[id]/page.tsx` — same shape (a
+`profiles` SELECT for `id` to forward to `<TicketReplyForm>` as
+`authorId`), missed by the original inventory because the file
+was added later in the v4 ticket-flow build and the F37
+audit ran against an older snapshot. Same disposition applied:
+profile block deleted, `authorId` prop dropped from JSX, `user`
+retained for the ticket SELECT. The behavior was already
+production-equivalent — `profile?.id || ''` was always the empty
+string in production because `profiles.id` does not exist as a
+column, and the `/api/tickets` PATCH fallback (`author_id ||
+user.id`) had been the only path that ever ran.
+
+(2) **`/api/admin/tickets` POST handler required a server-side
+fallback addition that the §5 plan claimed already existed.** The
+plan asserted both `/api/tickets` and `/api/admin/tickets` had
+the `author_id || user.id` fallback. Inspection during Task 4
+showed only `/api/tickets` actually had it. `/api/admin/tickets`
+validated `author_id` as required (line 25) and inserted it
+literally (line 36). Dropping `author_id` from the
+`<AdminTicketActions>` POST body without this fix would have
+400'd every admin reply. The fix:
+`const adminUser = guard` after the short-circuit, validation
+relaxed to `!ticket_id || !msgBody`, and insert changed to
+`author_id: author_id || adminUser.id`. The fallback was
+load-bearing — `adminProfileId` had always forwarded an empty
+string in production from the JSX caller, so the fallback path
+was already the only path that ever ran in any case where the
+prop drop was observable.
+
+**Production state at session close:**
+
+- Tip: `dd1807e` on `main`.
+- Active commitments: 2 (started 2026-04-22; day 90 lands
+  2026-07-21, ~87 days runway).
+- Active sponsorships: 1 (`pledged`).
+- Admin profiles: 1 (David); non-admin profiles: 27.
+- `profiles.visibility` distribution: `{private: 28}`.
+- `profiles_visibility_check` constraint: binary
+  (`'private', 'public'`) — `network` retired.
+- `profiles.role` from Pass 3a; `role` CHECK
+  (`role IS NULL OR role = 'admin'`) unchanged.
+- 13 role-check call sites consolidated to `src/lib/auth.ts`
+  helpers (Pass 3d), unchanged.
+- Institutional surface 404'd behind `INSTITUTIONAL_PORTAL_ENABLED`
+  (Pass 3c), unchanged.
+- F26 (visibility CHECK constraint mismatch with API validators)
+  closed naturally post-migration — the migration brought the
+  CHECK constraint into alignment with the API validators that
+  were already binary.
+- F30 (visibility enum residue across surfaces) closed via the
+  `network` option removal in `onboarding/visibility/page.tsx`
+  and the type narrowing in the same file.
+- F36 (`commitments.title` on missing column) closed via the
+  donations page's nested-SELECT read shape.
+- F37 (`select('id')` on `profiles` at admin/ticket sites) closed
+  at five sites with three component prop drops; behavior was
+  already production-equivalent due to the API fallbacks.
+- F37b (onboarding visibility silent-drop on `/api/profiles`)
+  closed via the route change to `/api/profiles/visibility`.
+- F2 (room_memberships upsert atomicity — sponsor pays but cannot
+  see the room) and F23 (companion/reflect dead-code retirement,
+  ~600 LOC) deferred to Pass 3f.
+- Pass 3 closing summary still pending — a final summary commit
+  should record what landed across 3a/b/c/d/e, what's deferred to
+  Pass 3f and Pass 4, and what Pass 4 should pick up first.
+
+---
