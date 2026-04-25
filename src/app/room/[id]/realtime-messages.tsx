@@ -133,6 +133,29 @@ export default function RealtimeMessages({
 
   const router = useRouter()
 
+  // Auto-scroll to the bottom of the message list on initial mount.
+  // The room is ordered ascending-chronological (chat-app convention,
+  // chat-room-plan §5 Phase 2 item 5), and on a long stream the latest
+  // message sits below the fold on first paint — particularly painful
+  // on mobile where the composer is also out of view. One-shot scroll
+  // on mount lands the viewer at the most recent message and adjacent
+  // composer.
+  //
+  // Deliberately mount-only — not on every new message. Continuous
+  // auto-scroll would yank the viewer away when they scroll up to read
+  // older context. The "stick to bottom only when already near bottom"
+  // pattern (Slack, iMessage) is more code and a calibration question
+  // worth deferring until the Phase 3 self-pilot reveals whether
+  // mount-only is enough.
+  const bottomRef = useRef<HTMLLIElement | null>(null)
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: 'end' })
+    // Empty dep array: run exactly once after first paint, after the
+    // SSR-rendered message list is in the DOM. Subsequent renders
+    // (Realtime appends, prop updates) do NOT retrigger this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Shared INSERT handler hoisted so both the initial subscription and
   // any retry path use the same logic. payload.new is the raw inserted
   // row; Supabase delivers snake_case columns matching the table.
@@ -447,6 +470,9 @@ export default function RealtimeMessages({
           viewerUserId={viewerUserId}
         />
       ))}
+      {/* Sentinel for the one-shot mount-time scroll-to-bottom effect.
+          Renders nothing visible. Must be the last child of <ul>. */}
+      <li ref={bottomRef} aria-hidden="true" style={{ listStyle: 'none' }} />
     </ul>
   )
 }
