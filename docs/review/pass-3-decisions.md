@@ -1220,3 +1220,229 @@ prop drop was observable.
   Pass 3f and Pass 4, and what Pass 4 should pick up first.
 
 ---
+
+## §6 — Pass 3 closing summary
+
+This section records the whole pass — not a single cluster — and
+mirrors the per-pass completion-note shape one level up. It is
+appended after Pass 3e's §5 completion note and before Pass 3f
+opens. No code changes.
+
+### (a) Executive summary
+
+Pass 3 reconciled the Pass 1 F-finding catalog against the v4 spec
+across five sub-passes (3a–3e) executed between 2026-04-24 and
+2026-04-25. Twenty F-findings closed, two deferred to Pass 3f, and
+the remainder dispositioned per Pass 2's three-state verdict
+(MATCHES-SPEC / DEFENSIBLE-DIVERGENCE / GENUINE-BUG) without
+requiring code in this pass. The sponsorship state machine
+(Cluster 1) was the principal blocking-tier work; the institutional
+portal take-down (Cluster 4 in Pass 2's roll-up — spec-deferred to
+v4.8) and the role-check consolidation (Cluster 3) collapsed
+13-call-site / 4-mechanism / 0-agreement drift into a single helper
+backed by a single column. Production data state at session close:
+two active commitments, one pledged sponsorship, zero terminal-
+state rows; 28 profiles all `private`; ~87 days runway to day 90.
+
+### (b) What landed, by sub-pass
+
+| Sub-pass | Cluster (Pass 2 roll-up) | Findings closed | Closing tip | Deploy |
+|---|---|---|---|---|
+| **Pass 3a** — `profiles.role` column add | Cluster 2 prep (for Cluster 3 in Pass 2's roll-up) | F11 (DB layer), F33 | Supabase migration only — no code commit; the column landing was a schema-only `apply_migration`. Tip referenced in Pass 3d as "post-3a." | n/a (DDL) |
+| **Pass 3b** — Sponsorship state machine | Cluster 1 | F1, F7, F10, F21, F22 | `e909cdf` | `dpl_9dRS8Kja4kFme1hFHe9FQbpWy578` |
+| **Pass 3c** — Institutional portal take-down | Cluster 4 in Pass 2's roll-up (spec-deferred to v4.8) | F39, F40, F41 | `db24acc` | `dpl_3bxvbtR8Yry29k72gxJqKhR5JQvy` |
+| **Pass 3d** — Role-check consolidation | Cluster 3 | F11 (app layer), F27, F33 (app-level callers — DB function unchanged), F34, F38, F42 | `b3fe91c` | `dpl_B5Hy2cTopbaKXuKszVV89PLsp7De` |
+| **Pass 3e** — Visibility + schema residue | Cluster 4 (Pass 2's roll-up — second half, separate from 3c) | F26, F30, F36, F37, F37b (sub-finding) | `dd1807e` | `dpl_FKwnPmYX3MJGoFqURbDzhnsQcWVd` |
+
+A note on cluster numbering: Pass 2's roll-up labelled the
+visibility-enum work Cluster 4 and the institutional portal as a
+separate concern under "scope decisions"; the session-prompt
+shorthand for 3c reads "Cluster 4 take-down" because both surfaces
+shared the v4-deferred shape. The findings dispositioned by 3c and
+3e do not overlap. The naming is harmless but recorded here for
+audit.
+
+### (c) F-findings closed, with closing commits
+
+The list below covers every F-finding from the Pass 1 catalog
+(F1–F45) that Pass 3 dispositioned with a code-or-schema change.
+Findings disposed of as MATCHES-SPEC, DEFENSIBLE-DIVERGENCE,
+documentation-only, or out-of-band-fix-pre-Pass-3 are listed in
+(d) and (e).
+
+| Finding | Severity (Pass 1) | Closing commit | Sub-pass |
+|---|---|---|---|
+| F1 — `sponsorship.status='paid'` rejected by CHECK | Blocking | `e909cdf` | 3b |
+| F7 — `'vetoed'` enum stranded; veto branch wrote `'abandoned'` | Concerning | `e909cdf` | 3b |
+| F10 — Cron + release-action both flip `commitments.status='completed'` | Blocking | `e909cdf` | 3b |
+| F11 (DB) — `profiles.role` column missing | Blocking | Pass 3a migration | 3a |
+| F11 (app) — Inline `profiles.role` reads consolidated to helper | Blocking | `b3fe91c` | 3d |
+| F21 — Practitioner-complete endpoint as third independent writer | Blocking | `e909cdf` | 3b |
+| F22 — Sponsors-page UI status union stale | Concerning | `e909cdf` | 3b |
+| F26 — `/api/profiles/visibility` rejects DB-accepted `'network'` | Concerning | `dd1807e` (closed at migration time) | 3e |
+| F27 — Dashboard nav reads `user_metadata.role` (third mechanism) | Blocking | `b3fe91c` | 3d |
+| F30 — `/api/trust/[userId]` serves `'network'` as if public | Concerning | `dd1807e` (closed naturally post-migration) | 3e |
+| F33 — `is_admin()` reads missing column | Blocking | Pass 3a migration (function unblocked atomically with column add); app-level callers consolidated `b3fe91c` | 3a + 3d |
+| F34 — Four `user_metadata.role` admin surfaces | Concerning | `b3fe91c` | 3d |
+| F36 — `commitments.title` selected; column does not exist | Concerning | `dd1807e` | 3e |
+| F37 — `profiles.select('id', ...)` against non-existent column | Concerning | `dd1807e` | 3e |
+| F37b (sub) — Onboarding visibility form submits to wrong route | Concerning (newly inventoried during 3e (1e) audit) | `dd1807e` | 3e |
+| F38 — Admin API writes via anon client silently no-op | Concerning | `b3fe91c` (piggyback at sites 4 + 7) | 3d |
+| F39 — Institution signup creates row without auth user | Concerning | `db24acc` (gated 404) | 3c |
+| F40 — `/api/institution/[id]/enroll` writes via anon client under owner-only RLS | Concerning | `db24acc` (gated 404) | 3c |
+| F41 — `/api/institution/[id]/analytics` orphan | Nit | `db24acc` (deleted outright) | 3c |
+| F42 — Login redirects `user_metadata.role==='platform'` to non-existent route | Concerning | `b3fe91c` (branch deleted) | 3d |
+
+**Twenty F-findings dispositioned with code or schema changes.**
+
+### (d) F-findings deferred to Pass 3f
+
+| Finding | Severity | Why deferred from 3a–3e | Fix shape (one line) |
+|---|---|---|---|
+| F2 — `room_memberships` upsert atomicity on pledge | Concerning | Live production money flow; needs a transaction wrapper or service-client RPC pattern, plus a behavior change in the sponsor pledge flow. The active-pledge count was 1 at the time 3b/3c/3d/3e ran — low urgency but real. Wrapping the room-membership write into the pledge transaction (or a Supabase RPC) deserves its own pre-execution sanity-check pass before code touches the path. | Wrap pledge + membership writes in a single transactional unit (Supabase RPC or service-client pattern that can roll back); surface failures to client with retry. Bundle in Pass 3f Task 2 plan block before any code execution. |
+| F23 — Companion/reflect dead-code retirement (~600 LOC) | Concerning (Pass 1 upgrade) | Per userMemories the BCD arc Session 5 was supposed to author the per-file decision table for these ~10 dead files (`log/client.tsx`, `start/launch|ritual|active|sponsor|companion`, profiles API stubs, plus `companion-panel.tsx` + `/api/companion/reflect/route.ts` + the two unused system prompts in `src/lib/anthropic.ts`). Bundling deletion into 3a–3e would have side-stepped that decision-table review. F23 needs the principal's per-file sign-off before deletion. | Author per-file decision table (delete/redirect/fix-copy); grep Resend templates and Vercel runtime logs (30 days) for retired-path traffic; then delete in single commit. ~500 LOC + drop one table (`companion_rate_limit`) per F16+F23 confirmation. |
+
+### (e) F-findings deferred beyond Pass 3 (Pass 4+ candidates)
+
+These are either MATCHES-SPEC, DEFENSIBLE-DIVERGENCE, or
+GENUINE-BUG-but-non-blocking findings that Pass 3 chose not to
+execute. Verdicts are taken from `pass-2-reconciliation.md`.
+
+| Finding | Pass 2 verdict | Why deferred |
+|---|---|---|
+| F3 — `donations.sponsor_id` is actually `sponsorship_id` | DEFENSIBLE-DIVERGENCE | Cosmetic naming; harmless. Ride-along on a future donations migration if one happens. |
+| F4 — `donation_rate` not persisted by action-route insert | GENUINE-BUG | One-line fix (`donation_rate: rate` in the insert payload). Donations table is empty — zero user-visible impact today. Pass 4 candidate alongside other small donation-flow fixes. |
+| F5 — `streak_ends_at = started_at + 90d` computed per-caller in 3 routes | DEFENSIBLE-DIVERGENCE | 90 is a fixed spec constant; drift risk small. Helper consolidation is fine cleanup but not blocking. Pass 4+. |
+| F6 — Practitioner email links to `/commit/.../sponsors`, sponsor email to `/room/...` | MATCHES-SPEC | Different audiences legitimately have different destinations. No action. |
+| F8 — Access-token release flow has no replay window beyond idempotent status check | MATCHES-SPEC | Spec doesn't require nonce; bearer-token model is intentional. Defer hardening until threat model is named. |
+| F9 — Stripe signature verification uses default tolerance | MATCHES-SPEC | Industry standard. No action. |
+| F12 — `companion_moderation` enum value never written | DEFENSIBLE-DIVERGENCE | Reserved for chat-room-plan §5 Phase 5 (sponsor-drift moderation). Carry as scaffold; document in chat-room-plan §2 schema section. |
+| F13 — Room-level Companion bypasses 20-calls/hour rate limit | GENUINE-BUG | Followup path is structurally self-limiting (one-session-per-day DB constraint + Companion voice terminating naturally) but no cost floor. Pass 4 — add room-keyed rate limit (30/hour or compound-key reuse of `companion_rate_limit`). |
+| F14 — Followup heuristic addressee-unaware in multi-practitioner rooms | DEFENSIBLE-DIVERGENCE | V2 design absorbs the fix. No production multi-practitioner rooms today. |
+| F15 — `companion_rate_limit` upsert is racy | DEFENSIBLE-DIVERGENCE | Becomes moot if F23's reflect-endpoint retirement also drops the `companion_rate_limit` table. |
+| F16 — `/api/companion/reflect` is dead under Decision #8 | GENUINE-BUG | Bundled into F23. Pass 3f. |
+| F17 — Day-90 summary result discarded by cron | DEFENSIBLE-DIVERGENCE | chat-room-plan §5 Phase 5 explicitly defers persistence pending self-pilot signal. |
+| F18 — Admin milestone endpoint non-idempotent | MATCHES-SPEC | chat-room-plan §6.5 documents this as design. |
+| F19 — userMemories references non-existent `SUMMARY_MODEL` | DEFENSIBLE-DIVERGENCE | Doc drift. Update userMemories — code is correct as-is. |
+| F20 — `POST /api/commitments` reuses any room caller is a member of | GENUINE-BUG | Spec-aligned fix (filter on creator ownership) is small but not currently triggered by production data — no practitioner is in multiple rooms as a sponsor while declaring a new commitment. Pass 4 candidate. |
+| F24 — Two profile-write endpoints use SSR client for UPDATE | GENUINE-BUG | Pattern fix mechanical; covers `/api/profiles` PATCH and `/api/profiles/visibility` PATCH. Pass 4 — bundle with broader SSR-client-bug audit. |
+| F25 — `/commit` form collects 5 fields the API ignores | GENUINE-BUG (nit-level) | Form simplification work; not blocking. Pass 4. |
+| F28 — `/api/commitments/[id]/posts` orphan | GENUINE-BUG (orphan cleanup) | Bundle with F23 in Pass 3f or in a broader v3-residue cleanup pass. |
+| F29 — Toggling `is_session=true` does not fire Companion | GENUINE-BUG | Mirror the `after()` block from the insert path with idempotency guard. Pass 4 candidate alongside Companion behavior work. |
+| F31 — `/api/account/delete` does not check profile-delete result | GENUINE-BUG | Mechanical fix; check result before `auth.admin.deleteUser`. Pass 4. |
+| F32 — Admin nav references `/feed` route that doesn't exist | GENUINE-BUG (nit) | Dead link in admin chrome. Trivial. Pass 4 — bundle with admin-chrome cleanup. |
+| F35 — `POST /api/admin/create-test-users` no auth gate | RESOLVED OUT-OF-BAND | Already deleted in commit `93f8214` before Pass 2 opened. No further action. |
+| F43 — StageBar hardcodes 6 stages; only 3 live post-Decision #8 | GENUINE-BUG (nit) | Stage copy cleanup. Pass 4. |
+| F44 — `/start/commitment` collects 5 fields API drops | GENUINE-BUG (nit) | Parallels F25; same disposition. Pass 4. |
+| F45 — Root layout renders `<PublicFooter/>` on logged-in surfaces | GENUINE-BUG (nit) | Layout cleanup. Pass 4. |
+
+### (f) Schema state at end of Pass 3 (diff vs Pass 1 baseline)
+
+| Object | Pass 1 baseline | End of Pass 3 | Sub-pass |
+|---|---|---|---|
+| `profiles.role` (column) | Did not exist | `text NULL` with CHECK `role IS NULL OR role = 'admin'` | 3a (added) |
+| `profiles_visibility_check` (constraint) | Ternary: `private`/`network`/`public` | Binary: `private`/`public` | 3e (migration `visibility_shrink_to_binary`, applied as a separate Supabase MCP operation in an earlier session — see §5 completion note) |
+| `sponsorships.paid_at` (column) | Existed (timestamp) | Dropped | 3b (migration `20260424_v4_drop_sponsorships_paid_at.sql`) |
+| `confirmation_acknowledgments` (table) | (Per session-prompt: dropped pre-Pass-3) | Not present | Pre-Pass-3, out-of-band — recorded here per principal's session-prompt assertion; not corroborated by review docs and not a Pass 3 change. |
+| `commitments_status_check` (constraint) | `{active, completed, vetoed, abandoned}` | Unchanged — `'vetoed'` was already in the enum; F7 fix was code-only | n/a |
+| `sponsorships_status_check` (constraint) | `{pledged, released, vetoed, refunded}` | Unchanged — `'paid'` was already absent; F1 fix was code-only | n/a |
+| `is_admin()` (Postgres function) | Read `profiles.role` (column missing → false for everyone) | Read `profiles.role` (column now exists; function works as written) | 3a (atomically unblocked when column landed) |
+
+Net Pass 3 schema impact: one column added (`profiles.role`), one
+column dropped (`sponsorships.paid_at`), one CHECK constraint
+shrunk (`profiles_visibility_check`). No new tables. No tables
+dropped (`companion_rate_limit` deferred to Pass 3f as part of
+F23). No RLS policy changes. The DB function `is_admin()` is
+unchanged in definition but now functional because its referenced
+column exists.
+
+### (g) Code structure changes worth recording
+
+| Module | Status | Sub-pass | Purpose |
+|---|---|---|---|
+| `src/lib/auth.ts` | NEW (~100 LOC) | 3d | Canonical admin detection. Exports `isCurrentUserAdmin()`, `requireAdminPage()`, `requireAdminApi()`. Service-client read of `profiles.role`. Replaces 13 distinct call sites across 4 mechanisms. |
+| `src/lib/feature-flags.ts` | NEW | 3c | Reads `INSTITUTIONAL_PORTAL_ENABLED` env var; exports `isInstitutionalPortalEnabled()` and `requireInstitutionalPortal()`. Default off; surface 404s in production. |
+| Institutional `page.tsx` files | RENAMED to `*-form.tsx` (client components) with new server wrappers | 3c | Pattern: thin server wrapper gates on `requireInstitutionalPortal()` and renders the (preserved) client component. Lets v4.8 redesign salvage the form code without branch archaeology. |
+| Sponsorship state machine | Single canonical writer pattern | 3b | Release-action route is the only path that flips `commitments.status='completed'`. Cron writes milestone + summary only; webhook is no-op-with-log on `payment_intent.succeeded` for pledges (release-action owns the synchronous capture and status flip). Practitioner-complete endpoint deleted entirely. |
+| Visibility surface | Binary (`private`/`public`) end-to-end | 3e | DB CHECK, API validators, onboarding UI option list, type unions, and trust-route filter all aligned. `'network'` removed from every reader and writer. |
+| Admin write paths | Service-client post-auth (uniform) | 3d (F38 piggyback) | `/api/admin/users` and `/api/admin/tickets` migrated. No remaining anon-client admin writes in the codebase. |
+
+### (h) What Pass 4 should pick up first
+
+This is a recommendation, not a decree. The principal sets Pass 4
+scope based on launch readiness and runway considerations.
+
+**Recommended Pass 4 anchor: password reset flow (Option C).**
+Per userMemories ("On the horizon" → "Password reset flow") and
+the v4 launch posture, this is the load-bearing blocker to real-
+user launch — there is no self-serve recovery path for a
+mistyped signup password. Resend is already wired for transactional
+email; the fix is `supabase.auth.resetPasswordForEmail` + `/auth/
+reset` handler route + new-password form. Estimated single-session
+work.
+
+**Other Pass 4 candidates (smaller, stackable):**
+
+- **F2 + F23** (if Pass 3f doesn't land before Pass 4 opens) —
+  see (d) above.
+- **F4** (donation_rate persistence) — one-line fix; ride-along.
+- **F13** (room-level Companion rate limit) — bounded
+  guardrail against prompt regression; adds a cost floor.
+- **F24** (SSR-client profile-write bug) — small, mechanical;
+  bundles with broader SSR-bug audit work flagged in
+  userMemories.
+- **F31** (account-delete result check) — small mechanical fix.
+- **F32 + F45** (admin chrome cleanup, footer) — small, low-
+  risk.
+
+**Larger Pass 4+ candidates (may warrant their own session):**
+
+- **F25 + F44** (form-field cleanup at `/commit` and
+  `/start/commitment`) — UI work; coordinate with v4 declaration
+  shape per Decision #8.
+- **F29** (`is_session` toggle Companion fire) — Companion
+  behavior work; coordinate with chat-room-plan Phase 3+ work.
+- **F43** (StageBar 6→3 stages) — UI; bundle with v4 onboarding
+  copy review.
+
+**Out of Pass 4 scope (Pass 5+ / platform-stage):**
+
+- v4.8 institutional portal redesign (deferred per spec; the 3c
+  take-down preserved the code behind a flag for the redesign
+  to refer to).
+- Day-90 summary persistence (chat-room-plan §5 Phase 5; awaits
+  self-pilot signal).
+- Multi-practitioner room work (F14 V2 absorption).
+- v4.9 portable Trust export.
+
+### (i) Production state at end of Pass 3
+
+- **Tip:** `30803fc` on `main` (Pass 3e §5 completion note,
+  docs-only). Last code-bearing commit: `dd1807e`.
+- **Last code deploy:** `dpl_FKwnPmYX3MJGoFqURbDzhnsQcWVd` from
+  `dd1807e`, READY in production.
+- **Active commitments:** 2 (both started 2026-04-22; day 90
+  lands 2026-07-21, ~87 days runway from Pass 3 close).
+- **Active sponsorships:** 1 (`pledged`); zero terminal-state
+  rows across the entire production dataset.
+- **Profiles:** 28 total; 1 admin (David,
+  `c5370edf-8505-441a-a60e-4d9a5ef0d7e0`); 27 NULL role.
+- **`profiles.visibility` distribution:** `{private: 28}` —
+  consistent with the (1e) audit's finding that the onboarding
+  visibility step had been a no-op from day one (now closed by
+  F37b).
+- **Schema state:** `profiles.role` present (Pass 3a);
+  `profiles_visibility_check` binary (Pass 3e); `sponsorships.
+  paid_at` dropped (Pass 3b); `is_admin()` functional.
+- **Code state:** 13 admin-detection call sites consolidated to
+  `src/lib/auth.ts` helpers; institutional portal surface 404'd
+  behind `INSTITUTIONAL_PORTAL_ENABLED` (unset in prod, safe by
+  default); `'network'` visibility retired from every reader and
+  writer; `'paid'` sponsorship status retired from every reader
+  and writer.
+- **Open Pass 3f scope:** F2 (room_memberships upsert atomicity),
+  F23 (companion/reflect dead-code retirement, ~600 LOC).
+- **Recommended Pass 4 anchor:** Password reset flow (Option C),
+  per userMemories.
+
+---
