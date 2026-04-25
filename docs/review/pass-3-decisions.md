@@ -852,3 +852,100 @@ Q4: Delete the `/platform` branch outright. Collapse login to
 PAUSE before executing.
 
 ---
+
+### §4 — Completion note
+
+**Status: COMPLETE.** Landed at commit `b3fe91c` on `main`,
+deploy `dpl_B5Hy2cTopbaKXuKszVV89PLsp7De` READY in production.
+
+**Code changes (13 files, +486/−158, single commit):**
+
+| Site | File | Disposition |
+|---|---|---|
+| — | `src/lib/auth.ts` | NEW. Exports `isCurrentUserAdmin`, `requireAdminPage`, `requireAdminApi`. Service-client read of `profiles.role`. ~100 LOC including doc comments. |
+| 1 | `src/app/admin/layout.tsx` | Inline service-client `profiles.role` lookup → `requireAdminPage()`. Display-name read split off into its own SELECT. |
+| 2 | `src/app/admin/donations/page.tsx` | Defense-in-depth re-check kept as a pattern; mechanism replaced with `requireAdminPage()`. |
+| 3 | `src/app/api/admin/companion/milestone/route.ts` | Inline SSR `profiles.role` lookup → `requireAdminApi()`. Service-client write path unchanged (already correct). |
+| 4 | `src/app/api/admin/tickets/route.ts` | Inline `checkAdmin` (SSR anon `profiles.role`) → `requireAdminApi()`. **F38 piggyback**: anon-client writes for `ticket_messages` INSERT and `support_tickets` UPDATE switched to service client. |
+| 5 | `src/app/(dashboard)/layout.tsx` | `user.user_metadata?.role === 'admin'` → `await isCurrentUserAdmin()`. |
+| 6 | `src/app/admin/page.tsx` | `user.user_metadata?.role !== 'admin'` → `requireAdminPage()`. |
+| 7 | `src/app/api/admin/users/route.ts` | Inline `checkAdmin` (`user_metadata.role`) → `requireAdminApi()`. **F38 piggyback**: anon-client writes for `profiles` UPDATE and `trust_records` UPDATE switched to service client. |
+| 8 | `src/app/institution/[id]/dashboard/page.tsx` | `user_metadata.role === 'admin'` override → `await isCurrentUserAdmin()`. (Surface 404'd behind 3c flag.) |
+| 9 | `src/app/institution/[id]/members/page.tsx` | Same as 8. (Surface 404'd behind 3c flag.) |
+| 10 | `src/app/api/institution/[id]/enroll/route.ts` | Same shape with `isCurrentUserAdmin`. (Route 404'd behind 3c flag.) |
+| 11 | `src/app/(auth)/login/page.tsx` | F42 platform-role branch deleted outright. `onSuccess` collapses to `router.push('/dashboard')` after the `safeReturnTo` short-circuit. |
+| — | `docs/review/pass-3-decisions.md` | §4 plan + this completion note. |
+
+**Verification (Task 5):**
+
+- `npx tsc --noEmit`: clean (run before commit; no type errors).
+- Vercel deploy state `READY`; build clean (`turbopack`, `nodejs:3`).
+  Vercel's build runs tsc as part of every deploy — `READY` is a
+  second tsc verification.
+- Runtime logs (15-minute window post-deploy, error+fatal levels):
+  zero results.
+- Endpoint verification against `https://www.searchstar.com`:
+  - `GET /admin` (no auth) → **307** redirect (expected: helper redirects to `/login`)
+  - `GET /dashboard` (no auth) → **307** redirect
+  - `GET /login` → **200**
+  - `PATCH /api/admin/users` (no auth) → **401** Unauthorized
+  - `POST /api/admin/companion/milestone` (no auth) → **401**
+  - `POST /api/admin/tickets` (no auth) → **401**
+  - `GET /institution/signup` → **404** (3c flag still gates the surface)
+- Pre-3d these admin API routes returned 403 (since they read
+  `profiles.role` on what was a missing column → null profile →
+  failed at the role step). Post-3d they correctly distinguish
+  unauthenticated (401) from non-admin (403). The 401 vs 403 split
+  is the helper's design and matches REST convention.
+- Production data state re-queried at session close:
+  - `profiles`: 1 admin (David), 27 NULL — unchanged
+  - `commitments`: 2 active, 0 completed, 0 abandoned — unchanged
+  - `sponsorships`: 1 pledged, 0 paid, 0 released — unchanged
+  - `support_tickets`: 0, `ticket_messages`: 0 — unchanged
+  - `institutions`: 0, `institution_memberships`: 0 — unchanged
+- Code grep at tip `b3fe91c`: zero `user_metadata?.role` /
+  `user_metadata.role` reads; zero inline `profiles.role` reads
+  outside `src/lib/auth.ts`.
+
+**Deviations from §4 plan worth recording:**
+
+(i) Q2 framing was corrected mid-plan, before code execution. The
+initial Task 2 recommendation said SSR client for the role read
+based on owner-full-access RLS. A closer read of
+`admin/layout.tsx:18–22` flipped this — the layout's pre-3d code
+already used the service client *deliberately* with an in-line
+comment about the @supabase/ssr JWT-propagation bug silently
+returning empty owner-RLS reads. The corrected Q2 (service client
+for the read) was written into §4 and signed off; the helper
+implements service-client reads accordingly.
+
+(ii) Site 2's defense-in-depth disposition shifted from "delete the
+re-check entirely" (per the original §4 plan) to "replace the
+mechanism with the helper, keep the re-check pattern." Removing the
+re-check would have lost a real safety net if a future layout
+regression bypassed the gate. The helper-based re-check costs one
+service-client query and preserves the defense-in-depth shape.
+
+**Production state at session close:**
+- Tip: `b3fe91c` on `main`.
+- Active commitments: 2 (started 2026-04-22; day 90 lands 2026-07-21,
+  ~87 days runway).
+- Active sponsorships: 1 (`pledged`).
+- Admin profiles: 1 (David); non-admin profiles: 27.
+- `is_admin()` DB function: unchanged, still backing 4 RLS policies on
+  `support_tickets` / `ticket_messages` (verified Task 1c).
+- `profiles_role_check` constraint: unchanged (`role IS NULL OR role
+  = 'admin'`).
+- Institutional surface: hidden behind feature flag from 3c; entry
+  points return 404 in production. Sites 8/9/10's helper migration
+  is internally consistent for v4.8 redesign.
+- F38 (anon-client admin writes) closed as Pass 3d piggyback at sites
+  4 and 7. No remaining anon-client admin writes in the codebase.
+- F2 (room_membership upsert atomicity), F23 (companion/reflect dead
+  code), F36 (`commitments.title` on missing column), F37
+  (`select('id')` on `profiles`) NOT yet executed — Pass 3e
+  candidates.
+- F26 + F30 (visibility enum residue — Cluster 4 in Pass 2's roll-up)
+  NOT yet executed. Pass 3 closing summary should record disposition.
+
+---
