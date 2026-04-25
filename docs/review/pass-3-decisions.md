@@ -1899,3 +1899,175 @@ edits (`media.ts`, `anthropic.ts` doc comments) are mechanical.
 #### PAUSE — F23 awaits sign-off on Q1, Q2, Q3, Q4 (and the disposition table).
 
 ---
+
+## §8 — Pass 3f Task 2 completion notes
+
+This section records the execution of the F2 + F23 fixes whose plans
+were laid out in §7. Two sub-blocks: §8.1 for F2, §8.2 for F23. Both
+findings landed this session.
+
+---
+
+### §8.1 — F2 completion note
+
+**Status: closed.**
+
+**Principal sign-offs received before execution:**
+- Q1 — Fix shape: **B** (service-client + explicit rollback).
+- Q2 — Membership state on pledge: **keep `'active'`**.
+- Q3 — Backfill: **none** (zero orphans in production confirmed
+  during §7.1 sanity-check; nothing to reconcile).
+- Q4 — sponsor_invitations atomicity: **awareness-only**, dissolves
+  naturally under Option B (any failure before the
+  sponsor_invitations.update line returns 500 and leaves the
+  invitation `'pending'`, which is the correct retryable state).
+
+**Code changes:**
+
+| File | Lines | Change |
+|---|---|---|
+| `src/app/api/sponsorships/route.ts` | 314–339 → 314–369 | Replaced best-effort membership upsert with explicit rollback per Option B. On membership upsert failure: compensating delete of the just-inserted sponsorship row, then cancel the orphaned PaymentIntent, then return 500 with `code: 'membership_upsert_failed'`. The rollback delete is itself wrapped in try/catch with a CRITICAL log line if it fails (the only path that produces a true sponsorship-without-membership orphan, and the log gives forensic traceability). The sponsor_invitations.update branch at the original line 342–349 is unchanged — still best-effort try/catch (non-fatal) per Q4. |
+
+**Migrations applied:** none. Option B is a pure application-code
+change.
+
+**Verification (post-deploy):**
+- Vercel deploy `dpl_6bVKJxtoEjJga7qk74vrvqRVodxf` from
+  `40a37ad892af31fd9fc5b80b097d0a98ae764dc9`, state `READY` in
+  production. Build clean.
+- `npx tsc --noEmit`: clean.
+- Vercel runtime logs (30m window covering deploy +25 minutes,
+  level error+fatal, production environment): zero entries.
+- Production data re-query (mirror of §7.1's sponsorship +
+  membership join): identical baseline. 1 sponsorship row
+  (`59720e9f-d4ab-447b-a280-a6b5b1df2847`, status `pledged`,
+  room `5574621b-e783-4627-8648-9d69c530bb63`), 1 corresponding
+  membership (`3b4e087a-04c7-4b46-95f2-8479e2d844b8`, state
+  `active`). Zero orphans. No regression.
+
+**Deviations from §7.1 plan:** none. The implementation matches
+Option B as documented in §7.1's fix-shape candidates table.
+
+**Production state at session close:** unchanged for F2's surface.
+The fix is forward-protective — its effect will be seen the next
+time a membership upsert fails (which has not happened in the
+production lifetime of the route per the §7.1 baseline). The route
+now returns 500 with a structured error code rather than committing
+a sponsor-without-room state.
+
+---
+
+### §8.2 — F23 completion note
+
+**Status: closed.**
+
+**Principal sign-offs received before execution:**
+- Q1 — `/api/commitments/[id]/start/route.ts` 410-Gone tombstone:
+  **KEEP**.
+- Q2 — `src/app/log/layout.tsx` passthrough: **KEEP**.
+- Q3 — Single migration for `DROP TABLE companion_rate_limit`
+  alongside the code: **yes**.
+- Q4 — Per-file disposition table: **no objections**, proceed as
+  tabled in §7.2.
+
+**Code changes:**
+
+| File / object | Action | LOC delta |
+|---|---|---|
+| `src/components/companion-panel.tsx` | DELETE | −380 |
+| `src/app/api/companion/reflect/route.ts` | DELETE | −360 |
+| `src/app/api/commitments/[id]/posts/route.ts` | DELETE (F28 ride-along) | ~−30 |
+| `COMPANION_SYSTEM_PROMPT` constant in `src/lib/anthropic.ts` | DELETE (consumer was reflect/route.ts only) | −15 (the constant body) |
+| `COMPANION_LAUNCH_SYSTEM_PROMPT` constant in `src/lib/anthropic.ts` | DELETE (zero callers anywhere) | −12 (the constant body) |
+| `src/lib/anthropic.ts` preamble doc-block (formerly lines 24–57, 75–103) | DELETE (rationale for now-deleted prompts) | ~−70 (comment lines) |
+| `src/lib/anthropic.ts` `COMPANION_ROOM_SYSTEM_PROMPT` preamble refs at formerly lines 149, 178, 195 | FIX-COPY (rewrote three dangling references; reflowed surrounding paragraphs for clean line breaks) | net 0 (rewrite) |
+| `src/lib/media.ts` line 3 | FIX-COPY (removed `src/app/api/companion/reflect/route.ts` from the importer-list comment) | net 0 (rewrite) |
+| `supabase/migrations/20260425_v4_drop_companion_rate_limit_table.sql` | NEW (mirror of applied migration) | +5 |
+
+Net commit: 6 files changed, 20 insertions, 932 deletions.
+
+**Migrations applied:**
+- `drop_companion_rate_limit_table` via `Supabase:apply_migration`
+  on project `qgjyfcqgnuamgymonblj`. SQL:
+  `DROP TABLE IF EXISTS companion_rate_limit;` Mirrored to repo
+  at `supabase/migrations/20260425_v4_drop_companion_rate_limit_table.sql`.
+
+**Verification (post-deploy):**
+- Vercel deploy `dpl_FgCryf66HxrRNLVYagQDYFGcW1hy` from
+  `3674732d0a3c2b85ec57831f0bdea91fabad6ff9`, state `READY` in
+  production. Build clean (TypeScript pre-commit gate covered the
+  prompt-deletion cascade because the only consumer,
+  reflect/route.ts, was deleted in the same commit).
+- `npx tsc --noEmit`: clean.
+- Vercel runtime logs (30m window covering both F2 and F23
+  deploys, level error+fatal, production environment): zero
+  entries.
+- Re-grep against `src/` for the five retired references — all
+  return zero matches:
+    - `companion-panel|CompanionPanel`: 0
+    - `/api/companion/reflect`: 0
+    - `COMPANION_SYSTEM_PROMPT`: 0
+    - `COMPANION_LAUNCH_SYSTEM_PROMPT`: 0
+    - `companion_rate_limit`: 0
+    - `/api/commitments/[id]/posts` (F28): 0
+- Schema verification: `SELECT COUNT(*) FROM information_schema
+  .tables WHERE table_schema='public' AND table_name=
+  'companion_rate_limit'` returns 0. Table is gone.
+
+**Deviations from §7.2 plan:**
+
+(1) The `anthropic.ts` patch initially produced two awkward
+sentence fragments in the `COMPANION_ROOM_SYSTEM_PROMPT` preamble
+where the FIX-COPY anchors landed (anchor A produced "Distinct
+surface from the per-commitment / the per-commitment Companion
+surface that v3 used:" — a duplicated phrase; anchors B and C
+left odd line breaks). Three follow-up `str_replace` edits
+reflowed the affected paragraphs for clean reading. The semantic
+content matches §7.2's recommendation; only the prose surface
+changed.
+
+(2) Stale-comment note flagged in commit body but **not patched**
+(out of F23 scope to keep the commit surface tight): the preamble
+above `COMPANION_ROOM_SYSTEM_PROMPT` still says "This constant is
+not yet wired to any invocation path. Phase 2 of
+docs/chat-room-plan.md (the minimum room build) picks it up." —
+that wiring already happened when Decision #8 went live. This is
+the kind of stale-doc finding that fits a Pass 4 anchor like F4
+or F44/F25, not a F23 ride-along. Recording for archaeology.
+
+(3) Empty parent directories `src/app/api/companion/reflect/`
+and `src/app/api/commitments/[id]/posts/` removed via `rmdir`
+after their only files were deleted. Not separately enumerated
+in §7.2's plan (the plan listed file deletions only) but the
+removal is mechanical and keeps the tree clean. No effect on
+routing or build.
+
+**Production state at session close:**
+- 28 profiles unchanged.
+- 2 active commitments unchanged (started 2026-04-22, day 90
+  lands 2026-07-21, ~86 days runway).
+- 1 pledged sponsorship + 1 active room_membership unchanged
+  (re-verified post-F2 deploy).
+- `companion_rate_limit` table dropped.
+- ~845 LOC of dead code removed from `src/`.
+- `profiles.role` distribution unchanged: {1 admin, 27 NULL}.
+- `profiles.visibility` distribution unchanged: {28 private}.
+
+---
+
+### Pass 3f close
+
+Both deferred concerning-tier findings from §6(d) have landed.
+F2 closes the only remaining write-path atomicity concern in the
+pledge flow; F23 retires ~845 LOC of v3-era dead code plus one
+single-route table.
+
+Pass 3f opens with `a79bbf4` (§7 plan blocks); closes with
+`3674732` (F23 fixes; F2 fixes at `40a37ad`). Both deploys
+production-READY, runtime logs clean, production data state
+non-regressive.
+
+Per §6(h), Pass 4 picks up the password reset flow (Option C)
+as the next anchor — it remains the load-bearing blocker to
+real-user launch.
+
