@@ -949,3 +949,133 @@ service-client query and preserves the defense-in-depth shape.
   NOT yet executed. Pass 3 closing summary should record disposition.
 
 ---
+
+## §5 — Cluster 4 visibility + schema residue cleanup: plan for principal review
+
+Pass 3e. Closes F26, F30, F36, F37 by aligning four "DB-accepts-X / app-doesn't" or "app-expects-X / DB-doesn't-have-X" surfaces. Lower complexity than 3b/3d — mostly read-path corrections plus one small CHECK-constraint shrink.
+
+### Pre-execution sanity checks (Task 1, completed this session)
+
+**(1a) Call-site count, stable.** Re-grepped at tip `c082399`. None of 3a/3b/3c/3d touched any of the four findings' surfaces. Counts match Pass 1 inventory exactly.
+
+| # | Finding | File:line | Current shape |
+|---|---|---|---|
+| F26 | API rejects DB-accepted value | `src/app/api/profiles/visibility/route.ts:15` | PATCH validator allows only `('public', 'private')` |
+| F30 | API serves narrow-audience as public | `src/app/api/trust/[userId]/route.ts:22–24` | Filter excludes `'private'` only |
+| F36 | App expects column DB doesn't have | `src/app/admin/donations/page.tsx:74, 146, 326, 355` | `select('id, title')` against `commitments`; render fallback `cm?.title ?? d.commitment_id.slice(0, 8)` |
+| F37 | App expects column DB doesn't have | `src/app/admin/tickets/page.tsx:86`, `src/app/admin/tickets/[id]/page.tsx:67, 82`, `src/app/(dashboard)/support/page.tsx:49` | `select('id', ...)` against `profiles` |
+
+**(1b) Production DB inspection.**
+
+- `profiles_visibility_check`: `CHECK ((visibility = ANY (ARRAY['private'::text, 'network'::text, 'public'::text])))`. Confirmed.
+- Visibility row distribution: `{private: 28, network: 0, public: 0}` — total 28, matches `profiles_admin (1) + profiles_null (27)`. **Zero `'network'` rows in production.** Q3 simplifies: clean DROP/ADD migration, no backfill needed.
+- `commitments` columns: `{id, user_id, practice_id, status, completed_at, target_payout_amount, created_at, room_id, started_at}`. **No `title` column.** Per Decision #8 the commitment statement IS the practice name (no separate title field). Q1 disposition forced to (b): change the read shape, not add a column.
+- `profiles` columns: `{user_id, display_name, location, bio, trust_stage, mentor_role, created_at, pending_validator_email, pending_validator_note, visibility, institution_id, role}`. **No `id` column.** PK is `user_id`.
+
+**(1c) F37 PostgREST runtime probe — answer is not load-bearing for the disposition.**
+
+The empirical disambiguation between (A) PostgREST silently drops unknown column vs (B) PostgREST returns 400 cannot be drawn cleanly from production logs: zero F37-site traffic in the 24-hour log window (donations/support_tickets/ticket_messages all empty, no admin visited `/admin/tickets`, no user visited `/support`). The raw-SQL probe via `execute_sql` confirms the SQL layer raises `42703: column "id" does not exist`. Postgrest's documented behavior is to return 400 on unknown columns in `select=`; that is the most likely production behavior.
+
+But the runtime answer doesn't change the fix shape. All four sites destructure `{ data }` only and never inspect `error`. Both possible behaviors converge on the same observable outcome:
+
+- (A) silent-drop: `data` rows arrive with `id: undefined`. Site 1's `(profiles || []).reduce(...)` handles it; sites 2/3/4 read `?.id || ''` fallbacks.
+- (B) 400 + swallowed error: `data` is `null`. Site 1's `(profiles || [])` handles it; sites 2/3/4's optional chaining + `||` fallbacks handle it.
+
+Either way the fix is mechanical: change SELECTs to `'user_id'`, update downstream references. Whether to also start checking `error` is a separate cleanup not strictly required to close F37.
+
+**(1d) Production data state — baselines re-confirmed at session open.**
+
+- `commitments`: 2 active, 0 completed, 0 abandoned (unchanged from 3d close)
+- `sponsorships`: 1 pledged, 0 paid, 0 released (unchanged)
+- `support_tickets`: 0, `ticket_messages`: 0 (unchanged — F37 user-visible impact today: zero)
+- `donations`: 0 (unchanged — F36 user-visible impact today: zero)
+- `profiles`: 1 admin (David), 27 NULL = 28 total (unchanged)
+- `profiles.visibility`: `{private: 28, network: 0, public: 0}` — the visibility-shrinkage collateral check passes.
+
+**(1e) Onboarding visibility UI audit — surfaces a third bug, not previously inventoried.**
+
+`src/app/onboarding/visibility/page.tsx`:
+
+1. The form offers all three options: `'private'`, `'network'`, `'public'` (lines 7, 9–25). Under the proposed binary shrinkage, the `'network'` option must be removed.
+2. **The form submits to `/api/profiles` PATCH (line 38), not `/api/profiles/visibility` PATCH.** `/api/profiles` does not accept `visibility` at all — it whitelists `{display_name, location, bio}` only (route lines 13, 25). Any `visibility` value submitted is silently dropped; the API returns `{success: true}` with no rows updated. **This means the onboarding visibility step has been a no-op from day one.** The fact that all 28 production profiles are `'private'` (the column default) and zero are `'public'` or `'network'` is direct evidence — there has been no real variation despite users having gone through the form.
+
+This is a third schema-residue bug in the same surface. It is genuinely separate from F26/F30 in mechanism, but it lives in the same file Pass 2 §51 explicitly scoped into Cluster 4 ("the onboarding visibility step also needs to be audited"). The fix is one line: route the form to `/api/profiles/visibility`. Bundling avoids shipping a binary-visibility deploy whose UI still doesn't work.
+
+Searching for `'network'` across `src/`: only two references, both in the onboarding visibility page. The DB CHECK is the only other place it lives. Cluster 4's surface area is small.
+
+### Per-finding disposition table
+
+| Finding | Current shape | Proposed fix | Files touched |
+|---|---|---|---|
+| F26 | API validator already accepts only `('public', 'private')`; DB CHECK accepts the third value `'network'`. | **No code change required.** Migration shrinks DB CHECK to match API. F26 dissolves at migration time. | (none — DB only) |
+| F30 | Filter excludes `'private'` only; treats `'network'` and `'public'` identically. | **No code change required post-migration.** With `'network'` removed from the DB, the binary `not-private == public` predicate becomes correct. | (none — relies on migration) |
+| F36 | `select('id, title')` against `commitments`; render fallback. | Change SELECT to read practice name via the `practice_id` join. Recommended Supabase nested-select shape: `select('id, practice:practices(name)')`, then read `cm?.practice?.name ?? d.commitment_id.slice(0, 8)` at the render site. Type `CommitmentRow` updated accordingly. Existing slice fallback preserved as a defense for malformed rows. | `src/app/admin/donations/page.tsx` (type, SELECT, render — 3 spots) |
+| F37 | `select('id', ...)` against `profiles` at 4 sites. | Change SELECT column from `'id'` to `'user_id'` at all 4 sites. Update downstream field references where applicable. **Bonus simplification (recommend bundling):** sites 3 and 4 pass `?.id \|\| ''` to props (`adminProfileId`, `profileId`) the API's `author_id \|\| user.id` fallback already covers — these props have always been `''` in production. Delete the props from the call sites and component signatures; the API behavior is unchanged. | 4 page files + 2 component files (props removed) |
+| F37b (sub) | Onboarding visibility form submits to `/api/profiles` (which silently drops `visibility`). | Route the fetch in `src/app/onboarding/visibility/page.tsx` to `/api/profiles/visibility`. | `src/app/onboarding/visibility/page.tsx` (1-line route change) |
+| Onboarding UI residue | Onboarding visibility page offers `'network'` as a selectable option. | Remove the `'network'` entry from `OPTIONS`; remove `'network'` from the `Visibility` type. | `src/app/onboarding/visibility/page.tsx` (type + array entry) |
+
+### Principal sign-offs needed before execution
+
+**Q1 — F36 disposition.** **Recommend (b): change the read shape.** The `commitments` schema does not contain `title`, has not contained `title`, and per Decision #8 should not — the practice name *is* the commitment statement. Adding the column would create a duplicate field that nothing else in the codebase writes to or reads from. The donations page joins `commitments → practices(name)` via the existing `practice_id` foreign key. The Supabase JS nested-select shape `select('id, practice:practices(name)')` matches the idiom used elsewhere in the repo (e.g., `/api/cron/release-streaks` reads `practice:practices(name)` the same way) and is the cleanest fix. The existing `?? d.commitment_id.slice(0, 8)` fallback stays — defense for malformed rows.
+
+**Q2 — F37 disposition.** **Recommend: change SELECTs to `'user_id'`, AND prune the dead-prop pattern.**
+
+The strict literal fix is column rename: `'id'` → `'user_id'` at all four SELECTs, with downstream `profile?.id` references updated accordingly. This closes F37 by the inventory's literal definition.
+
+But sites 1 and 2 select `id` and *never use it* — pure dead column selection. Sites 3 and 4 select `id` and pass it through `?.id || ''` props that have been empty strings in 100% of production calls (zero rows in `support_tickets` so the `<AdminTicketActions>` branch has never run; the `<TicketForm profileId>` prop has been `''` for every form ever rendered). The downstream APIs (`/api/admin/tickets` POST and `/api/tickets` POST) already fall back to `user.id` when `author_id` is empty.
+
+Bundling the prop cleanup means: delete the `id` selection at sites 1–2 entirely; delete the SELECT at sites 3–4 entirely (they served only the prop); delete the `adminProfileId` prop from `<AdminTicketActions>` and the `profileId` prop from `<TicketForm>` and `<TicketReplyForm>`. The API fallback to `user.id` continues to do the right thing. Net change: less code, identical behavior.
+
+The bundled cleanup is small (probably +0/-25 LOC) and removes a Pass-1-flagged misleading prop pattern. The unbundled "literal column rename" version preserves the misleading shape for a future cleanup. Recommend bundle.
+
+**Q3 — Visibility migration shape + UI work.**
+
+Migration: option (i) — clean `DROP CONSTRAINT IF EXISTS profiles_visibility_check` + `ADD CONSTRAINT ... CHECK (visibility IN ('private', 'public'))`. No backfill needed (zero `'network'` rows confirmed).
+
+UI work: per the (1e) audit, two changes to `/onboarding/visibility/page.tsx`:
+
+(α) Remove `'network'` from the `Visibility` type and from the `OPTIONS` array (one entry deleted at lines 16–20 plus the `| 'network'` from the type union at line 7).
+
+(β) **Sub-question for principal:** the form submits to `/api/profiles` instead of `/api/profiles/visibility` — a third bug surfaced during audit, mechanism distinct from F26/F30 but in the file Pass 2 §51 scoped into Cluster 4. **Recommend bundling the route fix (1-line change) with the visibility shrinkage.** Rationale: shipping a binary-visibility deploy whose UI still doesn't persist any visibility selection means the cleanup superficially closes F26/F30 but leaves the entire visibility surface broken end-to-end. Cohesive fix.
+
+If you prefer to defer the route fix to a separate session for clean scope discipline, say so and Q3(β) becomes "remove `'network'` only; leave route fix for a later pass." The visibility shrinkage stands either way.
+
+**Q4 — Commit shape.** **Recommend single commit.** Cluster 4 is small: one migration + ~6 file touches (donations page, three F37 pages, one F37 supporting component pair, onboarding visibility page). The Pass 3d retro showed single commits handle this cohesively. Bundling reduces verification surface (one deploy, one log scan, one set of curl probes) and keeps the cluster's identity intact.
+
+The migration lands first (no app-layer dependency on it; `'network'` rows are zero so the DROP/ADD is a pure DDL change). Code lands in the same commit as the migration would not be problematic because the application doesn't care about the constraint shape at runtime — it only cares that the API and DB agree, which they do post-migration.
+
+### What this plan does NOT do
+
+- **Does not address F2** (`room_memberships` upsert atomicity — sponsor pays but cannot see the room). Pass 3f.
+- **Does not address F23** (companion/reflect dead-code retirement, ~600 LOC). Pass 3f.
+- **Does not introduce a `network` interpretation under v4.** No v4 doc reinstates the value; the validator-circle anchor it depended on was retired in Decision #1; the room model that replaced it has no middle tier.
+- **Does not add a surrogate `id` PK to `profiles`.** Cluster 2 (Pass 3a) added `role` only, not a new PK shape. F37 is handled via column rename, not by reintroducing the column the old code expected.
+- **Does not modify the `DEFAULT 'private'` on `profiles.visibility`.** Default remains `'private'` post-shrinkage — still the v4 sensible default.
+- **Does not touch the trust visibility behavior beyond the binary semantics.** F30's filter shape is unchanged in code; it becomes correct because the DB column can no longer hold `'network'`.
+
+### Standing rules for execution
+
+- `npx tsc --noEmit` before commit. Cluster 4 is small-LOC; tsc gate is cheap.
+- `git restore package.json package-lock.json` after any `npm install`.
+- Single-commit landing on `main`. Deploy automatic.
+- Migration via `Supabase:apply_migration`, name `20260425_visibility_shrink_to_binary` (or principal-preferred name). Verify with `execute_sql` follow-up showing the new constraint and re-querying the row distribution.
+- 45-second wait, then `list_deployments` for `state=READY` against the new SHA.
+- `get_runtime_logs` production, `level=['error','fatal']`, `since='15m'` post-deploy.
+- Spot-checks:
+  - `GET /api/trust/{userId}` for the David admin user (visibility=private) → 404 (correct: private filter still triggers).
+  - `PATCH /api/profiles/visibility` with `{visibility: 'network'}` → 400 (correct: API still rejects).
+  - `PATCH /api/profiles/visibility` with `{visibility: 'public'}` → 200 (correct: post-migration the DB now also accepts it without `'network'` in scope).
+  - `/admin/donations` loads (empty data; no SELECT 500).
+  - `/admin/tickets` loads (empty data; no SELECT 500).
+  - `/onboarding/visibility` renders with two options only.
+- Re-query baselines at session close. Visibility distribution should remain `{private: 28}` (no users will have changed visibility during the session); CHECK constraint definition should now show the binary shape.
+- Append §5 completion note mirroring §2/§3/§4 pattern.
+
+### Awaiting principal sign-off on Q1, Q2, Q3, Q4
+
+Q1: F36 — change read shape via `practice:practices(name)` join. Recommend (b).
+Q2: F37 — column rename `'id'` → `'user_id'` AND bundle the dead-prop cleanup at sites 3/4 (`adminProfileId`, `profileId`).
+Q3: Visibility — clean DROP/ADD (no backfill) + remove `'network'` UI option + (β) route the onboarding form fix from `/api/profiles` to `/api/profiles/visibility` (recommend bundling; defer if principal prefers strict scope).
+Q4: Single commit.
+
+PAUSE before executing.
