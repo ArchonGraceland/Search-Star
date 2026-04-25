@@ -78,6 +78,93 @@ here.*
 
 ## Daily log
 
+### Day 0 — Baseline (retrospective, written 2026-04-25)
+
+**Why this entry is retrospective.** The pilot is being formalized on
+2026-04-25 against a room that has been in real use since 2026-04-22.
+The first three days predate the journal but are part of the pilot
+window. This entry captures the starting state so Day 1 (below) can
+just be the first daily entry written in real time.
+
+**Room state as of 2026-04-25.**
+- Room: `5574621b-e783-4627-8648-9d69c530bb63` (created 2026-04-22).
+  This is the only room in production; the older B/C/D-arc test room
+  (`29b52264-...`) is gone.
+- Members (both `active`): David Verchere (creator), Rick Fisher
+  (joined 2026-04-22 11:42).
+- Active commitments (both day 3 of 90, both `status='active'`,
+  `target_payout_amount = 2500`):
+  - David — "Italian"
+  - Rick — "Pullups"
+- Sponsorships: one. Rick → David's "Italian" for $5, status
+  `pledged`. David is not yet sponsoring Rick. The room is
+  asymmetric.
+- Messages (98 total over 3 days):
+  - 1 `companion_welcome` (the founding message; fired correctly)
+  - 47 `companion_response` (~16/day cadence)
+  - 43 `practitioner_post` (chat, not session-marked)
+  - 6 `practitioner_post` with `is_session = true` (across the 3 days
+    × 2 practitioners = right at the per-day cap, well-behaved)
+  - 1 `sponsor_message` (Rick, on Apr 22)
+- Affirmations: **0**. Six session-marked messages, no sponsor has
+  clicked "affirm" on any of them.
+
+**Companion baseline.** v1 prompt from `docs/chat-room-plan.md` §6.4
+deployed verbatim in `src/lib/anthropic.ts` as
+`COMPANION_ROOM_SYSTEM_PROMPT` (verified byte-for-byte 2026-04-25).
+Wired to all three room invocation paths (session response, milestone,
+welcome) in `src/lib/companion/room.ts`. Model: `claude-sonnet-4-6`.
+
+**Things to watch from Day 1 onward, beyond the seven standard
+prompts:**
+
+1. **F14 — Companion followup-path misfires in multi-practitioner
+   rooms.** Documented in `docs/bcd-arc.md` lines 1498–1597. The bug:
+   when the Companion asks Practitioner A a question and Practitioner B
+   replies first (e.g., a side-chat reply to A), the followup path
+   fires anyway and the Companion produces a meta-message correcting
+   the addressee. The room currently has the exact conditions that
+   trigger this (two practitioners, active question/reply patterns).
+   The bug has fired in production at least once already (Rick's
+   pullups thread, 2026-04-22 — see bcd-arc.md). Pass 3 disposition
+   was "V2 absorbs the fix; do not patch V1." Phase 3 observation
+   stance: log every misfire here under prompt #5 (Companion misses)
+   with day number, screenshot the exchange, note what the better
+   response would have been. The frequency and disruption level of
+   F14 misfires across 30 days is itself useful input to the V2
+   design.
+
+2. **Cadence (~16 Companion responses/day at start).** Phase 3 prompt
+   #6 (rhythm) is exactly this question. Watch whether this self-tunes
+   down as conversation deepens or stays high. The C-2 followup path
+   (commit `c0eadc1`, 2026-04-21) is what's driving most of those
+   responses; F14 misfires inflate this count.
+
+3. **Sponsor writing rate (1 message in 3 days).** Phase 3 prompt #4
+   asks whether sponsors write at all. The data so far says: barely.
+   Rick's one sponsor-message was on Apr 22 — none since. Worth
+   watching whether this is a "still figuring out the surface" moment
+   or a structural pattern.
+
+4. **Room asymmetry (David sponsored, Rick not yet sponsored).** Per
+   Decision #8, the ideal mature-room state is every member both
+   practicing and sponsoring. Watch whether the asymmetry resolves,
+   persists, or matters in practice.
+
+5. **Affirmation usage (0 of 6 possible).** Could be (a) Rick hasn't
+   seen the session-marked messages, (b) Rick has seen them but
+   doesn't click affirm, (c) the affirmation UI is hard to find on
+   mobile. Worth noting under prompt #7 (mobile feel) and prompt #4
+   (sponsor writing).
+
+**Cost note.** Back-of-envelope at current cadence and Sonnet 4.6
+pricing: ~$0.04/Companion-call × ~16 calls/day ≈ $0.63/day,
+roughly $20 over 30 days. F13 (no rate limit on the room Companion)
+is a Pass 4 candidate but does not need a fix for the pilot at this
+spend level.
+
+---
+
 ### Day 1 — YYYY-MM-DD
 
 **What I posted today:** *(brief — what was the session, was it
@@ -88,7 +175,7 @@ session-marked, any media)*
 **What I felt about the exchange:** *(one or two sentences)*
 
 **Observation prompts touched today:** *(which of 1–7 above this day's
-entry feeds into)*
+entry feeds into; if a Companion response missed, also note F14)*
 
 ---
 
