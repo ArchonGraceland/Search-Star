@@ -291,3 +291,124 @@ template achieved. No deviations.
   `mailer_templates_recovery_content` updated as above. All other
   auth config fields unchanged (URL allowlist, password rules, OTP
   expiry, signup template — all left as-was).
+
+---
+
+## §3 — F24: service-client UPDATE on profile-write routes
+
+**Discovery.** Pass 4 §3 opened with an audit of the remaining
+profile-write surface. Two routes — `PATCH /api/profiles`
+(display_name / location / bio) and `PATCH /api/profiles/visibility`
+— were issuing their UPDATE through the SSR cookie-bound Supabase
+client. This is the same `@supabase/ssr` JWT-propagation pattern
+that the Pass 3d sweep migrated at `/api/admin/users` and
+`/api/admin/tickets` (commit `b3fe91c`), and that the broader
+end-to-end sweep migrated at commits `0710ce4`, `1dccc46`,
+`501d976`, `0f28db9`. Symptom of the pattern when it fails: the
+auth check passes (the cookie reads cleanly), but the subsequent
+UPDATE silently no-ops because the Postgres connection runs
+unauthenticated and RLS rejects the row. No error surface. The
+caller sees a 200 and a "saved" toast; the database is unchanged.
+
+Both routes were inside the E2E path the principal exercises
+during real usage — the account page writes display_name/location/
+bio through the first, and the visibility toggle on the same page
+writes through the second. They had been overlooked in the earlier
+sweeps because they live under `/api/profiles/` rather than under
+`/api/admin/`, `/api/commitments/`, or the other directories the
+sweep prompts had focused on.
+
+**Decision.** Migrate the UPDATE step to the service client on
+both routes. Keep the auth check on the SSR client — it needs the
+cookie to identify the caller. Authorization for the UPDATE comes
+from the explicit `user.id` WHERE-clause filter that both routes
+already had: a service-client UPDATE filtered by `eq('user_id',
+user.id)` can only ever modify the authenticated user's own row,
+because `user.id` is the value the SSR auth check returned a
+moment earlier. RLS becomes defense-in-depth rather than the
+primary gate, mirroring the model the Pass 3d sweep settled on.
+
+No change to authorization semantics. No change to caller-visible
+behavior on the success path. The only difference is that under
+JWT-propagation failure the UPDATE now lands instead of silently
+no-opping.
+
+**Execution.** Commit `2af29fb` on `main`:
+
+> `fix(profiles): F24 — service-client UPDATE on profile-write routes`
+
+Two files touched:
+
+| File | Change |
+|---|---|
+| `src/app/api/profiles/route.ts` | UPDATE moved from SSR client to service client; auth check unchanged |
+| `src/app/api/profiles/visibility/route.ts` | UPDATE moved from SSR client to service client; auth check unchanged |
+
+Vercel deploy `dpl_2TZNXSz69yYZf9nFtpE42ktUY3Yv`: READY.
+
+**Verification.** Four unauth smoke probes against the canonical
+host `www.searchstar.com`. The bare apex `searchstar.com` returns
+a 307 redirect to `www.`, which masked the visibility-PATCH probe
+on the first attempt — a curl without `-L` reads the redirect's
+own 307 instead of reaching the auth gate. Probing `www.` directly
+removes that confound.
+
+| Probe | Result |
+|---|---|
+| `PATCH /api/profiles` (no body) | HTTP 401 `{"error":"Unauthorized"}` |
+| `PATCH /api/profiles` (valid body `{"display_name":"x"}`) | HTTP 401 `{"error":"Unauthorized"}` |
+| `PATCH /api/profiles/visibility` (no body) | HTTP 401 `{"error":"Unauthorized"}` |
+| `PATCH /api/profiles/visibility` (valid body `{"visibility":"public"}`) | HTTP 401 `{"error":"Unauthorized"}` |
+
+The auth gate fires first on every probe, as designed. No UPDATE
+is ever reached on an unauthenticated request, so no row should
+have moved on the smoke run, and none did. Distribution re-query
+post-deploy:
+
+| Column | Distribution | Baseline | Drift |
+|---|---|---|---|
+| `profiles.visibility` | 28 private | 28 private | none |
+| `profiles.role` | 1 admin, 27 NULL | 1 admin, 27 NULL | none |
+
+**Probe-host note for future sessions.** Hit `www.searchstar.com`
+directly when probing protected routes. The bare apex's 307 to
+`www.` looks like a generic curl/proxy hiccup — the symptom
+described as "DNS cache overflow" in the §3 starting prompt is
+this redirect. With `-L` the probe completes; without `-L` the
+probe reads the redirect verb-loss as a non-401 response. The
+fastest path is to skip the apex entirely.
+
+**Migrations applied.** None. F24 is application-code only.
+Repo tip moves from `6e60cbc` (end of §2) to `2af29fb`.
+
+**Deferred work — institutional-portal sweep.** Inventory while
+auditing F24 surfaced two more routes that write through the SSR
+cookie-bound client in the same pattern:
+
+- `src/app/api/institution/[id]/enroll/route.ts`
+- `src/app/api/institution/signup/route.ts`
+
+Out of F24 scope. Both are part of the Phase 9 institutional-
+portal surface, which is not in the E2E path the principal
+currently exercises during real usage and is not gating real-user
+launch. They are carried forward to a future institutional-portal
+audit pass that should sweep the entire `/api/institution/*` tree
+together — there are likely other patterns worth fixing in that
+surface (RLS coverage, service-vs-SSR client choice, payload
+validation) and dribbling them in one route at a time would
+fragment the review. Recorded here so the inventory finding
+isn't lost.
+
+**Production state at section close.**
+
+- Repo tip: `2af29fb` (F24 code commit) + this §3 docs commit on top.
+- Vercel deploys: `dpl_2TZNXSz69yYZf9nFtpE42ktUY3Yv` READY.
+- 28 profiles unchanged (28 private, 1 admin / 27 NULL).
+- 2 active commitments unchanged.
+- 1 pledged sponsorship + 1 active room_membership unchanged.
+- `companion_rate_limit` table still dropped (Pass 3f).
+- Auth config unchanged from §2 (recovery template still
+  branded as in §2).
+- `/api/profiles` and `/api/profiles/visibility` now write
+  through the service client; auth gate on the SSR client
+  unchanged.
