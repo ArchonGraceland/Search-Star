@@ -314,10 +314,11 @@ export async function POST(request: Request) {
   // Insert room membership. ON CONFLICT DO NOTHING handles the case
   // where the sponsor was already a room member (e.g., an existing
   // practitioner in the same room who's now also sponsoring someone).
-  // Membership insert failure is logged but NOT fatal — the sponsorship
-  // is already recorded, and a later repair job can reconcile. Without
-  // the membership row the sponsor won't be able to see the room until
-  // that repair runs, but they'll keep their pledge and Stripe hold.
+  // Decision #8 in v4-decisions.md mandates that every sponsor who
+  // backs a practitioner is a member of the room. If the membership
+  // upsert fails, the sponsorship row is rolled back and the Stripe
+  // PaymentIntent is cancelled — the pledge surfaces as a 500 to the
+  // client rather than committing a sponsor-without-room state.
   const { error: membershipError } = await supabase
     .from('room_memberships')
     .upsert(
@@ -331,11 +332,41 @@ export async function POST(request: Request) {
 
   if (membershipError) {
     console.error(
-      '[sponsorships POST] room_memberships insert failed — sponsor pledged but not in room:',
+      '[sponsorships POST] room_memberships upsert failed — rolling back sponsorship:',
       membershipError
     )
-    // Do not return an error to the client; the pledge succeeded. A
-    // human can reconcile from logs if needed.
+    // Compensating delete: remove the just-inserted sponsorship row.
+    try {
+      const { error: deleteError } = await supabase
+        .from('sponsorships')
+        .delete()
+        .eq('id', sponsorship.id)
+      if (deleteError) {
+        console.error(
+          '[sponsorships POST] CRITICAL: rollback delete failed; orphan sponsorship row:',
+          { sponsorship_id: sponsorship.id, error: deleteError }
+        )
+      }
+    } catch (deleteErr) {
+      console.error(
+        '[sponsorships POST] CRITICAL: rollback delete threw; orphan sponsorship row:',
+        { sponsorship_id: sponsorship.id, error: deleteErr }
+      )
+    }
+    // Cancel the orphaned PaymentIntent (best-effort; same pattern as
+    // the sponsorship-insert failure branch above).
+    try {
+      await getStripe().paymentIntents.cancel(paymentIntentId)
+    } catch (cancelErr) {
+      console.error(
+        '[sponsorships POST] failed to cancel orphaned PI after membership failure:',
+        cancelErr
+      )
+    }
+    return NextResponse.json(
+      { error: 'Failed to record pledge.', code: 'membership_upsert_failed' },
+      { status: 500 }
+    )
   }
 
   // Mark the invitation accepted. Non-fatal.
