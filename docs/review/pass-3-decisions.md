@@ -331,4 +331,67 @@ Assuming recommendations (B-with-drop, i, a):
 - Does not address F2 (room_membership upsert atomicity), which
   per the Pass 2 ordering belongs to a session after Cluster 1.
 
+### §2 — Completion note
+
+**Status: COMPLETE.** Landed at commit `e909cdf` on `main`,
+deploy `dpl_9dRS8Kja4kFme1hFHe9FQbpWy578` READY in production.
+
+**Principal sign-offs (received before execution):**
+- Q1 → Option B with `paid_at` dropped (full hygiene, one migration)
+- Q2 → Option (i) (cron leaves still-pledged commitments at `'active'`)
+- Q3 → Option (a) (delete practitioner-complete route entirely)
+
+**Migration applied to production:**
+- `20260424_v4_drop_sponsorships_paid_at.sql` — verified column gone
+  via `information_schema.columns` post-apply. Mirrored to repo for
+  audit.
+
+**Code changes (9 files, +96/−157, single consolidated commit):**
+
+| Finding | File | Disposition |
+|---|---|---|
+| F1 | `src/app/api/stripe/webhook/route.ts` | `'paid'` write retired; `terminal` set corrected to include `'released'` |
+| F10 | `src/app/api/cron/companion-milestones/route.ts` | Step 3 status flip block removed; `status_flip` field gone from type; header comment rewritten |
+| F21 | `src/app/api/commitments/[id]/complete/route.ts` | File + parent dir deleted (zero UI consumers verified) |
+| F22 (read-side) | `src/app/(dashboard)/commit/[id]/sponsors/page.tsx` | Status union widened to `pledged \| released \| vetoed \| refunded`; badge map updated; `paid_at` dropped from interface, `released_at`/`vetoed_at` added |
+| F22 (GET shape) | `src/app/api/sponsorships/[id]/route.ts` | `.select(...)` replaces `paid_at` with `released_at, vetoed_at` |
+| F7 (write) | `src/app/api/sponsorships/[id]/action/route.ts` | Veto branch writes `'vetoed'` instead of `'abandoned'` |
+| F7 (read) | `src/app/(dashboard)/earnings/page.tsx` | Status pill renders "Ended by sponsor" for `'vetoed'`; preserves `'abandoned'` branch |
+| F7 (read) | `src/app/sponsor/invited/[invite_token]/page.tsx` | Both terminal-status gates (useEffect + closed-render) recognize `'vetoed'` |
+
+**Verification (Task 5):**
+- Vercel deploy state `READY`; build clean.
+- Runtime logs (10m window post-deploy, error+fatal levels): zero
+  results.
+- Production data state re-queried: 2 commitments (`active`),
+  1 sponsorship (`pledged`), zero terminal-state rows. Unchanged
+  from Task 1(b) baseline. No backfill needed; none was expected.
+- `npx tsc --noEmit`: clean against the full working tree before
+  commit.
+- `package.json` / `package-lock.json`: restored after `npm install`
+  (no drift).
+
+**Deviation from §2 plan worth recording:**
+
+The plan called for two commits (write-side then read-side, per
+the 70%-mark rule). Revised to **one consolidated commit** because
+the migration was already applied to production and splitting
+commits across pushes would have deployed a known-500 state
+between them — `/api/sponsorships/[id]` selecting the dropped
+`paid_at` column. The 70%-mark commit rule is for surviving
+tool-budget interruptions within a session, not for sacrificing
+deploy atomicity. Captured in the commit body for future
+archaeology.
+
+**Production state at session close:**
+- Tip: `e909cdf` on `main`
+- Active commitments: 2 (both started 2026-04-22; day 90 lands
+  2026-07-21, ~87 days runway)
+- Active sponsorships: 1 (`pledged`)
+- Webhook will now log-only on `payment_intent.succeeded` for
+  pledges; no DB transition (release-action owns the flip).
+- Cron will continue firing milestone + summary at day 90; no
+  longer flips status. A still-pledged commitment past day 90
+  will sit in `'active'` until a sponsor releases — by spec.
+
 ---
