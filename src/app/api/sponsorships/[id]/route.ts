@@ -42,7 +42,7 @@ export async function GET(
 
   const { data: sponsorships } = await db
     .from('sponsorships')
-    .select('id, sponsor_name, sponsor_email, pledge_amount, status, pledged_at, paid_at')
+    .select('id, sponsor_name, sponsor_email, pledge_amount, status, pledged_at, released_at, vetoed_at')
     .eq('commitment_id', id)
     .order('pledged_at', { ascending: true })
 

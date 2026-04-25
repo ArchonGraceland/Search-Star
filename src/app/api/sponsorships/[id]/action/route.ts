@@ -345,11 +345,16 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to record veto.' }, { status: 500 })
   }
 
-  // Flip the commitment to abandoned per the no-escape-hatch principle.
+  // Flip the commitment to 'vetoed' — the spec-named terminal state
+  // for a sponsor-initiated end (chat-room-plan §2). Pre-3b code wrote
+  // 'abandoned' here, conflating sponsor-veto with the
+  // (not-yet-implemented) practitioner-initiated abandon path. The
+  // CHECK enum already includes 'vetoed'; F7 fix is purely a
+  // vocabulary correction.
   await db
     .from('commitments')
     .update({
-      status: 'abandoned',
+      status: 'vetoed',
       completed_at: null,
     })
     .eq('id', commitment.id)

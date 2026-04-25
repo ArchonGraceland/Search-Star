@@ -108,6 +108,7 @@ export default function InvitedSponsorPage() {
     if (data.status !== 'pending') return
     if (
       data.commitment_status === 'completed' ||
+      data.commitment_status === 'vetoed' ||
       data.commitment_status === 'abandoned'
     ) return
 
@@ -284,7 +285,11 @@ export default function InvitedSponsorPage() {
     )
   }
 
-  if (data.commitment_status === 'completed' || data.commitment_status === 'abandoned') {
+  if (
+    data.commitment_status === 'completed' ||
+    data.commitment_status === 'vetoed' ||
+    data.commitment_status === 'abandoned'
+  ) {
     return (
       <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
         <PublicHeader />

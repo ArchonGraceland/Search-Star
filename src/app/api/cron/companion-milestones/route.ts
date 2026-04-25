@@ -9,8 +9,7 @@ import { summarizeCommitment } from '@/lib/companion/day90'
 // commitment whose day-number (floor((now - started_at) / 86400)) is
 // currently at 30, 60, or 90, drops the corresponding Companion
 // milestone marker into its room. At day 90, additionally computes the
-// day-90 sponsor summary and flips commitments.status from 'active' to
-// 'completed'.
+// day-90 sponsor summary.
 //
 // Auth: Authorization: Bearer $CRON_SECRET. Vercel's cron invocation
 // signs the request with this header (set via project env var);
@@ -25,8 +24,7 @@ import { summarizeCommitment } from '@/lib/companion/day90'
 // Day-90 sequencing — see docs/chat-room-plan.md §6.5 and
 // docs/bcd-arc.md Session 1 log.
 //
-// Three distinct surfaces fire on the same tick at day 90, in this
-// order:
+// Two surfaces fire on the same tick at day 90:
 //
 //   1. Milestone marker.  generateCompanionRoomMilestone produces a
 //      "Day ninety." row in room_messages. Idempotency guard: count
@@ -43,32 +41,29 @@ import { summarizeCommitment } from '@/lib/companion/day90'
 //      is discarded. See "Flag for future work" at the bottom of this
 //      file.
 //
-//   3. Status flip.       UPDATE commitments SET status='completed'
-//      WHERE id=? AND status='active'. This is the load-bearing
-//      action. The WHERE-status='active' clause is the idempotency
-//      branch: if the cron re-fires on a later tick and this row is
-//      already 'completed', zero rows update and we move on.
+// What this cron does NOT do: flip commitments.status to 'completed'.
+// Under v4 Decision #5 ('Payment release is the attestation'), the
+// release-action route owns the 'active' → 'completed' transition;
+// it fires when the last pledged sponsorship flips to released. A
+// commitment whose day 90 has elapsed but whose sponsors have not
+// released stays in status='active' indefinitely — by spec, an
+// unreleased commitment is an unattested commitment, and the room
+// surfaces sponsor activity (or its absence) without needing a
+// terminal status. Pre-3b code flipped to 'completed' here on
+// elapsed time, which racing the release-action route's guard left
+// the release path structurally dead from day 90 onward; retired in
+// Pass 3b Cluster 1 (F10/F21).
 //
-// The three steps are NOT wrapped in a transaction. Steps 1 and 2
-// make Anthropic calls that cannot be rolled back, and step 2 reads
-// a potentially-large context that should not hold a DB transaction
-// open. Each step is independently idempotent and reconciles on the
-// next cron tick if it failed mid-sequence:
+// The two remaining steps are NOT wrapped in a transaction. They
+// each make Anthropic calls that cannot be rolled back, and step 2
+// reads a potentially-large context that should not hold a DB
+// transaction open. Each step is independently idempotent and
+// reconciles on the next cron tick if it failed mid-tick:
 //
-//   - If (1) succeeds and (2)/(3) fail: next tick's milestone guard
-//     sees count==1-expected-so-far, skips (1), retries (2) and (3).
-//   - If (1) and (2) succeed and (3) fails: next tick sees status
-//     still 'active', milestone guard still matches, retries (2)
-//     and (3).
-//   - If all three succeed: next tick sees status 'completed' (no
-//     longer in the active-query), nothing happens.
-//
-// The milestone-row guard branches on the milestone row; the status-
-// flip guard branches on commitments.status. Deliberately two
-// separate guards: the admin endpoint from Session 1 is NOT
-// idempotent and can create a duplicate milestone row without
-// flipping status, so we can't use "milestone row exists" as a
-// proxy for "status already flipped."
+//   - If (1) succeeds and (2) fails: next tick's milestone guard
+//     sees count==expected-so-far, skips (1), retries (2).
+//   - If both succeed: next tick re-fires (2) — known deferred work,
+//     see F17 in docs/review/as-built-inventory.md.
 // ---------------------------------------------------------------------------
 
 export const dynamic = 'force-dynamic'
@@ -92,7 +87,6 @@ type ProcessedAction = {
   actions: {
     milestone?: 'fired' | 'skipped_duplicate' | 'failed'
     summary?: 'fired' | 'skipped_not_day_90' | 'failed'
-    status_flip?: 'fired' | 'skipped_not_day_90' | 'skipped_already_completed' | 'failed'
   }
   milestone_message_id?: string
   notes?: string[]
@@ -208,11 +202,8 @@ export async function GET(request: NextRequest) {
       action.actions.milestone = milestoneAlreadyFired ? 'skipped_duplicate' : 'fired'
       if (dayNumber === 90) {
         action.actions.summary = 'fired'
-        action.actions.status_flip =
-          commitment.status === 'active' ? 'fired' : 'skipped_already_completed'
       } else {
         action.actions.summary = 'skipped_not_day_90'
-        action.actions.status_flip = 'skipped_not_day_90'
       }
       action.notes?.push(
         `dry-run: existing_milestone_count=${existingCount}, expected=${expected}`
@@ -248,18 +239,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // ---- Steps 2 & 3: day-90 only --------------------------------
+    // ---- Step 2: day-90 only -------------------------------------
     if (dayNumber !== 90) {
       action.actions.summary = 'skipped_not_day_90'
-      action.actions.status_flip = 'skipped_not_day_90'
       processed.push(action)
       continue
     }
 
     // Step 2: summary. Read-only call; the result is discarded. If
-    // this fails, log and continue — step 3 is the load-bearing
-    // action, and next tick's cron will retry this step because
-    // status is still 'active'.
+    // this fails, log and continue — there is no further step. Next
+    // tick will retry until day 90 is no longer the day-number.
     try {
       const result = await summarizeCommitment(commitment.id)
       if (result.ok) {
@@ -278,30 +267,6 @@ export async function GET(request: NextRequest) {
       })
       action.actions.summary = 'failed'
       action.notes?.push('summarizeCommitment threw')
-    }
-
-    // Step 3: status flip. WHERE status='active' is the idempotency
-    // branch — if the admin endpoint or a prior tick already flipped
-    // this, zero rows update and we move on. The load-bearing action.
-    const { data: flipped, error: flipErr } = await db
-      .from('commitments')
-      .update({ status: 'completed', completed_at: now.toISOString() })
-      .eq('id', commitment.id)
-      .eq('status', 'active')
-      .select('id')
-      .maybeSingle()
-
-    if (flipErr) {
-      console.error('[cron/companion-milestones] status flip failed:', {
-        commitmentId: commitment.id,
-        error: flipErr,
-      })
-      action.actions.status_flip = 'failed'
-      action.notes?.push(`status flip error: ${flipErr.message}`)
-    } else if (flipped) {
-      action.actions.status_flip = 'fired'
-    } else {
-      action.actions.status_flip = 'skipped_already_completed'
     }
 
     processed.push(action)

@@ -9,14 +9,16 @@ interface Sponsorship {
   sponsor_name: string
   sponsor_email: string
   pledge_amount: number
-  status: 'pledged' | 'paid' | 'refunded'
+  status: 'pledged' | 'released' | 'vetoed' | 'refunded'
   pledged_at: string
-  paid_at: string | null
+  released_at: string | null
+  vetoed_at: string | null
 }
 
-const STATUS_BADGE = {
+const STATUS_BADGE: Record<Sponsorship['status'], { bg: string; color: string; label: string }> = {
   pledged: { bg: '#eef2f8', color: '#1a3a6b', label: 'Pledged' },
-  paid: { bg: '#edf7ed', color: '#2d6a2d', label: 'Paid' },
+  released: { bg: '#edf7ed', color: '#2d6a2d', label: 'Released' },
+  vetoed: { bg: '#fef2f2', color: '#991b1b', label: 'Vetoed' },
   refunded: { bg: '#fef2f2', color: '#991b1b', label: 'Refunded' },
 }
 

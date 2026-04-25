@@ -8,15 +8,21 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // Stripe webhook handler. Verifies signature against STRIPE_WEBHOOK_SECRET,
-// then reacts to a small set of PaymentIntent lifecycle events by advancing
-// the corresponding sponsorship row. Transitions are forward-only.
+// then reacts to a small set of PaymentIntent lifecycle events.
 //
-// Phase 4a scope: log amount_capturable_updated and payment_failed; mark
-// 'paid' on succeeded (capture completed at release); mark 'refunded' on
-// canceled if the sponsorship is not already terminal.
+// Pledge capture model under v4 Decision #5 ('Payment release is the
+// attestation'): the release-action route synchronously calls
+// paymentIntents.capture() and only advances sponsorships.status to
+// 'released' if capture returns success. There is no released-then-paid
+// two-state distinction worth tracking; 'released' IS terminal for
+// pledges. payment_intent.succeeded for a pledge is therefore a
+// log-only event here — the DB transition has already happened on the
+// release path. (Pre-3b code attempted to advance 'released' → 'paid',
+// but 'paid' was never in the sponsorships_status_check enum; the write
+// was rejected silently. Retired in Pass 3b Cluster 1.)
 //
-// Phase 5 scope (future): donation succeeded/failed events will also land
-// here and will be dispatched by inspecting metadata.intent_type.
+// payment_intent.canceled for a pledge advances non-terminal rows to
+// 'refunded'. Donations are dispatched separately via metadata.intent_type.
 export async function POST(request: Request) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET
   if (!secret) {
@@ -285,10 +291,12 @@ export async function POST(request: Request) {
           break
         }
 
-        // Pledge capture completed — sponsor released at day 90. Mark the
-        // sponsorship 'paid' only if it's currently 'released' (the
-        // practitioner-facing transition is driven by the release action
-        // route; this webhook confirms the money actually landed).
+        // Pledge capture confirmation. Under v4 Decision #5 the
+        // released-then-paid two-state model collapses: the
+        // release-action route advances 'pledged' → 'released' only
+        // after a synchronous paymentIntents.capture() succeeds, so
+        // 'released' IS terminal. payment_intent.succeeded here is an
+        // audit echo — log for replay-safety visibility, do not write.
         const { data: sponsorship } = await db
           .from('sponsorships')
           .select('id, status')
@@ -300,20 +308,18 @@ export async function POST(request: Request) {
           break
         }
 
-        // Forward-only: only advance from 'released' to 'paid'. If the row
-        // is already 'paid', this is a replay — no-op. Any other status is
-        // unexpected and we log but don't regress.
         if (sponsorship.status === 'released') {
-          const { error: updateErr } = await db
-            .from('sponsorships')
-            .update({ status: 'paid', paid_at: new Date().toISOString() })
-            .eq('id', sponsorship.id)
-          if (updateErr) {
-            console.error(`[stripe] failed to mark sponsorship ${sponsorship.id} paid:`, updateErr)
-          }
-        } else if (sponsorship.status !== 'paid') {
+          // Expected steady state — release path captured, webhook
+          // confirms. No DB write.
+          console.log(
+            `[stripe] succeeded for pi=${pi.id}: sponsorship ${sponsorship.id} already 'released' (expected)`
+          )
+        } else {
+          // Unexpected — capture succeeded but the release path didn't
+          // record a transition. Log for investigation; do not regress
+          // or advance the row.
           console.warn(
-            `[stripe] succeeded for pi=${pi.id} but sponsorship status is "${sponsorship.status}"; not advancing`
+            `[stripe] succeeded for pi=${pi.id} but sponsorship ${sponsorship.id} status is "${sponsorship.status}"; not advancing`
           )
         }
         break
@@ -355,9 +361,13 @@ export async function POST(request: Request) {
           break
         }
 
-        // If the row is already terminal (paid, released, refunded, vetoed)
+        // If the row is already terminal (released, refunded, vetoed)
         // don't regress. Only flip to 'refunded' from non-terminal states.
-        const terminal = ['paid', 'refunded', 'vetoed']
+        // 'released' is terminal under v4 Decision #5; the pre-3b set
+        // included 'paid' (never reachable, CHECK rejected) and omitted
+        // 'released', which would have allowed a stray canceled event
+        // to regress a successful release. Corrected in Pass 3b Cluster 1.
+        const terminal = ['released', 'refunded', 'vetoed']
         if (terminal.includes(sponsorship.status)) {
           console.log(
             `[stripe] canceled for pi=${pi.id} but sponsorship ${sponsorship.id} is already "${sponsorship.status}"`

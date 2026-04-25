@@ -161,6 +161,8 @@ export default async function EarningsPage() {
                 <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '11px', color: '#b8b8b8', margin: 0 }}>
                   {e.status === 'completed'
                     ? `Completed ${formatDate(e.completed_at)}`
+                    : e.status === 'vetoed'
+                    ? 'Ended by sponsor'
                     : e.status === 'abandoned'
                     ? 'Abandoned'
                     : e.status === 'active'
