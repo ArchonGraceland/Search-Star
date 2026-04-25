@@ -1,10 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { isInstitutionalPortalEnabled } from '@/lib/feature-flags'
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!isInstitutionalPortalEnabled()) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

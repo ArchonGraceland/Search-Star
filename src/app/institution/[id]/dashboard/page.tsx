@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { requireInstitutionalPortal } from '@/lib/feature-flags'
 
 const TYPE_LABELS: Record<string, string> = {
   employer: 'Employer',
@@ -52,6 +53,7 @@ export default async function InstitutionDashboardPage({
   params: Promise<{ id: string }>
   searchParams: Promise<{ welcome?: string }>
 }) {
+  requireInstitutionalPortal()
   const { id } = await params
   const { welcome } = await searchParams
   const supabase = await createClient()

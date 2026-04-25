@@ -1,7 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { isInstitutionalPortalEnabled } from '@/lib/feature-flags'
 
 export async function POST(request: Request) {
+  if (!isInstitutionalPortalEnabled()) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   const supabase = await createClient()
   const body = await request.json()
   const { name, type, contact_name, contact_email, skill_category_id } = body

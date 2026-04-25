@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { requireInstitutionalPortal } from '@/lib/feature-flags'
 
 const STAGE_COLORS: Record<string, string> = {
   seedling: '#5a8a5a',
@@ -27,6 +28,7 @@ export default async function InstitutionMembersPage({
   params: Promise<{ id: string }>
   searchParams: Promise<{ page?: string }>
 }) {
+  requireInstitutionalPortal()
   const { id } = await params
   const { page: pageParam } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? '1', 10))

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import MobileNavToggle from './mobile-nav-toggle'
+import { isInstitutionalPortalEnabled } from '@/lib/feature-flags'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -24,7 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: '/earnings', label: 'Earnings' },
     { href: '/account', label: 'Account' },
     { href: '/support', label: 'Support' },
-    ...(profile?.institution_id ? [{ href: `/institution/${profile.institution_id}/dashboard`, label: 'My Institution' }] : []),
+    ...(isInstitutionalPortalEnabled() && profile?.institution_id ? [{ href: `/institution/${profile.institution_id}/dashboard`, label: 'My Institution' }] : []),
     ...(isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
 

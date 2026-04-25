@@ -395,3 +395,98 @@ archaeology.
   will sit in `'active'` until a sponsor releases — by spec.
 
 ---
+
+## §3 — Cluster 4 institutional portal take-down: plan and execution
+
+**Findings dispositioned.** F39 (institution signup creates institution
+row without auth user — broken sign-in promise), F40 (`/api/institution
+/[id]/enroll` writes `profiles.institution_id` via SSR client — silently
+no-ops under owner-only RLS), F41 (`/api/institution/[id]/analytics` is
+orphan — zero callers in the codebase).
+
+**Decision** (already made in §1, Option B): take down. This section
+documents the implementation shape and execution.
+
+### Pre-execution sanity checks
+
+**Files at tip eaa8204 (LOC counts exact match to inventory):**
+
+| File | LOC |
+|---|---:|
+| `src/app/institution/signup/page.tsx` | 167 |
+| `src/app/institution/[id]/dashboard/page.tsx` | 303 |
+| `src/app/institution/[id]/enroll/page.tsx` | 211 |
+| `src/app/institution/[id]/members/page.tsx` | 228 |
+| `src/app/api/institution/signup/route.ts` | 45 |
+| `src/app/api/institution/[id]/enroll/route.ts` | 93 |
+| `src/app/api/institution/[id]/analytics/route.ts` | 71 |
+| **Total** | **1118** |
+
+Pass 3b shifted line numbers inside the sponsorship-state-machine
+files; nothing in 3b touched the institutional surface.
+
+**Inbound links from outside the institution surface (single hit):**
+`src/app/(dashboard)/layout.tsx:27` — conditional nav link gated on
+`profile?.institution_id`. Marketing-site references in
+`public/spec.html` and `public/roadmap.html` stay as-is per §1.
+
+**Production data state:** `institutions` 0, `institution_memberships`
+0, `profiles WHERE institution_id IS NOT NULL` 0. Take-down has zero
+user impact.
+
+**Vercel env state:** `INSTITUTIONAL_PORTAL_ENABLED` is not set in
+production, preview, or development. `undefined === 'true'` evaluates
+false; default-off is structurally guaranteed. No env change required.
+
+### Principal sign-offs
+
+- **Q1 → Option B (helper).** New `src/lib/feature-flags.ts` exporting
+  `isInstitutionalPortalEnabled()` and `requireInstitutionalPortal()`.
+- **Q2 → Option (ii) (wrap nav-link).** Layout line 27 wrapped in
+  `isInstitutionalPortalEnabled() && profile?.institution_id`.
+- **Q3 → Option (a) (delete F41 in same commit).** One atomic
+  take-down.
+- **Env var stays unset.** No Vercel state change.
+
+### Execution shape
+
+**No migration.** Application-layer only. The `institutions` and
+`institution_memberships` tables stay for v4.8 redesign reference.
+
+**New file:** `src/lib/feature-flags.ts` exports the two helpers.
+
+**Code changes (8 existing files):**
+
+For the two **client** pages (`signup/page.tsx`, `[id]/enroll/page.tsx`):
+env vars aren't readable in client components, so the gate must be
+server-side. Pattern: `git mv` the existing `page.tsx` to a sibling
+`{form}-form.tsx`, rename the default export to `SignupForm` /
+`EnrollForm`, then write a new server-component `page.tsx` that calls
+`requireInstitutionalPortal()` and renders the client form. The client
+form's existing `useParams()` continues to work — route params are
+still available at the client layer.
+
+For the two **server** pages (`[id]/dashboard/page.tsx`,
+`[id]/members/page.tsx`): `requireInstitutionalPortal()` as the first
+line of the async component body.
+
+For the two **API routes** (`signup/route.ts`, `[id]/enroll/route.ts`):
+early return `NextResponse.json({error: 'Not found'}, {status: 404})`
+when `!isInstitutionalPortalEnabled()`.
+
+For the **dashboard layout** (`(dashboard)/layout.tsx`): wrap the
+line-27 nav-link spread in the flag check.
+
+**File deleted:** `src/app/api/institution/[id]/analytics/route.ts`
+— F41. Parent `analytics/` dir disappears with it; the `[id]/`
+parent stays because `enroll/` lives there.
+
+### What this plan does NOT do
+
+- No DB row migration (zero institutional rows exist).
+- No deletion of `institutions` / `institution_memberships` tables.
+- No marketing-site copy changes.
+- No Cluster 3 role-check consolidation (Pass 3d).
+- No Vercel env var change.
+
+---
