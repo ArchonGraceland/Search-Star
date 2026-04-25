@@ -60,13 +60,6 @@ export default async function UserTicketDetail({
     )
   }
 
-  // Get profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
-
   // Fetch messages
   const { data: messages } = await supabase
     .from('ticket_messages')
@@ -136,7 +129,7 @@ export default async function UserTicketDetail({
         {ticket.status !== 'resolved' ? (
           <div className="card-grace p-6">
             <h2 className="font-heading text-xl font-bold mb-4">Add a Reply</h2>
-            <TicketReplyForm ticketId={id} authorId={profile?.id || ''} />
+            <TicketReplyForm ticketId={id} />
           </div>
         ) : (
           <div className="bg-[#f0fdf4] border-l-[3px] border-[#166534] rounded-[3px] px-5 py-3.5">

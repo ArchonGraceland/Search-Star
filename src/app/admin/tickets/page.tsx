@@ -12,7 +12,6 @@ interface Ticket {
 }
 
 interface ProfileName {
-  id: string
   user_id: string
   display_name: string
 
@@ -83,7 +82,7 @@ export default async function AdminTickets({
   if (userIds.length > 0) {
     const { data: profiles } = await db
       .from('profiles')
-      .select('id, user_id, display_name')
+      .select('user_id, display_name')
       .in('user_id', userIds) as { data: ProfileName[] | null }
     nameMap = (profiles || []).reduce((acc, p) => {
       acc[p.user_id] = p

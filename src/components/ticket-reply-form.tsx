@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function TicketReplyForm({ ticketId, authorId }: { ticketId: string; authorId: string }) {
+export function TicketReplyForm({ ticketId }: { ticketId: string }) {
   const router = useRouter()
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
@@ -23,7 +23,6 @@ export function TicketReplyForm({ ticketId, authorId }: { ticketId: string; auth
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ticket_id: ticketId,
-          author_id: authorId,
           body: body.trim(),
         }),
       })

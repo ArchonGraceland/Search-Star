@@ -18,22 +18,29 @@ export async function POST(request: NextRequest) {
   try {
     const guard = await requireAdminApi()
     if (guard instanceof NextResponse) return guard
+    const adminUser = guard
 
     const body = await request.json()
     const { ticket_id, body: msgBody, author_id } = body
 
-    if (!ticket_id || !msgBody || !author_id) {
+    if (!ticket_id || !msgBody) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     const db = createServiceClient()
 
-    // Insert message
+    // Insert message. author_id is optional in the request body;
+    // fall back to the authenticated admin's user.id. Mirrors
+    // /api/tickets (POST line 62, PATCH line 111). Pass 3e
+    // dropped the client-side adminProfileId prop on
+    // <AdminTicketActions>, which had always forwarded an empty
+    // string in production — the fallback path was already the
+    // only path that ever ran.
     const { error: msgError } = await db
       .from('ticket_messages')
       .insert({
         ticket_id,
-        author_id,
+        author_id: author_id || adminUser.id,
         is_admin: true,
         body: msgBody,
       })

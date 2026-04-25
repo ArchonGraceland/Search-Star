@@ -71,7 +71,7 @@ type SponsorshipRow = {
 
 type CommitmentRow = {
   id: string
-  title: string | null
+  practice: { name: string } | null
 }
 
 export default async function AdminDonationsPage({
@@ -143,7 +143,7 @@ export default async function AdminDonationsPage({
           .in('id', sponsorshipIds)
       : Promise.resolve({ data: [] as SponsorshipRow[] }),
     commitmentIds.length > 0
-      ? db.from('commitments').select('id, title').in('id', commitmentIds)
+      ? db.from('commitments').select('id, practice:practices(name)').in('id', commitmentIds)
       : Promise.resolve({ data: [] as CommitmentRow[] }),
   ])
   const sponsorshipsById = new Map<string, SponsorshipRow>()
@@ -352,7 +352,7 @@ export default async function AdminDonationsPage({
                         </td>
                         <td style={{ padding: '10px 8px', fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#3a3a3a', maxWidth: '240px' }}>
                           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {cm?.title ?? d.commitment_id.slice(0, 8)}
+                            {cm?.practice?.name ?? d.commitment_id.slice(0, 8)}
                           </div>
                         </td>
                         <td style={{ padding: '10px 8px', fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: '#3a3a3a' }}>

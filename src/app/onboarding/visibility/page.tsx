@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
 
-type Visibility = 'private' | 'network' | 'public'
+type Visibility = 'private' | 'public'
 
 const OPTIONS: { value: Visibility; title: string; description: string; badge?: string }[] = [
   {
@@ -12,11 +12,6 @@ const OPTIONS: { value: Visibility; title: string; description: string; badge?: 
     title: 'Private',
     description: 'Only your sponsors can see your session posts. Your profile is not publicly searchable.',
     badge: 'Recommended',
-  },
-  {
-    value: 'network',
-    title: 'Network',
-    description: 'People you\'ve connected with on Search Star can see your profile.',
   },
   {
     value: 'public',
@@ -36,7 +31,7 @@ export default function VisibilityPage() {
     setLoading(true)
     setError(null)
 
-    const res = await fetch('/api/profiles', {
+    const res = await fetch('/api/profiles/visibility', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ visibility }),

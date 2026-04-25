@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function TicketForm({ userId, profileId }: { userId: string; profileId: string }) {
+export function TicketForm({ userId }: { userId: string }) {
   const router = useRouter()
   const [subject, setSubject] = useState('')
   const [priority, setPriority] = useState('normal')
@@ -29,7 +29,6 @@ export function TicketForm({ userId, profileId }: { userId: string; profileId: s
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
-          author_id: profileId,
           subject: subject.trim(),
           priority,
           body: body.trim(),

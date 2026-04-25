@@ -6,11 +6,9 @@ import { useRouter } from 'next/navigation'
 export function AdminTicketActions({
   ticketId,
   currentStatus,
-  adminProfileId,
 }: {
   ticketId: string
   currentStatus: string
-  adminProfileId: string
 }) {
   const router = useRouter()
   const [reply, setReply] = useState('')
@@ -33,7 +31,6 @@ export function AdminTicketActions({
         body: JSON.stringify({
           ticket_id: ticketId,
           body: reply.trim(),
-          author_id: adminProfileId,
         }),
       })
       const data = await res.json()

@@ -1,4 +1,4 @@
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { AdminTicketActions } from '@/components/admin-ticket-actions'
 
@@ -36,11 +36,11 @@ export default async function AdminTicketDetail({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
 
-  // Data reads via service client. Admin access gated by admin/layout.tsx;
-  // supabase is retained here only for the auth.getUser() call below.
-  // See commits 0710ce4 / 1dccc46 / 501d976 / 0f28db9.
+  // Data reads via service client. Admin access is gated by admin/layout.tsx
+  // via requireAdminPage() (Pass 3d). The service client also sidesteps the
+  // @supabase/ssr JWT-propagation race documented in commits 0710ce4 /
+  // 1dccc46 / 501d976 / 0f28db9.
   const db = createServiceClient()
 
   // Fetch ticket
@@ -64,7 +64,7 @@ export default async function AdminTicketDetail({
   // Fetch user profile
   const { data: userProfile } = await db
     .from('profiles')
-    .select('id, display_name')
+    .select('display_name')
     .eq('user_id', ticket.user_id)
     .single()
 
@@ -74,14 +74,6 @@ export default async function AdminTicketDetail({
     .select('*')
     .eq('ticket_id', id)
     .order('created_at', { ascending: true }) as { data: TicketMessage[] | null }
-
-  // Get current admin user id
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: adminProfile } = await db
-    .from('profiles')
-    .select('id')
-    .eq('user_id', user!.id)
-    .single()
 
   const s = statusBadge(ticket.status)
 
@@ -150,7 +142,6 @@ export default async function AdminTicketDetail({
         <AdminTicketActions
           ticketId={id}
           currentStatus={ticket.status}
-          adminProfileId={adminProfile?.id || ''}
         />
       </div>
     </div>

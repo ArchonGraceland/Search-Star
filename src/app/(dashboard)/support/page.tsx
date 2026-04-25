@@ -43,13 +43,6 @@ export default async function SupportPage() {
 
   if (!user) return null
 
-  // Get profile id
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
-
   // Fetch user's tickets
   const { data: tickets } = await supabase
     .from('support_tickets')
@@ -88,7 +81,7 @@ export default async function SupportPage() {
         {/* Submit Ticket */}
         <div className="card-grace p-6 mb-6">
           <h2 className="font-heading text-xl font-bold mb-5">Submit a Ticket</h2>
-          <TicketForm userId={user.id} profileId={profile?.id || ''} />
+          <TicketForm userId={user.id} />
         </div>
 
         {/* My Tickets */}
