@@ -489,4 +489,79 @@ parent stays because `enroll/` lives there.
 - No Cluster 3 role-check consolidation (Pass 3d).
 - No Vercel env var change.
 
+### §3 — Completion note
+
+**Status: COMPLETE.** Landed at commit `db24acc` on `main`,
+deploy `dpl_3bxvbtR8Yry29k72gxJqKhR5JQvy` READY in production.
+
+**Code changes (12 files, +524/−444, single commit):**
+
+| Finding | File | Disposition |
+|---|---|---|
+| — | `src/lib/feature-flags.ts` | NEW. Exports `isInstitutionalPortalEnabled()` and `requireInstitutionalPortal()`. |
+| F39 | `src/app/institution/signup/page.tsx` | RENAMED to `signup-form.tsx`; default export renamed `SignupForm`. |
+| F39 | `src/app/institution/signup/page.tsx` | NEW thin server wrapper: gates and renders `<SignupForm />`. |
+| F39, F41 | `src/app/api/institution/signup/route.ts` | Early-return 404 JSON when flag off. |
+| F40 | `src/app/institution/[id]/enroll/page.tsx` | RENAMED to `enroll-form.tsx`; default export renamed `EnrollForm`. |
+| F40 | `src/app/institution/[id]/enroll/page.tsx` | NEW thin server wrapper: gates and renders `<EnrollForm />`. |
+| F40 | `src/app/api/institution/[id]/enroll/route.ts` | Early-return 404 JSON when flag off. |
+| — | `src/app/institution/[id]/dashboard/page.tsx` | `requireInstitutionalPortal()` as first line of component body. |
+| — | `src/app/institution/[id]/members/page.tsx` | `requireInstitutionalPortal()` as first line of component body. |
+| F41 | `src/app/api/institution/[id]/analytics/route.ts` | DELETED. Parent `analytics/` dir removed; `[id]/` parent retained for `enroll/`. |
+| Q2 | `src/app/(dashboard)/layout.tsx` | Line 27 nav-link wrapped in `isInstitutionalPortalEnabled() && profile?.institution_id`. |
+| — | `docs/review/pass-3-decisions.md` | §3 plan + this completion note. |
+
+**Verification (Task 5):**
+
+- Vercel deploy state `READY`; build clean (`turbopack`, `nodejs:3`).
+- Runtime logs (15-minute window post-deploy, error+fatal levels):
+  zero results.
+- Endpoint verification against `https://www.searchstar.com`:
+  - `GET /institution/signup` → **404** (Next.js default HTML)
+  - `GET /institution/{uuid}/dashboard` → **404**
+  - `GET /institution/{uuid}/enroll` → **404**
+  - `GET /institution/{uuid}/members` → **404**
+  - `POST /api/institution/signup` → **404** (`{"error":"Not found"}` JSON)
+  - `POST /api/institution/{uuid}/enroll` → **404** (`{"error":"Not found"}` JSON)
+  - `GET /api/institution/{uuid}/analytics` → **404** (Next.js default HTML — file deleted, not gated, as planned)
+- Production institutional row counts re-queried: `institutions` 0,
+  `institution_memberships` 0, `profiles WHERE institution_id IS NOT NULL` 0.
+  Unchanged from pre-commit baseline.
+- Commitment + sponsorship state collateral check: 2 active
+  commitments, 1 pledged sponsorship. Unchanged from Pass 3b
+  session-close baseline.
+
+**Deviation from §3 plan worth recording:**
+
+`npx tsc --noEmit` was verified clean against the identical change
+set in two prior session attempts before this session. The final
+push session skipped the tsc gate to avoid a recurring tool-budget
+exhaustion that prevented the commit from landing in earlier
+attempts (each attempt completed all file edits but ran out of
+budget before commit/push). Vercel's build pipeline runs tsc as
+part of the production deploy — the `READY` state of
+`dpl_3bxvbtR8Yry29k72gxJqKhR5JQvy` is itself the final tsc
+verification, since a type error would have failed the build.
+
+`package.json` / `package-lock.json`: no drift (no npm install
+performed in the final push session; cached deps from prior sessions
+were sufficient for tsc verification when it ran).
+
+**Production state at session close:**
+- Tip: `db24acc` on `main` (pre-completion-note commit; this commit
+  appends the note as a doc-only follow-up).
+- Active commitments: 2 (started 2026-04-22; day 90 lands 2026-07-21,
+  ~87 days runway).
+- Active sponsorships: 1 (`pledged`).
+- Institutional surface: hidden behind feature flag; all entry points
+  return 404 in production. `INSTITUTIONAL_PORTAL_ENABLED` env var
+  remains unset — surface is safe-by-default.
+- Cluster 3 (role-check consolidation across 13 call sites with 4
+  detection mechanisms) NOT yet executed — Pass 3d. The
+  institutional surface's F34 references at inventory lines 444–447
+  are now unreachable behind the gate; 3d will rewrite the gates the
+  take-down preserves.
+- F2 (room_membership upsert atomicity), F23 (companion/reflect dead
+  code) NOT yet executed — Pass 3e candidates.
+
 ---
