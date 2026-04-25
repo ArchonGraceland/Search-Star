@@ -1446,3 +1446,456 @@ work.
   per userMemories.
 
 ---
+
+
+## §7 — Pass 3f deferred findings (F2 + F23): plans for principal review
+
+This section covers Pass 3f Task 1 — the pre-execution sanity
+checks for the two F-findings deferred from Pass 3a–3e per §6(d).
+Two sub-blocks: §7.1 for F2 (`room_memberships` upsert atomicity),
+§7.2 for F23 (companion/reflect dead-code retirement). Both are
+plan-only. Code execution lands in a later session after principal
+sign-off on the questions raised below.
+
+**Status (both findings): plan only — pending principal sign-off
+on the questions inside each sub-block before any code or
+migration is touched.**
+
+---
+
+### §7.1 — F2: `room_memberships` upsert atomicity on pledge
+
+**Finding dispositioned.** F2 (sponsorship pledge succeeds; the
+follow-on `room_memberships` upsert is best-effort, logged but not
+surfaced to client; sponsor pays and cannot see the room they paid
+for).
+
+**Pass 1 severity:** Concerning.
+**Pass 2 verdict:** GENUINE-BUG. Spec anchor: `v4-decisions.md`
+decision #8 — "A sponsor must be in a room to back a
+practitioner... Every sponsor who backs a practitioner is a
+member of the room."
+
+#### Pre-execution sanity checks (Task 1, completed this session)
+
+**Pledge-flow trace at tip 4d3f4a5 (`src/app/api/sponsorships/route.ts`,
+POST handler lines 97–362):**
+
+| Step | Lines | Action | Failure handling today |
+|---|---|---|---|
+| 1 | 97–138 | Auth + body validation | Returns 4xx; no side effects |
+| 2 | 142–178 | Resolve `sponsor_invitations` row + email match | Returns 4xx; no side effects |
+| 3 | 181–211 | Load commitment; reject self-sponsor / non-`active` | Returns 4xx/409; no side effects |
+| 4 | 213–222 | Resolve sponsor display name | Best-effort read |
+| 5 | 233 | Generate `access_token` | In-memory |
+| 6 | 242–252 | Stripe Customer create | On error: 502, no DB writes yet |
+| 7 | 254–273 | Stripe PaymentIntent create (`capture_method='manual'`) | On error: 502, no DB writes yet |
+| 8 | 284–301 | `sponsorships.insert` (status `'pledged'`) | On error: cancel PI (best-effort), return 500 |
+| **9** | **321–339** | **`room_memberships.upsert` — F2 surface** | **Logged via `console.error`, NOT returned to client; sponsorship row already committed** |
+| 10 | 342–349 | `sponsor_invitations.update` to `'accepted'` | Try/catch + log; non-fatal |
+| 11 | 357–361 | Return `{id, client_secret, room_id}` to client | n/a |
+
+The "a later repair job can reconcile" comment Pass 1 cited is
+at **line 318**. No such repair job exists in any cron, in any
+admin route, or in any other surface in the codebase.
+
+**`room_memberships` schema (queried this session against
+`qgjyfcqgnuamgymonblj`):**
+
+```
+id          uuid PK DEFAULT gen_random_uuid()
+room_id     uuid NOT NULL  → rooms(id) ON DELETE CASCADE
+user_id     uuid NOT NULL  → profiles(user_id) ON DELETE CASCADE
+state       text NOT NULL  DEFAULT 'lingering'
+                          CHECK (state IN ('active','lingering','exited'))
+joined_at   timestamptz NOT NULL DEFAULT now()
+```
+
+Constraints: PK on `id`; **UNIQUE (`room_id`, `user_id`)** —
+matches the upsert's `onConflict: 'room_id,user_id'`. RLS:
+`relrowsecurity=true`, `relforcerowsecurity=false` — service-role
+bypasses. Only one policy, read-on-own-rows
+(`user_id = auth.uid()`). **No INSERT policy**, but service-role
+writes are unaffected; the route uses `createServiceClient()` for
+the upsert, so RLS is not the failure path.
+
+**Sponsorship FK shape (queried this session):**
+
+`sponsorships` has FKs to `commitments` and `profiles` only. **No
+FK to `room_memberships`.** The two writes (`sponsorships.insert`
++ `room_memberships.upsert`) are schema-independent — the DB
+permits a sponsorship row whose sponsor has no membership row.
+Linkage is transitive:
+`sponsorship.commitment_id → commitments.room_id →
+room_memberships.room_id`.
+
+**Production data state (queried this session):**
+
+| Sponsorship id | Status | Room id | Membership id | Membership state |
+|---|---|---|---|---|
+| `59720e9f-…2847` | `pledged` | `5574621b-…0bb63` | `3b4e087a-…d844b8` | `active` |
+
+Aggregate: 1 sponsorship row with `sponsor_user_id IS NOT NULL`,
+1 corresponding membership. Zero orphans. **Pass 1's failure-mode
+hypothesis is structurally true but not realized in production
+data — same shape as F10 entering Pass 3b.** No backfill or row
+migration will be required when the fix lands.
+
+**RPC inventory (queried this session for fix-shape feasibility):**
+
+Public-schema functions: `get_user_id_by_email(text)`,
+`handle_new_user()`, `is_admin()`, `is_commitment_owner(uuid)`,
+`is_commitment_validator(uuid)`, `refresh_confidence_priors()`,
+`source_confidence(text)`, plus four `update_*` triggers. No
+existing transactional-write RPC. Only one Supabase RPC call site
+in code: `src/app/api/institution/[id]/enroll/route.ts:53`
+(`get_user_id_by_email`). A multi-write transactional RPC for the
+pledge flow would be the codebase's first.
+
+#### Fix-shape candidates (documented, not chosen)
+
+| Option | Mechanism | Atomicity | Stripe interaction | Code complexity |
+|---|---|---|---|---|
+| **A — Supabase RPC (transactional)** | New SECURITY DEFINER PL/pgSQL function wrapping `sponsorships.insert` + `room_memberships.upsert` in a single transaction. Route calls `.rpc('record_pledge', {...})`. | Strong: both rows commit or neither does | PI is created **before** the RPC; on RPC failure, route still calls `paymentIntents.cancel` (mirrors current line 306–310 path) | Highest — net new RPC + migration; no precedent in codebase |
+| **B — Service-client with explicit rollback** | Same two writes in sequence as today; on membership failure, `DELETE FROM sponsorships WHERE id = $1` and cancel PI. | Compensating transaction, not true atomic — a crash between insert and delete leaves an orphan | PI cancel mirrors current path | Low — pure application code; one new branch in the existing handler |
+| **C — Reorder: membership first, sponsorship second** | Upsert `room_memberships` before `sponsorships.insert`. On membership failure, return early, cancel PI, no sponsorship row written. | Avoids the orphan-sponsorship-without-membership state; introduces an orphan-membership-without-sponsorship state instead | PI cancel needed if membership fails; reorder before line 284 | Low — single block reorder + new error branch |
+| **D — Surface failure to client with retry path** | Today's order preserved; on membership failure, return a non-2xx with structured error so client can retry membership write idempotently (UNIQUE conflict already makes retry safe). | Not atomic at server level; relies on client retry | No change | Low — one return-shape change + client handler |
+
+**Trade-off matrix (Claude's read; principal decides):**
+
+- **A** is the strongest guarantee but introduces a new code path
+  shape (Supabase RPC) the codebase doesn't currently use. Worth
+  it if the principal wants the foundation for future
+  multi-write flows; overkill if F2 is the only one.
+- **B** matches the current architecture (service-client, no
+  RPCs) and reads the most naturally to anyone familiar with the
+  rest of the route. The orphan window between the two writes is
+  small — bounded by the single membership write's latency — but
+  is real if the function process is killed mid-handler.
+- **C** is the simplest fix and removes the worst failure mode
+  (sponsor pays without room access) by reversing the order
+  rather than adding atomicity. It introduces a new failure mode
+  (membership exists without sponsorship) which is
+  user-invisible — a sponsor who never completed the pledge
+  shows up as a room member, which is consistent with the
+  Decision #8 framing of "lingering" memberships, except the
+  state would be `'active'` not `'lingering'`. State could be
+  written as `'lingering'` until sponsorship insert succeeds,
+  then flipped — but at that point we're back to two writes
+  needing atomicity, so C reduces to A or B.
+- **D** is the lowest-impact change but makes the client
+  responsible for state convergence. Acceptable if the principal
+  is comfortable with the failure being a surfaced, retryable
+  error rather than a silent log line. The client-side retry
+  surface today (the `/sponsor/invited/[invite_token]` page)
+  would need a new "membership setup failed, retry?" branch.
+
+#### Open questions for principal sign-off
+
+##### Q1 — Which fix shape?
+
+A / B / C / D, or a hybrid (e.g., B with telemetry alerting on
+the orphan window). **Claude's recommendation: B.** Reasoning: it
+matches the codebase's existing service-client pattern; the orphan
+window is bounded by a single round-trip to Postgres; production
+already shows zero orphans, so the failure-mode urgency is
+"prevent the first one" rather than "clean up many." Option A is
+worth the extra weight only if the principal wants to seed an RPC
+pattern for future multi-write flows (release-action, veto, etc.)
+in which case A becomes the right anchor and a small ride-along
+RPC inventory pays back in later passes.
+
+##### Q2 — Should the membership state be `'active'` or `'lingering'` on pledge?
+
+Today's code writes `'active'` (line 327). Decision #8 says
+"sponsors are room members" but does not explicitly mandate that
+`state` text. The CHECK accepts `{active, lingering, exited}`;
+`'lingering'` is documented in §3 of `v4-decisions.md` as
+"prospective sponsors and prospective practitioners can be in a
+room without yet being economically committed." A pledged sponsor
+is **economically committed** (Stripe authorization in place,
+`sponsorships.status='pledged'`), so `'active'` is the correct
+state. Flagging only because the question would surface during
+fix-shape A (the RPC would write the state) and §7 should record
+that no change is intended. **Recommended: keep `'active'`.**
+
+##### Q3 — Backfill / one-time reconciliation pass?
+
+Production has zero orphans (1/1 sponsorships have memberships).
+**Recommended: no backfill.** The only orphans that could exist
+are pre-Pass-3a records, and the production query confirms there
+are none. The fix lands in a clean state.
+
+##### Q4 — Does the sponsor_invitations update (line 342–349) need the same treatment?
+
+The third write in the pledge flow — flipping the invitation to
+`'accepted'` — is already wrapped in try/catch + log + non-fatal.
+A failure here means the invitation row stays `'pending'`, which
+prevents a successful pledge from being followed by another
+attempt with the same `invite_token` (line 152 rejects on
+`status !== 'pending'`)… wait — actually a `'pending'` invitation
+with a successful pledge would let the SAME sponsor pledge again
+(same email, same auth user, would pass all checks). This is a
+secondary atomicity concern adjacent to F2. **Flagging for
+principal awareness; not in F2 scope as defined.** If A or B is
+chosen, the sponsor_invitations write naturally gets included in
+the same atomicity boundary and Q4 dissolves. If C or D is
+chosen, Q4 remains as a separate concerning-tier finding worth
+its own pass.
+
+#### Standing rules for execution (when this lands)
+
+- Migration only if Q1 → A (the RPC + supporting function).
+- Single commit covering route changes + (if A) migration.
+- `npx tsc --noEmit` before commit.
+- `git restore package.json package-lock.json` after any
+  incidental npm work (none anticipated).
+- Post-deploy: 45s wait → `list_deployments` for state=READY →
+  `get_runtime_logs` 10m window error+fatal → re-query the
+  Task 1 production data state (sponsorship + membership join)
+  to confirm no regression. The single live pledge row should
+  remain unchanged.
+
+#### What this plan does NOT do
+
+- Does not fix F4 (donation_rate persistence — Pass 4).
+- Does not address Q4's secondary sponsor_invitations atomicity
+  unless the chosen fix shape (A or B) absorbs it naturally.
+- Does not modify the access_token flow (F8 deferred per §6(e)).
+- Does not modify Stripe webhook behavior (Cluster 1 closed in
+  Pass 3b).
+
+#### PAUSE — F2 awaits sign-off on Q1.
+
+---
+
+### §7.2 — F23: companion/reflect dead-code retirement
+
+**Findings dispositioned.** F23 (the entire reflect/panel chain is
+orphan code), bundled with F16 (the spec anchor for retirement)
+and F15 (becomes moot when `companion_rate_limit` drops). The
+related orphan-cleanup F28 (`/api/commitments/[id]/posts` orphan)
+rides along per §6(e)'s "bundle with F23 in Pass 3f" disposition.
+
+**Pass 1 severity:** Concerning (upgrade).
+**Pass 2 verdict:** GENUINE-BUG (orphan cleanup). Spec anchors:
+`v4-decisions.md` decision #8 (rooms are primary);
+`chat-room-plan.md` §3 (Companion is a room-level entity).
+
+#### Pre-execution sanity checks (Task 1, completed this session)
+
+**File-level grep results at tip 4d3f4a5:**
+
+`grep -rn "companion-panel|CompanionPanel" src/`:
+- `src/components/companion-panel.tsx` (self-references at
+  lines 5, 106, 112, 116) — **zero external import sites**.
+
+`grep -rn "/api/companion/reflect" src/`:
+- `src/app/api/companion/reflect/route.ts` (self, line 8)
+- `src/lib/media.ts:3` — **stale comment** flagged in
+  userMemories; references the route in a list of importers
+- `src/components/companion-panel.tsx:140` — `fetch` call (also
+  being deleted)
+
+`grep -rn "COMPANION_SYSTEM_PROMPT|COMPANION_LAUNCH_SYSTEM_PROMPT" src/`:
+- `src/app/api/companion/reflect/route.ts:4` (import) and
+  line 183 (use of `COMPANION_SYSTEM_PROMPT`)
+- `src/lib/anthropic.ts` (definitions at lines 59 and 104; doc
+  comments referencing the names at lines 149, 178, 195)
+- **No live consumers outside `reflect/route.ts`.**
+  `COMPANION_LAUNCH_SYSTEM_PROMPT` has zero references anywhere
+  in `src/` outside its own definition.
+
+`grep -rn "companion_rate_limit" src/`:
+- `src/app/api/companion/reflect/route.ts:23, 101, 116` only.
+  **Single-route table.**
+
+**Live Companion-prompt constants (verified to remain after
+deletion):**
+- `COMPANION_MODEL` (used by `lib/companion/room.ts` at lines 5,
+  445, 563, 706 and `lib/companion/day90.ts` at lines 5, 169) —
+  **KEEP**.
+- `COMPANION_ROOM_SYSTEM_PROMPT` (used by `lib/companion/room.ts`
+  at lines 6, 38, 447, 565, 712) — **KEEP**.
+- `DAY90_SUMMARY_SYSTEM_PROMPT` (used by `lib/companion/day90.ts`
+  at lines 6, 17, 171) — **KEEP**.
+
+**BCD-arc dead-file inventory (per userMemories Session 5 list):**
+
+The userMemories list referenced ten files; the actual tree at
+4d3f4a5 contains the following. Several files in the userMemories
+list (`log/client.tsx`, `start/ritual`) **do not exist in the
+current tree** — already removed in earlier work (likely the v4.1
+Atomic Role Excision per Pass 1's note on F23). The remaining
+files break into three groups:
+
+- **Live redirect routers** (`/log/page.tsx` and the four retired
+  `/start/*` stages): each loads the user's most recent active
+  commitment and `redirect`s to `/room/[room_id]` or
+  `/dashboard`. They handle legacy bookmarks, email links, and
+  screenshot OCRs. Vercel runtime logs (30 days, queried this
+  session) confirm `/log` receives ~6 hits per visible window —
+  **the routers are doing real work.**
+- **Live onboarding stages** (`/start/page.tsx`,
+  `/start/practice/page.tsx`, `/start/commitment/page.tsx`):
+  these are the post-signup three-stage flow that
+  `/start/page.tsx` routes to. Load-bearing for new-user
+  onboarding. Not orphans; not in F23 scope.
+- **Genuine orphans** (`companion-panel.tsx`,
+  `companion/reflect/route.ts`, the two retired prompts in
+  `anthropic.ts`, `companion_rate_limit` table, F28's
+  `/api/commitments/[id]/posts/route.ts`): zero callers in tree;
+  zero live function; zero traffic in production logs.
+
+**Per-file decision table:**
+
+| File / object | LOC | Live callers in tree | Production traffic (30d) | Disposition |
+|---|---|---|---|---|
+| `src/components/companion-panel.tsx` | 380 | 0 | n/a (component) | **DELETE** |
+| `src/app/api/companion/reflect/route.ts` | 360 | 0 | 0 | **DELETE** |
+| `COMPANION_SYSTEM_PROMPT` (in `lib/anthropic.ts`) | ~45 lines (59–101) | only `reflect/route.ts` | n/a | **DELETE** |
+| `COMPANION_LAUNCH_SYSTEM_PROMPT` (in `lib/anthropic.ts`) | ~30 lines (104–131) | none in tree | n/a | **DELETE** |
+| Doc comments referencing the retired prompts (`anthropic.ts` lines 149, 178, 195) | ~3 lines | n/a | n/a | **FIX-COPY** (rewrite the references in the doc comments around `COMPANION_ROOM_SYSTEM_PROMPT` so they don't dangle) |
+| `companion_rate_limit` table | n/a (DB) | only `reflect/route.ts` | n/a | **DROP TABLE** (closes F15 per §6(e)) |
+| `src/lib/media.ts` line 3 (stale comment) | 1 line | n/a | n/a | **FIX-COPY** (remove `companion/reflect/route.ts` from the comment's reference list) |
+| `src/app/api/commitments/[id]/posts/route.ts` (F28 ride-along) | ~30 LOC | 0 | 0 (`/posts` query returned zero hits) | **DELETE** |
+| `src/app/api/commitments/[id]/start/route.ts` | 13 | 0 | not separately probed (low-volume tombstone) | **DEFER** (returns 410 Gone — David's call: KEEP-as-tombstone OR DELETE; see Q1 below) |
+| `src/app/log/page.tsx` | 37 | router | `/log` shows 307 redirects in 30d window | **KEEP** — live redirect router |
+| `src/app/log/layout.tsx` | 4 | only `log/page.tsx` | n/a | **KEEP** (passthrough; harmless) |
+| `src/app/start/launch/[id]/page.tsx` | 30 | router | not separately probed | **KEEP** — live redirect router |
+| `src/app/start/active/[id]/page.tsx` | 36 | router | not separately probed | **KEEP** — live redirect router |
+| `src/app/start/sponsor/page.tsx` | 27 | router | not separately probed | **KEEP** — live redirect router |
+| `src/app/start/companion/page.tsx` | 32 | router | not separately probed | **KEEP** — live redirect router |
+| `src/app/start/page.tsx` | 30 | live post-signup | (substring match returned 0 — Vercel API is sampled per userMemories pattern) | **KEEP** — load-bearing |
+| `src/app/start/practice/page.tsx` | 154 | live stage 1 | as above | **KEEP** |
+| `src/app/start/commitment/page.tsx` | 147 | live stage 2 | as above | **KEEP** (flagged for F44/F25 form-field cleanup in Pass 4) |
+| `src/app/api/profiles/route.ts` | 40 | live | not probed | **NOT IN F23 SCOPE** (F24 Pass-4 candidate) |
+| `src/app/api/profiles/visibility/route.ts` | 30 | live | not probed | **NOT IN F23 SCOPE** (F24 Pass-4 candidate) |
+
+**Net deletion scope:**
+- `companion-panel.tsx` (380 LOC) + `companion/reflect/route.ts`
+  (360 LOC) + `commitments/[id]/posts/route.ts` (~30 LOC) +
+  the two retired prompts in `anthropic.ts` (~75 LOC).
+- ~845 LOC removed (vs Pass 1's ~500 LOC estimate — the
+  difference is because Pass 1 didn't include the prompt LOC).
+- 1 table dropped (`companion_rate_limit`).
+- Two single-line FIX-COPY edits in `media.ts:3` and
+  `anthropic.ts` (cleanup of dangling doc references).
+
+**Resend template audit (this session):**
+
+Four files import `getResend` from `@/lib/resend`:
+- `src/app/api/sponsorships/[id]/action/route.ts`
+- `src/app/api/stripe/webhook/route.ts`
+- `src/app/api/sponsors/invite/route.ts`
+- `src/app/api/rooms/[id]/invite/route.ts`
+
+Grep across all four for retired path strings (`/log`,
+`/start/launch`, `/start/active`, `/start/ritual`,
+`/start/sponsor`, `/start/companion`, `/api/companion/reflect`):
+**only one match** — `webhook/route.ts:137`, which mentions
+`/login` in a comment (substring of `/log`), not a template URL.
+**No transactional email points at any retired surface.** No
+template updates needed before deletion.
+
+**Vercel runtime log audit (30-day window, this session):**
+
+| Path queried | 30d hits |
+|---|---|
+| `/api/companion/reflect` | 0 |
+| `/log` (substring) | 6 visible 307 redirects (the redirect router is in use) |
+| `/start/` and `start` (substring) | 0 — but this is sampled / partial per the broader Vercel-MCP truncation pattern; absence here does not prove absence everywhere |
+| `/posts` (substring) | 0 |
+
+The absence of `/api/companion/reflect` and `/posts` traffic
+across 30 days, combined with zero in-tree callers, is the
+authoritative basis for deleting those routes. The presence of
+`/log` traffic is the authoritative basis for keeping it.
+
+#### Open questions for principal sign-off
+
+##### Q1 — `/api/commitments/[id]/start/route.ts` (13-line 410-Gone tombstone): KEEP or DELETE?
+
+Returns 410 Gone with a clear retirement message. Stale clients
+calling it today see a clean diagnostic. If deleted, those clients
+get 404 instead. Both are acceptable, but the choice has a
+philosophical edge: 410 is the honest response when a path has
+been deliberately retired, and a tombstone preserves that signal
+for any external observer (third-party docs, screenshots,
+older versions of email templates). **Claude's recommendation:
+KEEP-as-tombstone.** Cost is 13 LOC; benefit is honest deprecation
+diagnostics. The principal may prefer DELETE for hygiene; either
+is safe.
+
+##### Q2 — `src/app/log/layout.tsx` (4-line passthrough): KEEP or DELETE?
+
+The layout is a no-op wrapper; `/log/page.tsx` is a redirect with
+no UI. Deletion has no functional impact. **Claude's
+recommendation: KEEP** — it's the kind of file that someone might
+re-create later when adding chrome to a new `/log` surface, and
+the cost of keeping it is 4 LOC. But DELETE is also clean and
+removes a file that does nothing.
+
+##### Q3 — Single migration for `companion_rate_limit` drop, or batch with future cleanup?
+
+The table is single-route and the route is being deleted. Dropping
+the table in the same commit/migration as the route deletion is
+the spec-aligned move. **Recommended: DROP TABLE
+companion_rate_limit** in the same Supabase migration as the code
+deletion lands (mirrored to repo). One migration file. Closes
+F15 (`companion_rate_limit` racy upsert) per §6(e)'s
+"becomes moot if F23 retires the table" disposition.
+
+##### Q4 — Per-file disposition: any objections?
+
+The table above is the recommendation. Principal review of the
+**DELETE** rows is the load-bearing sign-off. The **KEEP** rows
+(redirect routers, live onboarding) are documented for the audit
+trail; principal approval there is implicit. The two **FIX-COPY**
+edits (`media.ts`, `anthropic.ts` doc comments) are mechanical.
+
+#### Standing rules for execution (when this lands)
+
+- Single migration: `DROP TABLE companion_rate_limit;`. Mirror to
+  repo under `supabase/migrations/`.
+- Single code commit covering all DELETE + FIX-COPY rows in the
+  table above. Splitting commits would deploy a known-broken
+  intermediate state (e.g., `media.ts` referencing a deleted
+  route) — the deploy-atomicity exception in §2's completion
+  note (the 70%-mark rule yielding to deploy atomicity) applies.
+- `npx tsc --noEmit` before commit. The deletion of
+  `COMPANION_SYSTEM_PROMPT` and `COMPANION_LAUNCH_SYSTEM_PROMPT`
+  is structurally checked by `tsc` because the only consumer
+  (`reflect/route.ts`) is deleted in the same commit. No dangling
+  imports possible.
+- `git restore package.json package-lock.json` after any
+  incidental npm work (none anticipated).
+- Post-deploy: 45s wait → `list_deployments` for state=READY →
+  `get_runtime_logs` 10m window error+fatal. Re-query the
+  Task 1 grep results to confirm zero references to
+  `companion-panel`, `/api/companion/reflect`,
+  `COMPANION_SYSTEM_PROMPT`, `COMPANION_LAUNCH_SYSTEM_PROMPT`,
+  and `companion_rate_limit` remain anywhere in `src/`.
+- Schema verification: `SELECT 1 FROM information_schema.tables
+  WHERE table_schema='public' AND table_name='companion_rate_limit'`
+  — must return zero rows post-migration.
+
+#### What this plan does NOT do
+
+- Does not delete the live redirect routers (`/log`,
+  `/start/launch`, `/start/active`, `/start/sponsor`,
+  `/start/companion`). Production traffic confirms they are
+  doing real work.
+- Does not touch `/api/profiles` or `/api/profiles/visibility`
+  — those are F24 (Pass 4 candidate per §6(h)), not F23.
+- Does not modify `/start/page.tsx`, `/start/practice/page.tsx`,
+  or `/start/commitment/page.tsx` — load-bearing live
+  onboarding. F44/F25 form-field cleanup remains a Pass 4
+  candidate per §6(h).
+- Does not consolidate `COMPANION_MODEL`,
+  `COMPANION_ROOM_SYSTEM_PROMPT`, or `DAY90_SUMMARY_SYSTEM_PROMPT`
+  — those are the live constants; no change to them.
+
+#### PAUSE — F23 awaits sign-off on Q1, Q2, Q3, Q4 (and the disposition table).
+
+---
