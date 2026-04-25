@@ -1,7 +1,34 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isCurrentUserAdmin } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { isInstitutionalPortalEnabled } from '@/lib/feature-flags'
+
+// Institution enrollment route.
+//
+// Pass 5 §2 (F24 pattern): the SSR client is retained for
+// `auth.getUser()` (cookie-bound — that's correct) and for the
+// `get_user_id_by_email` RPC (a read; F24 specifically targets writes
+// that silently no-op under JWT-propagation failure, and the RPC is
+// SECURITY DEFINER on the database side anyway). Every write — the
+// membership INSERT and the `profiles.institution_id` UPDATE — runs
+// on the service client. The institution lookup that gates access
+// also runs on the service client, mirroring the dashboard and
+// members pages: a silent-empty here from JWT-propagation failure
+// would bounce a legitimate institution contact to 404.
+//
+// Authorization is layered:
+//   1. Authentication: SSR `auth.getUser()` (gate at the door).
+//   2. Access: caller email matches `institution.contact_email` OR
+//      caller is platform admin (the existing application-layer gate).
+//   3. Authorization on writes: explicit WHERE-clause filters tie
+//      every write to the `institution_id` from the URL path and the
+//      `targetUserId` resolved from email — both of which are values
+//      the access gate above has already validated. RLS becomes
+//      defense-in-depth.
+//
+// Mirrors the F24 shape settled at /api/profiles and
+// /api/profiles/visibility (Pass 4 §3) and the Pass 3d migration at
+// /api/admin/users (commit b3fe91c).
 
 export async function POST(
   request: Request,
@@ -11,8 +38,10 @@ export async function POST(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  // Auth gate — SSR client, cookie-bound.
+  const ssr = await createClient()
+  const { data: { user } } = await ssr.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
@@ -25,8 +54,15 @@ export async function POST(
     return NextResponse.json({ error: 'Maximum 50 emails per request.' }, { status: 400 })
   }
 
-  // Verify caller is institution contact or admin
-  const { data: institution } = await supabase
+  // Service client for the access-gating institution lookup and all
+  // subsequent writes. SSR client retained above only for the auth
+  // check and below for the per-email RPC read.
+  const db = createServiceClient()
+
+  // Verify caller is institution contact or admin. Service-client
+  // read because a silent-empty on this lookup would bounce a
+  // legitimate contact_email to 404.
+  const { data: institution } = await db
     .from('institutions')
     .select('contact_email')
     .eq('id', id)
@@ -48,8 +84,9 @@ export async function POST(
   const cleanEmails = emails.map((e) => e.trim().toLowerCase()).filter(Boolean)
 
   for (const email of cleanEmails) {
-    // Look up user by email via RPC
-    const { data: targetUserId, error: rpcError } = await supabase
+    // Look up user by email via RPC. SECURITY DEFINER on the database
+    // side; SSR client is fine here — F24 targets writes specifically.
+    const { data: targetUserId, error: rpcError } = await ssr
       .rpc('get_user_id_by_email', { p_email: email })
 
     if (rpcError || !targetUserId) {
@@ -57,8 +94,10 @@ export async function POST(
       continue
     }
 
-    // Check if already a member
-    const { data: existing } = await supabase
+    // Check if already a member — service client to avoid the silent-
+    // empty pattern that would let us double-insert under a JWT-
+    // propagation failure.
+    const { data: existing } = await db
       .from('institution_memberships')
       .select('id')
       .eq('institution_id', id)
@@ -70,8 +109,11 @@ export async function POST(
       continue
     }
 
-    // Insert membership
-    const { error: insertError } = await supabase
+    // Insert membership — service client. Authorization on this write
+    // is the WHERE-clause: `institution_id = id` is the value the
+    // access gate above just validated, and `user_id = targetUserId`
+    // came from the SECURITY DEFINER RPC.
+    const { error: insertError } = await db
       .from('institution_memberships')
       .insert({ institution_id: id, user_id: targetUserId })
 
@@ -85,8 +127,9 @@ export async function POST(
       continue
     }
 
-    // Update profiles.institution_id
-    await supabase
+    // Update profiles.institution_id — service client. WHERE-clause
+    // ties the write to the targetUserId resolved above.
+    await db
       .from('profiles')
       .update({ institution_id: id })
       .eq('user_id', targetUserId)
