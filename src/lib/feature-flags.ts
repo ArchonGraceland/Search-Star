@@ -14,14 +14,7 @@
 import { notFound } from 'next/navigation'
 
 export function isInstitutionalPortalEnabled(): boolean {
-  // PASS-5-VERIFICATION-OVERRIDE — temporary hardcoded `true` so the
-  // F25 fix can be exercised on production infra without touching the
-  // Vercel env config. To be reverted in the immediately following
-  // commit. If you are reading this in main, the verification window
-  // did not close cleanly — revert this line and the institutional
-  // surface will go back to flag-gated.
-  return true
-  // return process.env.INSTITUTIONAL_PORTAL_ENABLED === 'true'
+  return process.env.INSTITUTIONAL_PORTAL_ENABLED === 'true'
 }
 
 /**
