@@ -1,9 +1,19 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+// Profile self-update route.
+//
+// Pass 4 §3 (F24): the SSR client is retained for `auth.getUser()`
+// (cookie-bound — that's correct), but the UPDATE itself runs on the
+// service client. Authorization is by the explicit `user.id` carried
+// into the WHERE clause — RLS is defense-in-depth, not the primary
+// gate. This mirrors the Pass 3d migration shape at
+// /api/admin/users (commit b3fe91c) and the broader SSR-bug sweep
+// in commits 0710ce4 / 1dccc46 / 501d976 / 0f28db9.
+
 export async function PATCH(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const ssr = await createClient()
+  const { data: { user } } = await ssr.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -26,7 +36,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true })
   }
 
-  const { error } = await supabase
+  const db = createServiceClient()
+  const { error } = await db
     .from('profiles')
     .update(updates)
     .eq('user_id', user.id)
