@@ -1,6 +1,6 @@
 // Shared media URL classifiers. Imported by the Companion's image-passthrough
 // and video-transcription logic (src/lib/companion/media.ts,
-// src/lib/companion/day90.ts, src/app/api/companion/reflect/route.ts) AND by
+// src/lib/companion/day90.ts) AND by
 // the room message renderer (src/app/room/[id]/room-message.tsx) so URL
 // classification stays consistent across every place a practitioner's media
 // is read or rendered.
