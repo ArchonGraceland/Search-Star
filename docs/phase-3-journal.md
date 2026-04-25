@@ -244,7 +244,22 @@ one prompt change next week, what would it be?)*
 > rather than waiting for Phase 4, log it here with the date,
 > commit hash, and rationale.
 
-- *(empty — fill in if interim changes are made)*
+- **2026-04-25, commit `25e2b88` — auto-scroll to latest on mount.**
+  Not a prompt change; a UX change to the room render path
+  (`src/app/room/[id]/realtime-messages.tsx`). Motivation: opening
+  the room on mobile required scrolling all the way down past 90+
+  messages to see the latest message and reach the composer.
+  Mount-only `scrollIntoView({block:'end'})` lands the viewer at the
+  bottom on first paint. Realtime appends do NOT auto-scroll —
+  preserves "scroll up to read older context" as a stable behavior.
+  Order is unchanged (still ascending-chronological per
+  chat-room-plan §5 Phase 2 item 5). Watch in pilot: does the
+  absence of "stick to bottom on append" feel right, or do new
+  messages from Rick / the Companion get lost below the fold while
+  scrolled up reading? If lost-below-fold is real, the next
+  iteration is the Slack/iMessage "stick to bottom only when
+  already near bottom" pattern (see Phase 4 candidate changes
+  list above).
 
 ---
 
