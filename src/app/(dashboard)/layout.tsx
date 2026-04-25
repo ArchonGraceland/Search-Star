@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isCurrentUserAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
@@ -16,7 +17,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('user_id', user.id)
     .single()
 
-  const isAdmin = user.user_metadata?.role === 'admin'
+  // Pass 3d (Cluster 3, F27): admin bit via the canonical helper —
+  // service-client read of profiles.role, defends against the
+  // @supabase/ssr JWT-propagation bug.
+  const isAdmin = await isCurrentUserAdmin()
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard' },

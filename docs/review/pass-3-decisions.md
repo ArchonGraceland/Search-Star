@@ -565,3 +565,290 @@ were sufficient for tsc verification when it ran).
   code) NOT yet executed — Pass 3e candidates.
 
 ---
+
+## §4 — Cluster 3 role-check consolidation: plan for principal review
+
+Pass 3d. Closes F11, F27, F33, F34, F42 by routing every admin
+detection through a single canonical helper backed by `profiles.role`
+(landed in Pass 3a). 13 call sites, 4 mechanisms, 0 agreement
+collapse to 1 mechanism.
+
+### Pre-execution sanity checks (Task 1, completed this session)
+
+**(1a) Call-site count, stable at 13.** Re-grepped at tip `383567e`.
+The Pass 3c analytics-route deletion removed one F34 site (Pass 1
+inventory line 447); the count went from 14 in Pass 1 to 13 in 3d.
+None of 3a/3b/3c incidentally rewrote any other role check — every
+remaining mechanism site is exactly as Pass 1 catalogued it.
+
+| # | File:line | Current mechanism | Finding |
+|---|---|---|---|
+| 1 | `src/app/admin/layout.tsx:38` | `profiles.role === 'admin'` (service client) | F11 |
+| 2 | `src/app/admin/donations/page.tsx:96` | `profiles.role` defense-in-depth re-check (service client) | F11 |
+| 3 | `src/app/api/admin/companion/milestone/route.ts` | `profiles.role` (SSR client) | F11 |
+| 4 | `src/app/api/admin/tickets/route.ts` (POST + PATCH share `checkAdmin`) | `profiles.role` (SSR anon — F38) | F11 |
+| 5 | `src/app/(dashboard)/layout.tsx:19` | `user_metadata.role === 'admin'` | F27 |
+| 6 | `src/app/admin/page.tsx:12` | `user_metadata.role !== 'admin'` | F34 |
+| 7 | `src/app/api/admin/users/route.ts:25` | `user_metadata.role !== 'admin'` (F38: anon-client write) | F34 |
+| 8 | `src/app/institution/[id]/dashboard/page.tsx:81` | `user_metadata.role === 'admin'` override | F34 (gated by 3c) |
+| 9 | `src/app/institution/[id]/members/page.tsx:58` | `user_metadata.role === 'admin'` override | F34 (gated by 3c) |
+| 10 | `src/app/api/institution/[id]/enroll/route.ts:37` | `user_metadata.role === 'admin'` override | F34 (gated by 3c) |
+| 11 | `src/app/(auth)/login/page.tsx:56–57` | `user_metadata.role === 'platform'` → `/platform` | F42 |
+| 12 | DB `is_admin()` function | `profiles.role = 'admin'` (correct post-3a) | F33 |
+| 13 | RLS policies on `support_tickets`, `ticket_messages` | call `is_admin()` | F33 chain |
+
+**(1b) `is_admin()` function body.** Live DB inspection:
+
+```sql
+CREATE OR REPLACE FUNCTION public.is_admin()
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE user_id = auth.uid() AND role = 'admin'
+  );
+$function$
+```
+
+The function reads `profiles.role = 'admin'` correctly. Pre-3a it was
+broken (column missing); post-3a it works as written. **Decision 3
+disposition: (a) keep, no repair, no drop.** No DDL needed for the
+function in 3d.
+
+**(1c) RLS dependents.** Four policies, not the three the inventory
+listed:
+
+| Table | Policy | cmd | qual / with_check |
+|---|---|---|---|
+| `support_tickets` | Admins read all tickets | SELECT | `is_admin()` |
+| `support_tickets` | Admins update all tickets | UPDATE | `is_admin()` |
+| `ticket_messages` | Admins read all ticket_messages | SELECT | `is_admin()` |
+| `ticket_messages` | Admins insert ticket_messages | INSERT | `is_admin()` (with_check) |
+
+All four work post-3a. The inventory at line 449 missed the INSERT
+policy — minor inventory drift, not load-bearing. Pass 3d does not
+need to rewrite any of these.
+
+**(1d) Column state.** Live DB:
+
+- `profiles.role`: `text`, nullable, no default
+- CHECK constraint `profiles_role_check`: `((role IS NULL) OR (role = 'admin'::text))`
+- Distribution: 1 row `role='admin'` (David, `c5370edf-…`), 27 rows
+  `role IS NULL`, total 28.
+
+**Two corrections to the handoff prompt the actual state forces:**
+
+(i) The handoff said the CHECK allows `('user', 'admin', 'platform')`.
+The actual constraint is `IS NULL OR = 'admin'` — `NULL` is the
+non-admin state, there's no `'user'` literal, and `'platform'` was
+never permitted. The Task 3 sub-step "tighten CHECK to drop
+`'platform'`" is moot.
+
+(ii) The handoff framed the helper as needing the service client
+because of "F40 lesson". The F40 lesson was about reading *another
+user's* profile under owner-only RLS. For "is the *current* user an
+admin," `profiles` SELECT RLS is owner-full-access — the SSR (anon)
+client reading the caller's own row is sufficient and correct.
+
+**(1e) Production baselines.**
+
+- `commitments`: 2 active, 0 completed, 0 abandoned (one extra row
+  vs 3c — re-verified, unchanged from 3c session close, the count
+  was correct then too)
+- `sponsorships`: 1 pledged, 0 paid, 0 released
+- `support_tickets`: 0 rows. `ticket_messages`: 0 rows. The
+  ticket-admin write paths are dead code in production today; their
+  consolidation is correctness work, not an incident fix.
+- `profiles.role`: 1 admin, 27 NULL
+
+### Principal sign-offs needed before execution
+
+**Q1 — Helper shape.** Three options on the table:
+
+(i) Inline: each call site queries `profiles.role` directly. No
+helper. Most repetitive.
+
+(ii) **Recommended.** Helper(s) in `src/lib/auth.ts`:
+
+```ts
+// Read the current user's admin bit. SSR client is sufficient
+// because profiles RLS is owner-full-access for SELECT.
+export async function isCurrentUserAdmin(
+  supabase: SupabaseClient
+): Promise<boolean>
+
+// One-shot guard for admin server pages and route handlers. Returns
+// the user if admin; redirects to /dashboard (pages) or returns null
+// for the route handler to 403 (routes). Two flavors because
+// redirect() doesn't compose with route handlers' Response shape.
+export async function requireAdminPage(): Promise<{ user, supabase }>
+export async function requireAdminApi(): Promise<{ user, supabase } | null>
+```
+
+(iii) Middleware-based gate at `/admin/*` and `/api/admin/*`. Cleanest
+for that surface but doesn't help non-admin role checks (the F42
+`/platform` branch in `/login`). Mixing middleware and helper-based
+gating across the same finding is more surface area than (ii).
+
+Recommendation: **(ii) helper-based.** Rationale: 12 of 13 sites
+follow the same shape ("am I admin? if not, redirect or 403"), so
+inlining would copy the same six lines twelve times. Pages need
+`redirect()` from `next/navigation`, route handlers need `NextResponse`
+JSON, hence two thin wrappers around one core check.
+
+**Q2 — Service client vs SSR client for the role read.**
+
+Inside the helper, use the **service client** for the role lookup —
+not the SSR client. The Task 1 plan recommended SSR on the basis
+that owner-full-access RLS makes elevation unnecessary, but a closer
+read of `src/app/admin/layout.tsx:18–22` flips this:
+
+> Data reads via service client. This layout is the admin gate — a
+> silent empty read (the @supabase/ssr JWT-propagation bug
+> documented in commits 0710ce4 / 1dccc46 / 501d976 / 0f28db9) would
+> boot a real admin out to /dashboard at line 30 even with valid
+> creds. Authorization is still enforced at the app layer via the
+> profile.role === 'admin' check.
+
+The known SSR JWT-propagation bug means owner-RLS reads can silently
+return empty even for the row's owner. Under SSR, an admin's
+`profiles.role` lookup could come back `null` and boot them. The
+service client bypasses RLS entirely, so the read is reliable. Auth
+is still owned by the explicit `getUser()` check at the top of the
+helper — the service-client read is just looking up the role bit
+once that's known.
+
+This matches the convention every other admin gate in the repo
+already uses (call sites 1, 2). 3d brings call sites 3, 4, 5, 6, 7,
+8, 9, 10 into the same convention.
+
+**Writes:** the two F38 sites — `/api/admin/users` (call site 7) and
+`/api/admin/tickets` (call site 4) — also need service-client writes,
+since their current anon-client writes either silently no-op
+(`/api/admin/users` against owner-only `profiles` RLS) or depend on
+`is_admin()` RLS policies whose stability we shouldn't rely on for
+correctness. Service-client writes after the explicit auth check
+match the rest of the codebase.
+
+**Q3 — DB `is_admin()` disposition.** Per Task 1(b): **(a) keep**.
+The function is correct post-3a. RLS policies that depend on it work.
+Dropping it would force rewriting four RLS policies for no benefit.
+Keeping it preserves the option to push more admin gating down to
+RLS later if that becomes attractive.
+
+**Q4 — F42 `/platform` branch.** Per Decision 2 (already approved):
+delete outright. The login `onSuccess` collapse is:
+
+```ts
+// Before
+const role = data.user?.user_metadata?.role
+if (role === 'platform') {
+  router.push('/platform')
+} else {
+  router.push(returnTo ?? '/dashboard')
+}
+
+// After
+router.push(returnTo ?? '/dashboard')
+```
+
+The `role` local variable goes away. No CHECK constraint change is
+needed because the constraint never permitted `'platform'` in the
+first place; no production row carries the value.
+
+### Proposed execution shape (pending Q1–Q4 sign-off)
+
+**One commit, application-layer only, no migrations.**
+
+Files touched (~13):
+
+| # | File | Change |
+|---|---|---|
+| — | `src/lib/auth.ts` | NEW. Exports `isCurrentUserAdmin`, `requireAdminPage`, `requireAdminApi`. ~40 LOC. |
+| 1 | `src/app/admin/layout.tsx` | Replace inline service-client `profiles.role` lookup with `requireAdminPage()`. |
+| 2 | `src/app/admin/donations/page.tsx` | Drop the defense-in-depth re-check entirely; the layout gate is now reliable. |
+| 3 | `src/app/api/admin/companion/milestone/route.ts` | Replace SSR `profiles.role` lookup with `requireAdminApi()`. |
+| 4 | `src/app/api/admin/tickets/route.ts` | Replace `checkAdmin` with `requireAdminApi()`; switch the writes from the anon SSR client to `createServiceClient()` (F38 fix piggybacked). |
+| 5 | `src/app/(dashboard)/layout.tsx` | Replace `user.user_metadata?.role === 'admin'` with `await isCurrentUserAdmin(supabase)`. |
+| 6 | `src/app/admin/page.tsx` | Replace `user.user_metadata?.role !== 'admin'` with `requireAdminPage()`. |
+| 7 | `src/app/api/admin/users/route.ts` | Replace `user_metadata.role` check with `requireAdminApi()`; switch writes to service client (F38 fix). |
+| 8 | `src/app/institution/[id]/dashboard/page.tsx` | Swap `user_metadata.role === 'admin'` for `await isCurrentUserAdmin(supabase)`. (Surface still gated by 3c flag — keeping it internally consistent for v4.8.) |
+| 9 | `src/app/institution/[id]/members/page.tsx` | Same as 8. |
+| 10 | `src/app/api/institution/[id]/enroll/route.ts` | Same shape with `isCurrentUserAdmin`. (Route still 404s behind 3c flag.) |
+| 11 | `src/app/(auth)/login/page.tsx` | Delete the `role === 'platform'` branch per Q4. Collapse to `router.push(returnTo ?? '/dashboard')`. |
+| — | `docs/review/pass-3-decisions.md` | This §4 plan + the completion note appended after deploy. |
+
+Inside the helpers, the role read is:
+
+```ts
+const db = createServiceClient()
+const { data } = await db
+  .from('profiles')
+  .select('role')
+  .eq('user_id', user.id)
+  .maybeSingle()
+return data?.role === 'admin'
+```
+
+The service client bypasses RLS. Auth is still gated by the
+explicit `getUser()` check at the top of the helper — the
+service-client read just looks up the role bit reliably (defends
+against the @supabase/ssr JWT-propagation bug per
+`admin/layout.tsx:18–22`). No DB function call (no
+`rpc('is_admin')`). The `is_admin()` function continues to exist
+for the four RLS policies that use it.
+
+### What this plan does NOT do
+
+- **Does not drop or modify `is_admin()`.** It works post-3a and is
+  load-bearing for four RLS policies.
+- **Does not modify the `profiles_role_check` constraint.** Already
+  the right shape (`IS NULL OR = 'admin'`).
+- **Does not touch RLS policies.** The four `is_admin()`-dependent
+  policies on `support_tickets` / `ticket_messages` work as-is.
+- **Does not address F36** (`commitments.title` selected on a column
+  that doesn't exist). Out of cluster scope. Pass 3e or later.
+- **Does not address F37** (`select('id')` on `profiles` returning
+  undefined). Out of cluster scope.
+- **Does not address F2** (room_membership upsert atomicity) or F23
+  (companion/reflect dead-code retirement). Pass 3e candidates per
+  3c completion note.
+- **Does not introduce a Practitioner / Sponsor role distinction in
+  `profiles.role`.** v4 decision #5 retired Mentor/Coach/CB/PL but
+  did not introduce a `role` value to distinguish Practitioners from
+  Sponsors — every user is potentially both. The CHECK stays at
+  `IS NULL OR = 'admin'`.
+
+### Standing rules for execution
+
+- `npx tsc --noEmit` before commit, with the 3c retro's tool-budget
+  judgment: if the session approaches 70% with tsc still pending,
+  push unverified and rely on Vercel's build pipeline (which runs
+  tsc on every deploy) for the final check. The change set here is
+  more code-touching than 3c, so tsc is more meaningful — but not
+  worth losing the commit.
+- `git restore package.json package-lock.json` after any `npm install`.
+- Single-commit landing on `main`. Deploy is automatic.
+- 45-second wait, then `list_deployments` for `state=READY` against
+  the new SHA.
+- `get_runtime_logs` production, `level=['error','fatal']`,
+  `since='15m'` post-deploy.
+- Spot-check `/admin` (200 for David) and a non-admin path returning
+  403 / redirect from a curl test if cookie material is on hand;
+  otherwise verify via Vercel logs that admin routes don't 500.
+- Re-query baselines at the end. Append §4 completion note.
+
+### Awaiting principal sign-off on Q1, Q2, Q3, Q4
+
+Q1: Helper shape (recommend ii — `isCurrentUserAdmin`,
+`requireAdminPage`, `requireAdminApi` in `src/lib/auth.ts`).
+Q2: Service client for the role read (per `admin/layout.tsx:18–22`
+SSR JWT-propagation comment); service client for writes in the two
+F38 sites (call sites 4 and 7).
+Q3: Keep `is_admin()` (a). No DDL.
+Q4: Delete the `/platform` branch outright. Collapse login to
+`router.push(returnTo ?? '/dashboard')`.
+
+PAUSE before executing.
+
+---

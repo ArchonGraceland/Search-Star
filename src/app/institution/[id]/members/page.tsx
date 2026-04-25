@@ -1,4 +1,5 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { isCurrentUserAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { requireInstitutionalPortal } from '@/lib/feature-flags'
@@ -55,7 +56,7 @@ export default async function InstitutionMembersPage({
 
   if (!institution) redirect('/login')
 
-  const isAdmin = user.user_metadata?.role === 'admin'
+  const isAdmin = await isCurrentUserAdmin()
   if (institution.contact_email !== user.email && !isAdmin) redirect('/dashboard')
 
   // Paginated memberships

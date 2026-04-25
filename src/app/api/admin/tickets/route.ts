@@ -1,45 +1,23 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { requireAdminApi } from '@/lib/auth'
 
-async function getAdminClient() {
-  const cookieStore = await cookies()
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } catch { /* server component */ }
-        },
-      },
-    }
-  )
-}
-
-async function checkAdmin(supabase: ReturnType<typeof createServerClient>) {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'admin') return null
-  return user
-}
+// Admin ticket reply / status route.
+//
+// Pass 3d (Cluster 3, F11/F34/F38): the inline `checkAdmin` (which read
+// profiles.role through the SSR anon client) and the inline anon-client
+// writes are replaced with `requireAdminApi` (canonical service-client
+// role read) plus service-client writes. The previous shape depended on
+// the `is_admin()` RLS policies on support_tickets / ticket_messages
+// being correct — under Pass 3a those policies do work, but
+// service-client writes after an explicit auth check is the convention
+// every other admin surface in this repo already uses.
 
 // POST — Admin reply to ticket
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getAdminClient()
-    const admin = await checkAdmin(supabase)
-    if (!admin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
+    const guard = await requireAdminApi()
+    if (guard instanceof NextResponse) return guard
 
     const body = await request.json()
     const { ticket_id, body: msgBody, author_id } = body
@@ -48,8 +26,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    const db = createServiceClient()
+
     // Insert message
-    const { error: msgError } = await supabase
+    const { error: msgError } = await db
       .from('ticket_messages')
       .insert({
         ticket_id,
@@ -63,14 +43,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Auto-update ticket status to in_progress if it was open
-    const { data: ticket } = await supabase
+    const { data: ticket } = await db
       .from('support_tickets')
       .select('status')
       .eq('id', ticket_id)
       .single()
 
     if (ticket && ticket.status === 'open') {
-      await supabase
+      await db
         .from('support_tickets')
         .update({ status: 'in_progress', updated_at: new Date().toISOString() })
         .eq('id', ticket_id)
@@ -86,11 +66,8 @@ export async function POST(request: NextRequest) {
 // PATCH — Update ticket status
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await getAdminClient()
-    const admin = await checkAdmin(supabase)
-    if (!admin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
+    const guard = await requireAdminApi()
+    if (guard instanceof NextResponse) return guard
 
     const body = await request.json()
     const { ticket_id, status } = body
@@ -103,7 +80,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
-    const { error: updateError } = await supabase
+    const db = createServiceClient()
+    const { error: updateError } = await db
       .from('support_tickets')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', ticket_id)

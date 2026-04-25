@@ -1,6 +1,6 @@
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { requireAdminPage } from '@/lib/auth'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,25 +79,15 @@ export default async function AdminDonationsPage({
 }: {
   searchParams: Promise<{ range?: string }>
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // Admin gate via the canonical helper — defense-in-depth on top of
+  // /admin/layout.tsx so this route stays safe if the layout is ever
+  // bypassed. Pass 3d (Cluster 3) collapsed the inline profiles.role
+  // re-check into the same helper the layout uses.
+  await requireAdminPage()
 
-  // All data reads below use the service client. Admin/layout.tsx gates
-  // this route; the defense-in-depth re-check of profiles.role that follows
-  // also runs through the service client. See commits 0710ce4 / 1dccc46 /
-  // 501d976 / 0f28db9 for the JWT-propagation bug writeup.
+  // All data reads below use the service client. See commits 0710ce4 /
+  // 1dccc46 / 501d976 / 0f28db9 for the JWT-propagation bug writeup.
   const db = createServiceClient()
-
-  // Admin layout already gates access via profiles.role === 'admin', but
-  // defense in depth: re-check here so this route is safe if the layout
-  // is ever bypassed.
-  const { data: profile } = await db
-    .from('profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
-  if (!profile || profile.role !== 'admin') redirect('/dashboard')
 
   const params = await searchParams
   const range = parseRange(params?.range)

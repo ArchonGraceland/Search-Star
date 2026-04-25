@@ -1,20 +1,20 @@
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { requireAdminPage } from '@/lib/auth'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export default async function AdminDashboard() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || user.user_metadata?.role !== 'admin') redirect('/dashboard')
+  // Admin gate via the canonical helper — Pass 3d (Cluster 3, F34)
+  // collapsed the prior `user_metadata.role` check onto a service-
+  // client read of profiles.role.
+  await requireAdminPage()
 
-  // Data reads via service client per 9b migration. The JWT role check above
-  // reads from user_metadata (a JWT claim), not a DB table, so it doesn't
-  // need the service client. See commits 0710ce4 / 1dccc46 / 501d976 /
-  // 0f28db9 for the full SSR JWT-propagation writeup.
+  // Data reads via service client per 9b migration. See commits
+  // 0710ce4 / 1dccc46 / 501d976 / 0f28db9 for the JWT-propagation
+  // bug writeup.
   const db = createServiceClient()
 
   // Platform stats

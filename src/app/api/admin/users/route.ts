@@ -1,39 +1,22 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { requireAdminApi } from '@/lib/auth'
 
-async function getAdminClient() {
-  const cookieStore = await cookies()
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } catch { /* server component */ }
-        },
-      },
-    }
-  )
-}
-
-async function checkAdmin(supabase: ReturnType<typeof createServerClient>) {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  // Admin role lives in user_metadata in v3
-  if (user.user_metadata?.role !== 'admin') return null
-  return user
-}
+// Admin user-management route.
+//
+// Pass 3d (Cluster 3, F34/F38): the inline `user_metadata.role` check
+// and the inline anon-client writes are replaced with `requireAdminApi`
+// (canonical service-client role read) plus service-client writes. The
+// previous shape silently no-op'd because `profiles` RLS is owner-only
+// and the SSR anon client's auth.uid() never matched the target row.
 
 const VALID_STAGES = ['seedling', 'rooting', 'growing', 'established', 'mature']
 
 // PATCH — update trust_stage (mentor_role was retired in v4; profiles.mentor_role column is dormant)
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await getAdminClient()
-    const admin = await checkAdmin(supabase)
-    if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    const guard = await requireAdminApi()
+    if (guard instanceof NextResponse) return guard
 
     const body = await request.json()
     const { user_id, trust_stage } = body
@@ -53,7 +36,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
 
-    const { error: updateError } = await supabase
+    const db = createServiceClient()
+
+    const { error: updateError } = await db
       .from('profiles')
       .update(updates)
       .eq('user_id', user_id)
@@ -62,7 +47,7 @@ export async function PATCH(request: NextRequest) {
 
     // Mirror trust_stage to trust_records if updated
     if (updates.trust_stage) {
-      await supabase
+      await db
         .from('trust_records')
         .update({ stage: updates.trust_stage, updated_at: new Date().toISOString() })
         .eq('user_id', user_id)

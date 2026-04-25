@@ -53,14 +53,11 @@ function LoginForm() {
         return
       }
 
-      const role = data.user?.user_metadata?.role
-      if (role === 'platform') {
-        router.push('/platform')
-        router.refresh()
-      } else {
-        router.push('/dashboard')
-        router.refresh()
-      }
+      // Pass 3d (Cluster 3, F42): the prior `user_metadata.role==='platform'`
+      // branch routed to /platform, a v3-retired surface that 404s. No users
+      // carry the role; v4 has no platform-admin tier. Branch deleted.
+      router.push('/dashboard')
+      router.refresh()
     }
   }
 

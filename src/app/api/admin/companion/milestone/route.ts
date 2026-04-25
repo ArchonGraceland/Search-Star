@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { requireAdminApi } from '@/lib/auth'
 import { generateCompanionRoomMilestone } from '@/lib/companion/room'
 
 // POST /api/admin/companion/milestone
@@ -9,11 +10,12 @@ import { generateCompanionRoomMilestone } from '@/lib/companion/room'
 // Derives the room_id from the commitment server-side so the client
 // cannot inject a mismatched pair.
 //
-// Auth pattern mirrors src/app/api/admin/tickets/route.ts: the cookie-
-// based SSR client authenticates the user and checks profiles.role =
-// 'admin'; the service-role client handles the actual write (Companion
-// message types have no RLS insert policy for user auth contexts — only
-// the server can write companion_* rows).
+// Auth via the canonical `requireAdminApi` helper (Pass 3d Cluster 3
+// consolidation): service-client read of profiles.role, defends
+// against the @supabase/ssr JWT-propagation bug. Service client also
+// handles the actual write (Companion message types have no RLS
+// insert policy for user auth contexts — only the server can write
+// companion_* rows).
 //
 // Non-idempotent by design. Calling twice produces two rows; the
 // operator can see both in the room and delete one. Session 2's cron
@@ -32,21 +34,9 @@ function isAllowedDay(n: unknown): n is AllowedDay {
 
 export async function POST(request: NextRequest) {
   try {
-    // Auth via cookie-based SSR client.
-    const ssr = await createClient()
-    const { data: { user } } = await ssr.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: profile } = await ssr
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    // Admin gate via the canonical helper.
+    const guard = await requireAdminApi()
+    if (guard instanceof NextResponse) return guard
 
     // Parse body.
     let body: unknown

@@ -1,4 +1,5 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { isCurrentUserAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { requireInstitutionalPortal } from '@/lib/feature-flags'
@@ -77,8 +78,9 @@ export default async function InstitutionDashboardPage({
 
   if (!institution) redirect('/login')
 
-  // Verify access: contact_email must match or platform admin
-  const isAdmin = user.user_metadata?.role === 'admin'
+  // Verify access: contact_email must match or platform admin (Pass 3d
+  // canonical helper — service-client read of profiles.role).
+  const isAdmin = await isCurrentUserAdmin()
   if (institution.contact_email !== user.email && !isAdmin) redirect('/dashboard')
 
   // Member count

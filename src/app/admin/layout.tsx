@@ -1,5 +1,5 @@
-import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { createServiceClient } from '@/lib/supabase/server'
+import { requireAdminPage } from '@/lib/auth'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 
@@ -8,32 +8,23 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Admin gate via the canonical helper — service-client read of
+  // profiles.role per Pass 3d (Cluster 3 consolidation). Defends
+  // against the @supabase/ssr JWT-propagation bug (commits 0710ce4 /
+  // 1dccc46 / 501d976 / 0f28db9) by bypassing RLS for the role read.
+  const user = await requireAdminPage()
 
-  if (!user) {
-    redirect('/login')
-  }
-
-  // Data reads via service client. This layout is the admin gate — a silent
-  // empty read (the @supabase/ssr JWT-propagation bug documented in commits
-  // 0710ce4 / 1dccc46 / 501d976 / 0f28db9) would boot a real admin out to
-  // /dashboard at line 30 even with valid creds. Authorization is still
-  // enforced at the app layer via the profile.role === 'admin' check.
+  // Data reads via service client below for the same reason.
   const db = createServiceClient()
 
-  // Check admin role
+  // Display-name lookup for the sidebar.
   const { data: profile } = await db
     .from('profiles')
-    .select('role, display_name')
+    .select('display_name')
     .eq('user_id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'admin') {
-    redirect('/dashboard')
-  }
-
-  const displayName = profile.display_name || user.email?.split('@')[0] || 'Admin'
+  const displayName = profile?.display_name || user.email?.split('@')[0] || 'Admin'
 
   // Get unresolved ticket count for badge
   const { count: openTickets } = await db

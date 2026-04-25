@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isCurrentUserAdmin } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { isInstitutionalPortalEnabled } from '@/lib/feature-flags'
 
@@ -34,7 +35,7 @@ export async function POST(
   if (!institution) return NextResponse.json({ error: 'Not found.' }, { status: 404 })
 
   const callerEmail = user.email ?? ''
-  const isAdmin = user.user_metadata?.role === 'admin'
+  const isAdmin = await isCurrentUserAdmin()
 
   if (institution.contact_email !== callerEmail && !isAdmin) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 403 })
