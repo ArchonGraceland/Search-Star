@@ -236,7 +236,7 @@ export async function POST(
         // the same prompt and can legitimately end with a question.
         const { data: lastCompanion } = await db
           .from('room_messages')
-          .select('id, body, posted_at')
+          .select('id, body, posted_at, user_id')
           .eq('room_id', roomIdSnapshot)
           .in('message_type', [
             'companion_response',
@@ -260,6 +260,19 @@ export async function POST(
         const body = lastCompanion.body
         const tail = body.slice(Math.max(0, body.length - 200))
         if (!tail.includes('?')) return
+
+        // Implicit-addressee gate. Companion rows are written with
+        // user_id = the practitioner whose message triggered them
+        // (see src/lib/companion/room.ts insert at the bottom of
+        // generateCompanionRoomResponse). Treat that user as the
+        // implicit addressee of any question the Companion asked.
+        // Only fire the followup path when the same practitioner is
+        // the one replying; otherwise a side-chat from another room
+        // member would mis-fire (see docs/bcd-arc.md Rick/David,
+        // 2026-04-22). Welcome and milestone rows carry the
+        // practitioner's user_id too, so this gate is consistent
+        // across all Companion entry points.
+        if (lastCompanion.user_id !== triggerUserId) return
 
         const companionMessageId = await generateCompanionRoomResponse({
           db,
