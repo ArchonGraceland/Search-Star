@@ -236,7 +236,7 @@ export async function POST(
         // the same prompt and can legitimately end with a question.
         const { data: lastCompanion } = await db
           .from('room_messages')
-          .select('id, body, posted_at, user_id')
+          .select('id, body, posted_at, user_id, addressee_user_id')
           .eq('room_id', roomIdSnapshot)
           .in('message_type', [
             'companion_response',
@@ -261,18 +261,17 @@ export async function POST(
         const tail = body.slice(Math.max(0, body.length - 200))
         if (!tail.includes('?')) return
 
-        // Implicit-addressee gate. Companion rows are written with
-        // user_id = the practitioner whose message triggered them
-        // (see src/lib/companion/room.ts insert at the bottom of
-        // generateCompanionRoomResponse). Treat that user as the
-        // implicit addressee of any question the Companion asked.
-        // Only fire the followup path when the same practitioner is
-        // the one replying; otherwise a side-chat from another room
-        // member would mis-fire (see docs/bcd-arc.md Rick/David,
-        // 2026-04-22). Welcome and milestone rows carry the
-        // practitioner's user_id too, so this gate is consistent
-        // across all Companion entry points.
-        if (lastCompanion.user_id !== triggerUserId) return
+        // Addressee gate. Prefer the explicit addressee_user_id column
+        // (set by parseAddresseeUserId in src/lib/companion/room.ts
+        // when the Companion's response begins with "{name},"). Fall
+        // back to the implicit user_id for older rows written before
+        // the addressee column existed and for responses where the
+        // parser couldn't resolve a unique room-member name. Either
+        // way, only fire the followup when the trigger user matches —
+        // a side-chat from another practitioner must not mis-fire
+        // (see docs/bcd-arc.md Rick/David, 2026-04-22).
+        const addressee = lastCompanion.addressee_user_id ?? lastCompanion.user_id
+        if (addressee !== triggerUserId) return
 
         const companionMessageId = await generateCompanionRoomResponse({
           db,

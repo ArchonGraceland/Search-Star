@@ -113,6 +113,42 @@ function truncate(s: string, n: number): string {
 }
 
 /**
+ * Parse the addressee out of a Companion response by looking for a
+ * leading "{display_name}, ..." pattern, where display_name matches a
+ * known room member. The system prompt instructs the Companion to name
+ * its addressee when asking a question (see the addressing-discipline
+ * paragraph in COMPANION_ROOM_SYSTEM_PROMPT). When that lands cleanly,
+ * we lift the addressee out of the prose and store it on the row so
+ * the followup trigger can gate on it explicitly.
+ *
+ * Returns null when the leading token doesn't match any room member,
+ * or when the response doesn't begin with a name-and-comma at all
+ * (room-wide statement, milestone marker, etc.). Callers should treat
+ * null as "no explicit addressee" and fall back to the implicit
+ * trigger-user gate.
+ */
+function parseAddresseeUserId(
+  responseText: string,
+  roomMembers: Array<{ user_id: string; display_name: string | null }>
+): string | null {
+  const trimmed = responseText.trimStart()
+  // Greedy on the comma so multi-word names ("Sarah Jane,") still work.
+  const commaIdx = trimmed.indexOf(',')
+  if (commaIdx <= 0 || commaIdx > 40) return null
+  const candidate = trimmed.slice(0, commaIdx).trim()
+  if (!candidate) return null
+
+  const lower = candidate.toLowerCase()
+  const matches = roomMembers.filter(
+    (m) => m.display_name && m.display_name.toLowerCase() === lower
+  )
+  // Exactly one match required — ambiguous matches (two members with
+  // the same display_name) fall back to null rather than guessing.
+  if (matches.length !== 1) return null
+  return matches[0].user_id
+}
+
+/**
  * Pull the members of a room with display names, their active
  * commitments (if any), and the sponsorships that tie specific
  * sponsors to specific commitments. Used to render the roster header
@@ -123,6 +159,7 @@ async function loadRoomContext(
   roomId: string
 ): Promise<{
   memberLines: string[]
+  roomMembers: Array<{ user_id: string; display_name: string | null }>
   activeCommitments: Array<{
     commitmentId: string
     userId: string
@@ -204,7 +241,12 @@ async function loadRoomContext(
     return `- ${name} — member`
   })
 
-  return { memberLines, activeCommitments }
+  const roomMembers = (memberships ?? []).map((m) => {
+    const profile = pickSingle(m.profiles)
+    return { user_id: m.user_id, display_name: profile?.display_name ?? null }
+  })
+
+  return { memberLines, roomMembers, activeCommitments }
 }
 
 /**
@@ -408,7 +450,7 @@ export async function generateCompanionRoomResponse(args: {
   const { db, roomId, triggerMessageId, triggerKind = 'session' } = args
 
   try {
-    const [{ memberLines, activeCommitments }, { historyText, triggerRow }] =
+    const [{ memberLines, roomMembers, activeCommitments }, { historyText, triggerRow }] =
       await Promise.all([
         loadRoomContext(db, roomId),
         loadRoomHistory(db, roomId, triggerMessageId),
@@ -461,6 +503,14 @@ export async function generateCompanionRoomResponse(args: {
     const responseText = textBlock.text.trim()
     if (!responseText) return null
 
+    // Lift the addressee out of the response prose. The system prompt
+    // tells the Companion to begin a question with the addressee's
+    // name and a comma; when it does, this resolves to a user_id and
+    // we store it. Null when the response doesn't begin with a known
+    // member name — the followup gate then falls back to the
+    // implicit-addressee check on user_id.
+    const addresseeUserId = parseAddresseeUserId(responseText, roomMembers)
+
     // Need a user_id for the row — the Companion has no user account.
     // We write these rows as the practitioner whose message triggered
     // them, which keeps the user_id non-null (schema requires it) and
@@ -478,6 +528,7 @@ export async function generateCompanionRoomResponse(args: {
         media_urls: [],
         transcript: null,
         is_session: false,
+        addressee_user_id: addresseeUserId,
       })
       .select('id')
       .single()
@@ -537,15 +588,25 @@ export async function generateCompanionRoomWelcome(args: {
       .maybeSingle()
     const practitionerName = profile?.display_name ?? 'the practitioner'
 
-    // Count how many active members there are besides the practitioner.
+    // Pull display_name alongside user_id so we can resolve the
+    // addressee out of the welcome prose without a second roundtrip.
+    type WelcomeMember = {
+      user_id: string
+      profiles: { display_name: string | null } | { display_name: string | null }[] | null
+    }
     const { data: memberships } = await db
       .from('room_memberships')
-      .select('user_id')
+      .select('user_id, profiles(display_name)')
       .eq('room_id', roomId)
       .eq('state', 'active')
+      .returns<WelcomeMember[]>()
     const otherMemberCount = (memberships ?? []).filter(
       (m) => m.user_id !== commitment.user_id
     ).length
+    const roomMembers = (memberships ?? []).map((m) => {
+      const p = pickSingle(m.profiles)
+      return { user_id: m.user_id, display_name: p?.display_name ?? null }
+    })
 
     // The welcome fires at room creation time; there are typically
     // zero other members. The prompt handles both cases — we pass the
@@ -571,6 +632,8 @@ export async function generateCompanionRoomWelcome(args: {
     const responseText = textBlock.text.trim()
     if (!responseText) return null
 
+    const addresseeUserId = parseAddresseeUserId(responseText, roomMembers)
+
     const { data: inserted, error: insertErr } = await db
       .from('room_messages')
       .insert({
@@ -582,6 +645,7 @@ export async function generateCompanionRoomWelcome(args: {
         media_urls: [],
         transcript: null,
         is_session: false,
+        addressee_user_id: addresseeUserId,
       })
       .select('id')
       .single()
