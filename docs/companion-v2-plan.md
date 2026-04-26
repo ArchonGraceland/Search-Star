@@ -13,7 +13,7 @@ that voice speaks.*
 
 ## TL;DR
 
-Phase 10 is reorganized into four sub-phases, in serial order except
+Phase 10 is reorganized into five sub-phases, in serial order except
 where noted. The first one began 2026-04-26.
 
 | Phase | Scope | State | Blocks on |
