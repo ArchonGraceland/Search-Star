@@ -1596,6 +1596,72 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   "Companion followup path mis-fires in multi-practitioner rooms,"
   2026-04-22.
 
+- **Companion silence on substantive non-session chat in
+  multi-practitioner room.** Discovered 2026-04-26 in a two-browser
+  test (David and Rick simulated as separate practitioners in the
+  same room). Companion V2 architectural evidence — confirms the
+  conversation-aware-participation rewrite as the correct destination,
+  not a deferred option.
+
+  **What happened.** Sequence visible in screenshot
+  `/mnt/chromeos/MyFiles/Downloads/Screenshot 2026-04-26 10.32.17 AM.png`:
+  Rick (practitioner of "Pullups") posts a non-session message — "I
+  haven't done it yet. I'm going to go later today." — answering an
+  earlier Companion question. The Companion fires the followup path,
+  correctly addresses Rick, and replies "Rick, then the session isn't
+  marked yet — come back when you've done it." That reply ends in a
+  period, deliberately closing the loop. David (practitioner of
+  "Italian") then posts a substantive non-session message about his
+  own commitment — "I don't remember what I put in the spec but it's
+  something related to creating complex Italian sentences at a B2
+  level." The Companion does not respond.
+
+  **Root cause (V1 design, not a regression).** The followup-path
+  guard at `src/app/api/rooms/[id]/messages/route.ts:262` short-circuits
+  when the most recent `companion_*` message has no `?` in its
+  trailing 200 chars. The Rick-addressed Companion reply ended in a
+  period, so the guard correctly suppressed any further followup
+  attempt — by design, the chain stops when the Companion stops asking.
+  The addressee gate from commits `79ad074` + `73a93ae` is never
+  reached in this trace; the `?` heuristic short-circuits first. Same
+  behavior would have shipped under the pre-79ad074 code.
+
+  **Why it matters.** This is not a bug to patch — it is the V1
+  trigger-driven architecture exhibiting the limitation that
+  `docs/companion-v2-scope.md` §1 named explicitly: the Companion
+  reacts to one trigger message at a time and has no "should I speak
+  now?" decision separate from the trigger fire. A practitioner
+  posting substantive material about their own commitment cannot
+  elicit a Companion response unless they session-mark it. In a
+  multi-practitioner room this means the Companion engages
+  asymmetrically — whoever happened to be answering a pending question
+  gets it, whoever else is talking does not — even when the second
+  practitioner has obviously more to engage with. Adding more
+  trigger types (a fourth branch for "substantive chat," a fifth for
+  "video upload," etc.) compounds the architectural problem rather
+  than resolving it.
+
+  **Scope call.** The third option from the 2026-04-22 entry — "stop
+  using the followup path as a unitary concept; move to a
+  conversation-aware model where the Companion receives every room
+  message and decides whether to speak" — is no longer the
+  not-yet-needed long-term direction. It is the next architectural
+  unit of work. The middle fix (addressee column + parser) shipped
+  2026-04-26 is a tactical bridge so the V1 path stops mis-firing in
+  multi-practitioner rooms; it does not, and was not designed to,
+  give the Companion the inverse capability of engaging when an
+  addressee-less practitioner speaks substantively.
+
+  **Where this sits in plan docs.** The planning artifact opened
+  immediately after this entry —
+  `docs/companion-v2-plan.md` — promotes conversation-aware
+  participation to the centerpiece of Phase 10 on the strength of
+  this trace plus the 2026-04-22 Rick/David trace. The "is this the
+  session?" nudge originally framed as `companion-v2-scope.md` §7
+  item 5 is folded into the rewrite rather than shipped as a
+  standalone trigger. Suggested citation when defending that choice:
+  bcd-arc.md Known-follow-ups, "Companion silence on substantive
+  non-session chat in multi-practitioner room," 2026-04-26.
 
 ---
 
