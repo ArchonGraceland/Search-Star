@@ -73,8 +73,11 @@ disappears. The followup heuristic disappears. Session-mark contracts
 remain explicit for the affordance reasons noted below, but everything
 else collapses into one decision shape.
 
-Phase 10B is the work to implement that. Phase 10A is everything that
-either supports it or is independent of it and worth shipping alongside.
+Phase 10B is the work to implement that. Phase 10A is the schema and
+read-path scaffolding that supports the long-arc memory 10B will
+read. Phase 10E is the second Companion-side agent that writes into
+10A's storage. Phases 10C and 10D are independent ergonomic and
+latency work that follow once 10B is stable.
 
 ---
 
@@ -167,9 +170,10 @@ reference to the prior arc when prompted by the practitioner's own
 content. No regression: rooms with no completed commitments behave
 identically.
 
-Estimated work: one session. Migration + completion-write code path
-+ `loadRoomHistory` change + a dedicated summary-generation prompt
-+ one synthetic test.
+Estimated work: one session. Migration + the completion-detection
+trigger that fires the writer (the writer itself is 10E) +
+`loadRoomHistory` change + one synthetic test against a manually
+inserted summary value.
 
 ---
 
@@ -552,33 +556,41 @@ the schema work.
 
 ## 7. Cross-cutting decisions
 
-### 6.1 Self-pilot pause points
+### 7.1 Self-pilot pause points
 
-Each phase ends with at least one week of self-pilot observation
-before the next phase begins. The pause is not optional; the value of
-the plan is that it forecasts what is worth building, and the
-forecast is worth more when each step's outcome can shape the next.
-Concretely:
+Each major phase ends with at least one week of self-pilot
+observation before the next begins. The pause is not optional; the
+value of the plan is that it forecasts what is worth building, and
+the forecast is worth more when each step's outcome can shape the
+next. Concretely:
 
-- **10A → 10B pause:** at least one week. Watch whether the
-  cross-commitment memory work changes the Companion's behavior in
-  noticeable ways even when no commitment has completed (it
-  shouldn't; verify it doesn't).
-- **10B → 10C pause:** at least one week, with the explicit checks
-  in §3.7. This is the longest pause because 10B is the most likely
+- **10A → 10E:** no formal pause. 10A and 10E are tightly coupled
+  (storage + writer for the same artifact) and can ship in one or
+  two adjacent sessions. The §6.8 estimated-work note explicitly
+  allows shipping them together if the dry-run is run in parallel
+  with the schema work.
+- **10E → 10B:** at least one week. The Curator should land before
+  10B begins so that 10B's participation envelope can include
+  Curator outputs from day one. The pause exists to verify the
+  Curator does no harm in rooms with zero completed commitments
+  (which is every room today) and to leave the addressee fix
+  enough air to expose any unrelated regressions.
+- **10B → 10C:** at least one week, with the explicit checks in
+  §3.7. This is the longest pause because 10B is the most likely
   phase to need a follow-up adjustment.
-- **10C → 10D pause:** indefinite, gated on the latency-pain signal.
+- **10C → 10D:** indefinite, gated on the latency-pain signal.
 
-### 6.2 Dry-run discipline
+### 7.2 Dry-run discipline
 
-Yes for prompt-shaped work (10B), no for code-shaped work (10A, 10C).
-The chat-room-plan §6.2 process of running candidate prompts against
-a fixed scenario set is expensive (an afternoon of API calls and
-careful reading) but reliably catches voice-level failures that code
-review cannot. Apply where the failure mode is "the Companion sounds
-wrong"; skip where the failure mode is "the code throws."
+Yes for prompt-shaped work (10B and 10E), no for code-shaped work
+(10A, 10C). The chat-room-plan §6.2 process of running candidate
+prompts against a fixed scenario set is expensive (an afternoon of
+API calls and careful reading) but reliably catches voice-level
+failures that code review cannot. Apply where the failure mode is
+"the Companion sounds wrong"; skip where the failure mode is "the
+code throws."
 
-### 6.3 The two commits from 2026-04-26
+### 7.3 The two commits from 2026-04-26
 
 Stay shipped. The implicit-addressee gate (`79ad074`) is correct and
 costs nothing to keep; the explicit `addressee_user_id` column with
@@ -586,7 +598,7 @@ parser (`73a93ae`) is correct and is reused by 10B's new generator.
 Neither needs revisiting. The followup-path code that the addressee
 gate guards is what 10B removes; the gate goes with it.
 
-### 6.4 What gets cited from this plan
+### 7.4 What gets cited from this plan
 
 When making a decision during a Phase 10 session — "should we add
 this trigger? should we ship this prompt change? should we pause
@@ -640,10 +652,11 @@ Phase 10 work specifically.
 This plan is a forecast. The self-pilot is allowed to invalidate it.
 Specifically:
 
-- If 10A's cross-commitment memory turns out to be unused (no
-  commitments complete in the self-pilot window) but 10B is ready
-  to ship, do 10B first. The phases are not strictly ordered if
-  reality forces a re-shuffle.
+- If the cross-commitment memory work (10A storage + 10E writer)
+  turns out to be unused (no commitments complete in the self-pilot
+  window) but 10B is ready to ship, do 10B first against a
+  Curator-less context envelope. The phases are not strictly ordered
+  if reality forces a re-shuffle.
 - If 10B's dry-run reveals that conversation-aware participation
   produces a Companion that reads badly across most scenarios, the
   plan reverts to "patch the trigger model further" and 10B becomes
