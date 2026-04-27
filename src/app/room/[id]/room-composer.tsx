@@ -99,6 +99,24 @@ export default function RoomComposer({
     setMediaKind(null)
   }
 
+  // Enter posts, Shift+Enter inserts a newline. Skipped on coarse-
+  // pointer (touch) devices so the phone "return" key keeps inserting
+  // newlines rather than sending accidentally — phone users tap Post.
+  // Also skipped during IME composition so accented/multi-byte input
+  // (e.g., Italian é, à) doesn't send mid-composition.
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== 'Enter' || e.shiftKey) return
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(pointer: coarse)').matches
+    ) {
+      return
+    }
+    e.preventDefault()
+    void handleSubmit()
+  }
+
   async function handleSubmit() {
     if (submitting || uploading) return
     const trimmed = body.trim()
@@ -158,6 +176,7 @@ export default function RoomComposer({
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder={
           isPractitioner
             ? alreadyMarkedToday
