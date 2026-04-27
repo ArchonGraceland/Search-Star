@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { getResend } from '@/lib/resend'
 import {
   getStripe,
@@ -8,6 +8,7 @@ import {
   DEFAULT_DONATION_RATE,
 } from '@/lib/stripe'
 import { computeAndPersistTrust } from '@/lib/trust-compute'
+import { generateCommitmentCompletionSummary } from '@/lib/companion/curator'
 
 // POST — sponsor releases or vetoes a pledge. Authentication is the sponsorship's
 // access_token (sponsors don't have Search Star accounts).
@@ -193,6 +194,43 @@ export async function POST(
           '— release is preserved; practitioner can recompute from the dashboard',
         )
       }
+
+      // Phase 10A.3 — Memory Curator. Fires once per commitment, the
+      // moment it transitions 'active' → 'completed' (which is exactly
+      // here, when the last pledged sponsorship released). Reads the
+      // full commitment history, writes a 200-400 word arc summary into
+      // commitments.completion_summary for the Response Companion's
+      // future memory. See docs/companion-v2-plan.md §3.3.
+      //
+      // In after() so this can never block the sponsor-facing release
+      // response, and so a Curator failure (Anthropic outage, prompt
+      // bug, message-load error) cannot cause the release path to
+      // return 500. Curator never throws on its own — its failures are
+      // captured in the discriminated-union return — but after() also
+      // guards against any unhandled exception. The completion_summary
+      // column stays null on failure; loadRoomHistory's prepend skips
+      // rows whose summary is null, so the room continues to function.
+      const curatorCommitmentId = commitment.id
+      after(async () => {
+        const result = await generateCommitmentCompletionSummary({
+          db,
+          commitmentId: curatorCommitmentId,
+        })
+        if (result.ok) {
+          console.log('[companion/curator] summary written:', {
+            commitmentId: curatorCommitmentId,
+            messageCount: result.messageCount,
+            truncated: result.truncated,
+            inputTokens: result.inputTokens,
+            outputTokens: result.outputTokens,
+          })
+        } else {
+          console.error('[companion/curator] summary not written:', {
+            commitmentId: curatorCommitmentId,
+            error: result.error,
+          })
+        }
+      })
     }
 
     // Optional voluntary donation — per v4-decisions §5 and spec §7.7, this
