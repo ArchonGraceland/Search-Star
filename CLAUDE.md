@@ -59,13 +59,17 @@ Require teamId `team_3QGOH2gaQBtEyFzCX7wtsP7X` and projectId `prj_4naGexGhfiklNA
 Outbound Postgres queries sometimes run unauthenticated; RLS-gated tables silently return empty. E2E path fully migrated as of 2026-04-25. Long-term: diagnose @supabase/ssr JWT-propagation. Not launch-blocking.
 
 ## Companion v2 / Phase 10 — current target
-The plan of record is `docs/companion-v2-plan.md` (drafted 2026-04-26, restructured around multi-agent architecture). Read that, not the older five-item roadmap that this section used to carry. Sub-phases in serial order:
+The plan of record is `docs/companion-v2-plan.md`. Read that, not the older five-item roadmap that this section used to carry.
 
-- 10A — Foundations: doc cleanup + cross-commitment memory (schema, Memory Curator agent, read path).
-- 10B — Conversation-aware participation: architectural rewrite of the Response Companion's trigger model. Replaces the `triggerKind` enum and the followup heuristic with one "should I speak now?" decision per practitioner_post.
-- 10C — Voice input via Whisper (Groq `whisper-large-v3`, reusing `src/lib/companion/media.ts`).
-- 10D — Streaming Companion responses (deferred until self-pilot signals 3–5s latency is the felt pain).
+**State as of 2026-04-27:**
 
-Cited supporting docs: `docs/companion-v2-scope.md` (scope-survival reasoning), `docs/bcd-arc.md` Known-follow-ups dated 2026-04-22 and 2026-04-26 (the two production traces driving 10B), `docs/chat-room-plan.md` §§3, 6, 7 (voice and event-by-event behavior — unchanged in Phase 10).
+- **10A — Foundations: SHIPPED 2026-04-27.** Cross-commitment memory schema (`commitments.completion_summary` column), `loadRoomHistory` prepend, Memory Curator agent (`src/lib/companion/curator.ts`), trigger from sponsorship release route, admin test endpoint at `/api/admin/companion/curator`. Commits: `818a460` (schema + read path), `a67d7e8` (prompt design + 18-output dry-run matrix in `chat-room-plan.md §6.7`), `dab98f3` (Curator wire-up). Open exit criteria: end-to-end test against a synthetic-completed commitment, failure-isolation verification — both can ride on the admin endpoint during self-pilot.
+- **10B — Conversation-aware participation: PENDING.** Self-pilot pause started 2026-04-27, earliest open 2026-05-04 (target 2026-05-04 to 2026-05-08). Watch during the pause for a third architectural failure trace; if it surfaces and is *not* in the orphaned-pending-question shape, the plan needs a fresh diagnostic pass per §9.
+- **10C — Voice input: PARTIAL.** Enter-to-post composer keybinding shipped 2026-04-27 (`e73a8c8`). Whisper integration still to do (after 10B).
+- **10D — Streaming responses: DEFERRED** until self-pilot signals 3–5s latency is the felt pain.
+
+Two production traces motivate 10B: `bcd-arc.md` 2026-04-22 (Rick/David over-engagement) and 2026-04-26 (orphaned-pending-question under-engagement). The 2026-04-26 entry was sharpened on 2026-04-27 (commit `871c231`) — the V1 limitation is precisely the absence of addressee-scoped conversation thread state.
+
+Cited supporting docs (read in this order at session open if working on Phase 10): `companion-v2-plan.md` (plan), `chat-room-plan.md` §§3, 6, 7 (voice and event-by-event behavior — unchanged), §6.7 (Curator prompt design rationale), `bcd-arc.md` Phase 10A session entry (2026-04-27) and Known-follow-ups dated 2026-04-22 and 2026-04-26.
 
 GROQ_API_KEY is set in Vercel (Production / Preview / Development) — no further env work needed for Companion media transcription or future Whisper composer input.

@@ -1680,6 +1680,111 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
 
 ---
 
+### Phase 10A session (2026-04-27) — Companion v2 foundations
+
+The session that took Phase 10A from "open" to "shipped." Six
+commits across one extended working window. Total Anthropic spend
+on prompt design: ~$0.22.
+
+**Shipped:**
+
+- `818a460` — **10A.1 doc cleanup + 10A.2 cross-commitment memory
+  schema and read path.** Migration: `commitments.completion_summary
+  text` (applied to live DB via MCP). `loadRoomHistory` in
+  `src/lib/companion/room.ts` now prepends prior-commitment
+  completion summaries (oldest first, capped at 5) ahead of the
+  recent-message window. CLAUDE.md's stale 5-item Phase 10 roadmap
+  replaced with a pointer to `companion-v2-plan.md` and the 10A-10D
+  sub-phase inventory; CLAUDE.md added to git (was untracked).
+  GROQ_API_KEY note updated to reflect the key is set in Vercel.
+  `docs/next-session-companion-v2.md` deleted (DEPRECATED;
+  superseded by `companion-v2-scope.md` + `companion-v2-plan.md`).
+- `a67d7e8` — **10A.3 prompt design + dry-run matrix.**
+  `chat-room-plan.md §6.7` added with the full prompt-design
+  exercise: §6.7.1 six synthetic 90-day commitment histories,
+  §6.7.2 three candidate system prompts (field notes / continuing-
+  voice / biographical), §6.7.3 full text of all 18 outputs from
+  the 3×6 dry-run matrix, §6.7.4 rationale + Candidate D sanity
+  check + chosen prompt. Word counts 260–387 (all within 200–400
+  target, no hard-cap violations).
+- `dab98f3` — **10A.3 Curator wire-up.**
+  `MEMORY_CURATOR_SYSTEM_PROMPT` in `src/lib/anthropic.ts`
+  (Candidate D from §6.7.4 — biographical foundation with
+  anti-smoothing patch and future-Companion-hook close).
+  `generateCommitmentCompletionSummary` in
+  `src/lib/companion/curator.ts`. Trigger wired into the
+  sponsorship release route (`/api/sponsorships/[id]/action`)
+  inside an `after()` block, immediately after the existing
+  trust recompute, only on the `'active' → 'completed'` flip.
+  Admin test endpoint at `/api/admin/companion/curator` for
+  end-to-end exercise without organic day-90 release.
+- `e73a8c8` — **Composer keybinding (Phase 10C partial).** Enter
+  posts, Shift+Enter inserts newline. Skipped on coarse-pointer
+  (touch) devices and during IME composition (Italian é/à etc.).
+  Independent of 10A; small UX polish that came up mid-session.
+- `871c231` — **2026-04-26 trace clarification.** During session
+  end-of-day review, the screenshot of the Italian-sentences trace
+  surfaced that the bcd-arc 2026-04-26 entry was incomplete: the
+  Companion had a pending `?`-ending question to David from earlier
+  in the room, and the failure was that David's continued
+  attempts to answer that question (after the Companion's period-
+  ending reply to Rick) all failed the followup heuristic because
+  it checks the room's most recent Companion message rather than
+  the most recent Companion-to-this-practitioner message. This is
+  more diagnostic of the V1 limitation — the architecture has no
+  notion of addressee-scoped conversation threads. bcd-arc
+  2026-04-26 entry rewritten; `companion-v2-plan.md` §1, §4.5
+  scenario 1, and §4.7 exit criteria updated to reflect the
+  orphaned-pending-question shape.
+
+**Deployed:** all six commits to `main`, Vercel auto-deploys
+verified READY for the load-bearing ones (`818a460`, `dab98f3`).
+Production routes verified: homepage 200, `/log` 307 (redirect to
+login), `/spec` 200, `/api/cron/companion-milestones` GET 401
+(auth-gated), `/api/admin/companion/curator` GET 405 (POST-only),
+`/api/admin/companion/curator` POST unauth 401 (admin-gated).
+
+**Deferred (open exit criteria for 10A):**
+
+- **End-to-end Curator test against a real or synthetic completed
+  commitment.** No commitment has organically completed yet (David
+  is sole live user, his commitment is still active). Path: hit
+  `/api/admin/companion/curator` against a synthetic-completed
+  commitment in the dev DB during the self-pilot pause. Reads the
+  resulting `completion_summary` against the §6.7.4 bans
+  (no praise, no prediction, no smoothing) on real practitioner
+  data — first signal whether the chosen prompt holds beyond the
+  six synthetic histories.
+- **Failure-isolation verification.** Per plan §3.4: temporarily
+  rotate `ANTHROPIC_API_KEY` in Vercel dev to invalid, hit admin
+  endpoint, confirm clean error response and `completion_summary`
+  stays null. ~5 minutes when David has time.
+- **The "next commitment in same room" prior-arc reference test.**
+  Same blocker as the first deferred item — needs a completed
+  commitment to anchor a "new commitment in same room" scenario.
+
+**State for next session (target 2026-05-04 to 2026-05-08):**
+
+- 10A is shipped to production. Self-pilot pause started 2026-04-27
+  per `companion-v2-plan.md` §7.1; earliest 10B open is 2026-05-04.
+- During the pause: use the room normally, watch for a third
+  architectural failure trace that is *not* in the orphaned-pending-
+  question shape (would invalidate the plan per §9). Hit the
+  Curator admin endpoint at convenience.
+- 10B (conversation-aware participation) is the next phase. Plan
+  §4 has the full target architecture, §4.5 the dry-run scenario
+  list (10 scenarios), §4.7 the exit criteria. Two production
+  traces motivate it: 2026-04-22 over-engagement (Rick/David side-
+  chat) and 2026-04-26 under-engagement (orphaned-pending-question).
+- Public spec/roadmap surfaces (`public/spec.html`, `public/roadmap.html`)
+  updated 2026-04-27 to reflect 10A as shipped and 10B as next.
+- The `.env.local` file pulled during this session (via
+  `vercel env pull` for the Curator dry-run matrix) is gitignored
+  but contains real dev secrets at rest. Delete with `rm
+  .env.local` if no longer needed for local Anthropic experiments.
+
+---
+
 ## After the arc
 
 When Session 6 completes, the remaining pre-launch blockers from the roadmap

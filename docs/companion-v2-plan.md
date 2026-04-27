@@ -15,13 +15,13 @@ what.*
 
 ## TL;DR
 
-Phase 10 is four sub-phases in serial order. The first began 2026-04-26.
+Phase 10 is four sub-phases in serial order. The first began 2026-04-26 and shipped 2026-04-27.
 
 | Phase | Scope | State | Blocks on |
 |---|---|---|---|
-| 10A | Foundations: doc cleanup + cross-commitment memory (schema, Memory Curator writer agent, read path) | Open | A completed commitment in self-pilot to exercise the writer end-to-end (no current blocker; schema and read path can ship now) |
-| 10B | Conversation-aware participation (architectural rewrite of the Response Companion's trigger model) | Open | 10A landed; one week of self-pilot under the addressee fix to confirm it isn't masking unrelated issues |
-| 10C | Composer affordance: voice input via Whisper | Open | 10B landed and stable; independent code-wise, but the composer's role in the room should be settled before adding affordances |
+| 10A | Foundations: doc cleanup + cross-commitment memory (schema, Memory Curator writer agent, read path) | **Shipped 2026-04-27** (commits `818a460` schema+read-path, `a67d7e8` prompt design + 18-output dry-run matrix, `dab98f3` Curator wire-up + admin endpoint) | — |
+| 10B | Conversation-aware participation (architectural rewrite of the Response Companion's trigger model) | Pending self-pilot pause | 10A's self-pilot observation window (started 2026-04-27, target ≥7 days). Plan §9: also gated on whether a third architectural failure trace surfaces during the pause that is not in the conversation-aware-participation shape — that would invalidate the diagnosis. |
+| 10C | Composer affordance: voice input via Whisper | Open (one piece partially shipped — Enter-to-post keybinding shipped 2026-04-27, commit `e73a8c8`; Whisper pipeline still to do) | 10B landed and stable |
 | 10D | Streaming Companion responses | Deferred | Explicit self-pilot signal that the 3–5s latency is felt as the pain |
 
 A separate cross-cutting concern — the multi-agent architecture
@@ -304,23 +304,44 @@ and dry-run + one synthetic test against a manually inserted summary
 value. The schema/read-path work and the Curator dry-run can run in
 parallel if scoped to two sessions.
 
-**Exit criteria.**
+**Actual: shipped 2026-04-27 across one extended session.** Three
+commits — `818a460` (schema migration + `loadRoomHistory` prepend),
+`a67d7e8` (prompt design exercise: §6.7 of `chat-room-plan.md` with
+six synthetic histories, three candidate prompts, full text of all
+18 dry-run outputs, rationale, and chosen prompt — Candidate D, a
+biographical foundation with anti-smoothing patch and future-
+Companion-hook-close patch), `dab98f3` (Curator wire-up:
+`MEMORY_CURATOR_SYSTEM_PROMPT`, `generateCommitmentCompletionSummary`
+in `src/lib/companion/curator.ts`, after-block trigger from the
+sponsorship release route, admin test endpoint at
+`/api/admin/companion/curator`). Total Anthropic spend on prompt
+design: ~$0.22.
 
-- One commitment in this codebase reaches `status = 'completed'`,
-  the Curator runs successfully, the resulting `completion_summary`
-  is readable to David and accurately describes the arc.
-- The Response Companion's first response in a new commitment
-  declared in the same room makes a contextually-appropriate (not
-  forced) reference to the prior arc when prompted by the
-  practitioner's own content.
-- The summary length is bounded and the read-path injection does not
-  produce prompt-bloat artifacts.
-- The Curator's failure does not affect any synchronous room
-  interaction — verified by deliberately simulating a Curator
-  failure during the test commitment's completion and confirming
-  the room continues to function.
-- No regression: rooms with no completed commitments behave
-  identically to today.
+**Exit criteria — status entering self-pilot pause.**
+
+- ✓ Shipped: schema, read path, Curator function, trigger wiring,
+  admin test endpoint. Build clean, deploy verified.
+- ⏳ Pending real-world verification: one commitment reaching
+  `status = 'completed'` with the Curator producing a summary
+  readable as accurate. No commitment has organically completed yet
+  (David is sole live user, his commitment is still active). Path
+  to verification during the self-pilot pause: hit the admin
+  endpoint against a synthetic-completed commitment in the dev DB.
+- ⏳ Pending real-world verification: Response Companion's first
+  response in a new commitment declared in the same room making a
+  contextually-appropriate reference to the prior arc. Same blocker
+  as above — no completed commitment exists to anchor a "next
+  commitment in same room" test.
+- ✓ Bounded summary length: prompt enforces 200–400 words with hard
+  cap 600. All 18 matrix outputs landed within target.
+- ⏳ Pending failure-isolation verification (per the original
+  exit criterion). Cheapest path: rotate `ANTHROPIC_API_KEY` in
+  Vercel dev to invalid briefly, hit admin endpoint, confirm clean
+  error response and `completion_summary` stays null. ~5 minutes.
+- ✓ No regression: the read-path prepend is empty-string when no
+  commitment in the room has a Curator-written summary, so behavior
+  is identical to pre-10A in every room today (zero rooms have a
+  completed commitment with summary). Build and deploy verified.
 
 ---
 
@@ -560,12 +581,18 @@ the plan is that it forecasts what is worth building, and the
 forecast is worth more when each step's outcome can shape the next.
 Concretely:
 
-- **10A → 10B pause:** at least one week. Watch whether the
-  cross-commitment memory infrastructure changes the Response
-  Companion's behavior in noticeable ways even when no commitment
-  has completed (it shouldn't; verify it doesn't). Also leaves the
-  addressee fix from today's commits enough air to expose any
-  unrelated regressions.
+- **10A → 10B pause:** at least one week. **Started 2026-04-27;
+  earliest 10B open is 2026-05-04, target 2026-05-04 to 2026-05-08.**
+  Watch whether the cross-commitment memory infrastructure changes
+  the Response Companion's behavior in noticeable ways even when no
+  commitment has completed (it shouldn't; verify it doesn't). Also
+  leaves the addressee fix and the trace-clarification commits
+  (`79ad074`, `73a93ae`, `871c231`) enough air to expose any
+  unrelated regressions. During this pause, the Curator path can be
+  exercised end-to-end via the admin endpoint
+  (`POST /api/admin/companion/curator`) against any synthetic
+  completion — the work item that closes the remaining 10A exit
+  criteria.
 - **10B → 10C pause:** at least one week, with the explicit checks
   in §4.7. This is the longest pause because 10B is the most likely
   phase to need a follow-up adjustment.
