@@ -50,6 +50,16 @@ import { buildImageBlocks, getOrFetchTranscript } from '@/lib/companion/media'
 // generous ceiling that covers a few weeks of typical activity.
 const MAX_ROOM_HISTORY = 50
 
+// How many prior-commitment completion summaries to inject ahead of
+// the recent-message window. Phase 10A cross-commitment memory: when
+// a commitment transitions to completed, the Memory Curator agent
+// writes a `commitments.completion_summary` row; we lift the most
+// recent N of those into the Companion's working memory so a new
+// commitment in the same room can be discussed against the prior arc.
+// Five is generous for any room that's actually accumulated this much
+// history; revisit when a real room exceeds it. Plan: §3.2.
+const MAX_COMPLETION_SUMMARIES = 5
+
 // Cap bodies pulled into context. A 2000-char body in the transcript
 // does not earn its place; long messages get truncated and flagged.
 const MAX_BODY_CHARS = 1200
@@ -250,29 +260,97 @@ async function loadRoomContext(
 }
 
 /**
+ * Pull completion summaries for prior commitments in this room (Phase
+ * 10A cross-commitment memory). Returns a single block of envelope-
+ * formatted lines, oldest first, capped at MAX_COMPLETION_SUMMARIES.
+ * Empty string when the room has no completed commitments with a
+ * Curator-written summary — which is every room today, so the
+ * injection is a no-op until the Curator agent ships in 10A.3.
+ *
+ * Skips silently when `completion_summary` is null on a completed
+ * commitment (legacy data or a Curator failure). Per plan §3.2:
+ * "don't fall back to 'this commitment completed but I have no record
+ * of it' because that adds noise the model will reach for."
+ */
+async function loadCompletionSummariesText(
+  db: SupabaseClient,
+  roomId: string
+): Promise<string> {
+  type CompletedRow = {
+    completion_summary: string | null
+    completed_at: string | null
+    user_id: string
+    practices: { name: string } | { name: string }[] | null
+  }
+  const { data: rows } = await db
+    .from('commitments')
+    .select('completion_summary, completed_at, user_id, practices(name)')
+    .eq('room_id', roomId)
+    .eq('status', 'completed')
+    .not('completion_summary', 'is', null)
+    .order('completed_at', { ascending: false, nullsFirst: false })
+    .limit(MAX_COMPLETION_SUMMARIES)
+    .returns<CompletedRow[]>()
+
+  if (!rows || rows.length === 0) return ''
+
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id)))
+  const { data: profiles } = await db
+    .from('profiles')
+    .select('user_id, display_name')
+    .in('user_id', userIds)
+  const nameFor = (uid: string) =>
+    profiles?.find((p) => p.user_id === uid)?.display_name ?? 'A practitioner'
+
+  // Reverse to oldest first — the model sees prior arcs in time order.
+  return [...rows]
+    .reverse()
+    .map((r) => {
+      const practice = pickSingle(r.practices)?.name ?? 'their practice'
+      const summary = (r.completion_summary ?? '').trim()
+      return `Earlier in this room, ${nameFor(r.user_id)} completed "${practice}": ${summary}`
+    })
+    .join('\n\n')
+}
+
+/**
  * Pull the most-recent room messages (chronological ascending) to
  * include as the conversational history the Companion is listening
  * to. Each message is formatted by author and type.
+ *
+ * Phase 10A: prepends any completion summaries from prior commitments
+ * in this room ahead of the recent-message window, so the Companion
+ * has cross-commitment memory of arcs that fell out of the 50-message
+ * ceiling. See plan §3.2 for the read-path shape.
  */
 async function loadRoomHistory(
   db: SupabaseClient,
   roomId: string,
   excludeMessageId?: string
 ): Promise<{ historyText: string; triggerRow: RoomContextRow | null }> {
-  // Fetch descending then reverse — this gets us the NEWEST
-  // MAX_ROOM_HISTORY messages, not the oldest.
-  const { data: rows } = await db
-    .from('room_messages')
-    .select(
-      'id, user_id, commitment_id, message_type, body, media_urls, transcript, is_session, posted_at'
-    )
-    .eq('room_id', roomId)
-    .order('posted_at', { ascending: false })
-    .limit(MAX_ROOM_HISTORY)
-    .returns<RoomContextRow[]>()
+  // Fetch the recent-message window and the completion summaries in
+  // parallel. The summaries are typically empty in production today
+  // (zero rooms have a completed commitment with a Curator summary
+  // yet); the call is bounded and safe regardless.
+  const [{ data: rows }, summariesText] = await Promise.all([
+    db
+      .from('room_messages')
+      .select(
+        'id, user_id, commitment_id, message_type, body, media_urls, transcript, is_session, posted_at'
+      )
+      .eq('room_id', roomId)
+      .order('posted_at', { ascending: false })
+      .limit(MAX_ROOM_HISTORY)
+      .returns<RoomContextRow[]>(),
+    loadCompletionSummariesText(db, roomId),
+  ])
 
   if (!rows || rows.length === 0) {
-    return { historyText: '(the room has no prior messages)', triggerRow: null }
+    const empty = '(the room has no prior messages)'
+    return {
+      historyText: summariesText ? `${summariesText}\n\n${empty}` : empty,
+      triggerRow: null,
+    }
   }
 
   // Look up display names in one shot.
@@ -315,8 +393,9 @@ async function loadRoomHistory(
     lines.push(`${when} ${who}${marker}: ${bodyText}${mediaNote}${transcriptNote}`)
   }
 
+  const messagesText = lines.length > 0 ? lines.join('\n') : '(the room has no prior messages)'
   return {
-    historyText: lines.length > 0 ? lines.join('\n') : '(the room has no prior messages)',
+    historyText: summariesText ? `${summariesText}\n\n${messagesText}` : messagesText,
     triggerRow,
   }
 }
