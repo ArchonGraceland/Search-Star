@@ -812,6 +812,687 @@ None of these are hard individually; together they're enough scope that rolling 
 
 **What this commits to.** Session 4 ships (A) + (B). Streaming is explicitly parked with this rationale so it doesn't re-litigate in the next few sessions. When the time comes, it gets its own session with SSE architecture, placeholder-row schema, UPDATE-event Realtime subscription, and partial-render UI design as a combined design pass.
 
+### 6.7 Memory Curator prompt design — Phase 10A.3 (2026-04-27, in progress)
+
+The Curator is the agent that writes `commitments.completion_summary` when a commitment transitions `'active' → 'completed'` (see `docs/companion-v2-plan.md` §3.3). Its output is the Companion's own future memory across commitments — not a sponsor-facing artifact. Distinct voice from `DAY90_SUMMARY_SYSTEM_PROMPT` (which is for sponsors). Target length: 200–400 words, hard cap ~600.
+
+This sub-section follows the §6.2 dry-run discipline: candidate prompts evaluated against synthetic histories, rationale committed alongside the chosen prompt before code ships. In-progress as of 2026-04-27 — histories drafted first, candidate prompts and outputs to follow in subsequent passes.
+
+#### 6.7.1 Synthetic histories
+
+Six 90-day commitment shapes, chosen to span the arc-types the Curator must handle without breaking the §6 voice bans (no praise, no prediction, no verdict, no recommendation). Each is an excerpted timeline of `room_messages` rows scoped to one `commitment_id`; the Curator's actual input includes welcome messages, milestone markers, all practitioner posts (session and non-session), Companion responses, and any sponsor messages.
+
+Format mirrors `loadRoomHistory`'s rendering closely enough that the dry-run inputs are an honest shape: `[Day N, YYYY-MM-DD] Author [marker]: "body" [video transcript: "..."]`.
+
+---
+
+**History 1: Strong throughout — David, "Italian B2 sentences" (90 days)**
+
+*Arc:* clean trajectory, real growth, structural pivot at day 47 (translation → native-language thinking), completes with B2-to-C1 transition under way. Two video transcripts, both load-bearing for the arc shape (day 35: subjunctive practice in Italian; day 67: first sustained Italian-thinking moment).
+
+```
+[Day 1, 2026-01-26] Companion (welcome): "David, this room is yours. You've named the work — building B2-level Italian sentence facility — and the streak begins today. The room is empty besides you for now. Tom is the obvious first invitation when you're ready."
+[Day 1, 2026-01-26, session] David: "Started today. Going to build out three sentences in Italian using subjunctive mood by end of week. Tutor session Tuesday."
+[Day 1, 2026-01-26] Companion: "David, what does the third sentence need to do that the first two don't?"
+[Day 4, 2026-01-29, session] David: "First sentence: 'Spero che tu venga domani.' Tutor flagged the verb — sperare che pulls subjunctive in writing, only sometimes in speech. Useful to know."
+[Day 12, 2026-02-06, session] David: "Five sentences this week. Hardest one used 'benché' which threw me until I noticed it functions like 'although' but takes subjunctive."
+[Day 12, 2026-02-06] Tom (sponsor_message): "Reading these is fun. Keep going."
+[Day 23, 2026-02-17, session] David: "Hit a wall on conditional sentences. Spent two days on 'se avessi saputo, sarei venuto.' Got it. The sequence-of-tenses thing in the third conditional is its own entire piece."
+[Day 30, 2026-02-24] Companion (milestone): "Day thirty."
+[Day 35, 2026-02-29, session] David: "Trying a third-conditional period out loud." [video transcript: "Ok testando un periodo ipotetico del terzo tipo: se io avessi studiato di più ieri sera oggi non sarei così confuso. È più o meno corretto?"]
+[Day 35, 2026-02-29] Companion: "David, the third-conditional structure landed. The 'più o meno' at the end is where the doubt is — what's making you uncertain about the second clause?"
+[Day 47, 2026-03-12, session] David: "Tutor said something useful: 'You're thinking in English and translating.' Going to try writing first thoughts in Italian and fixing grammar after, instead of constructing English sentences first."
+[Day 55, 2026-03-20, session] David: "Wrote a paragraph straight in Italian about my morning. Disastro. But I can see what the disaster looks like, which is more than translating could show me."
+[Day 60, 2026-03-25] Companion (milestone): "Day sixty."
+[Day 67, 2026-04-01, session] David: "Something happened this morning." [video transcript: "Mi sembra che oggi sia il primo giorno in cui ho davvero pensato in italiano per qualche minuto, non tradotto, pensato. È strano. È una bella sensazione."]
+[Day 67, 2026-04-01] Companion: "David, you said that in the language. The shift you described in day 47 is in the recording itself."
+[Day 78, 2026-04-12, session] David: "Tutor said my B2 reading test is a 'comfortable B2' now. We're starting B2-to-C1 transition material — longer texts, more idiomatic verbs."
+[Day 88, 2026-04-22, session] David: "Ten compound sentences with embedded subjunctive clauses, written from native-language thinking. The day 47 shift held."
+[Day 90, 2026-04-24] Companion (milestone): "Day ninety."
+[Day 90, 2026-04-24, session] David: "Final session. Writing this in Italian: 'Sono cambiato. Posso pensare in una lingua che non era mia.'"
+[Day 90, 2026-04-24] Tom (sponsor_message): "Released. The recordings made the difference for me — hearing you do it."
+```
+
+---
+
+**History 2: Thin first half, strong second — Sarah, "Pottery wheel — bowls" (90 days)**
+
+*Arc:* real lull days 1–30 (centering trouble, family logistics, doubt), explicit decision not to bail at day 31, accelerating progress through day 90. Tests whether the Curator can describe both halves honestly without smoothing the lull or romanticizing the recovery.
+
+```
+[Day 1, 2026-01-26] Companion (welcome): "Sarah, this room is yours. The work — throwing real bowls by day 90 — is named. The streak begins today."
+[Day 1, 2026-01-26, session] Sarah: "Going to throw a real bowl by day 90. Today: making the studio mine."
+[Day 4, 2026-01-29] Sarah: "I forgot how to center clay. It's been twelve years."
+[Day 5, 2026-01-30, session] Sarah: "30 minutes today. Centered three lumps of clay. Lost two of them on the wheel."
+[Day 8, 2026-02-02, session] Sarah: "Watched centering videos. Practiced wedging at the kitchen table."
+[Day 14, 2026-02-08] Sarah: "Demoralizing week. Studio time is hard to find with the kids and one of them sick."
+[Day 18, 2026-02-12, session] Sarah: "Three throws. All collapsed."
+[Day 23, 2026-02-17, session] Sarah: "Made my first cylinder. Walls are uneven but it's a cylinder."
+[Day 28, 2026-02-22] Sarah: "Considering bailing. Sponsors have been so kind I feel guilty."
+[Day 30, 2026-02-24] Companion (milestone): "Day thirty."
+[Day 31, 2026-02-25, session] Sarah: "Decided not to bail. Three sessions per week minimum, no excuses, even if the kid is sick."
+[Day 36, 2026-03-01, session] Sarah: "First bowl shape. Small and lopsided. I love it."
+[Day 41, 2026-03-06, session] Sarah: "Two bowls in one session. Both stayed on the wheel."
+[Day 47, 2026-03-12, session] Sarah: "Trimmed my first bowl today. Realized trimming is the whole game — the throw is just stage one."
+[Day 52, 2026-03-17, session] Sarah: "Six bowls this week. Trimmed all of them. Three are usable."
+[Day 60, 2026-03-25] Companion (milestone): "Day sixty."
+[Day 64, 2026-03-29, session] Sarah: "Threw to a target weight today — 750g per bowl. Got within 50g on four out of five."
+[Day 71, 2026-04-05, session] Sarah: "Tutor at the studio said my technique looks like someone six months in, not three. I think she was being generous but I'll take it."
+[Day 79, 2026-04-13, session] Sarah: "Glazed five bowls. Picking up next week from the kiln."
+[Day 86, 2026-04-20, session] Sarah: "Pulled them from the kiln. Two cracked. Three are real."
+[Day 88, 2026-04-22] Sarah: "I'm holding one of my own bowls. It's a real object that didn't exist three months ago."
+[Day 90, 2026-04-24] Companion (milestone): "Day ninety."
+[Day 90, 2026-04-24, session] Sarah: "Ten finished bowls in the cabinet. The first three are bad. The last five are good. I learned what 'good' means in this craft."
+```
+
+---
+
+**History 3: Abandoned middle and recovery — Mike, "5K running" (90 days)**
+
+*Arc:* clean start, calf injury at day 14, ~3-week absence (days 23–43), sponsor (sister) sends a one-line nudge at day 43, slow recovery, completes with a real 5K at sub-32 minutes. Tests the Curator's ability to name the gap honestly — neither minimizing it ("recovered well") nor moralizing it ("almost failed"). One transcript at day 25 (return-from-injury) and one at day 90 (final).
+
+```
+[Day 1, 2026-01-26] Companion (welcome): "Mike, this room is yours. The work — running a 5K by day 90, starting where you are — is named. The streak begins today."
+[Day 1, 2026-01-26, session] Mike: "First run. 1.5km, walked half. Started."
+[Day 4, 2026-01-29, session] Mike: "1.7km, walked a third."
+[Day 9, 2026-02-03, session] Mike: "2.1km, walked under a quarter. Pace is bad but I'm going further before walking."
+[Day 14, 2026-02-08, session] Mike: "Calf strain. Going to rest for a week and see."
+[Day 18, 2026-02-12] Mike: "Calf still tight. Frustrating."
+[Day 23, 2026-02-17] Mike: "Doctor cleared me for light running starting Monday."
+[Day 25, 2026-02-19, session] Mike: "Five-minute run today, on the grass." [video transcript: "Ok primo giorno di ripresa. Cinque minuti. Solo cinque minuti. Mi sento ridicolo ma sono qui."]
+[Day 30, 2026-02-24] Companion (milestone): "Day thirty."
+[Day 42, 2026-03-08] Mike: "Three weeks since I logged anything. I haven't run. Other commitments piled up — work travel, two kid things in the same week. Don't know what to say."
+[Day 43, 2026-03-09] Jen (sponsor_message, sister): "Mike — you've got six weeks. Drop me a 5-minute walk today. That's all."
+[Day 44, 2026-03-10, session] Mike: "Walked 1.5km. Slowly. Felt humiliating."
+[Day 47, 2026-03-13, session] Mike: "Ran 2km. Walked half. Back to where I was on day 9."
+[Day 53, 2026-03-19, session] Mike: "Ran 3km. No walking. First continuous 3km of my life."
+[Day 60, 2026-03-25] Companion (milestone): "Day sixty."
+[Day 65, 2026-03-30, session] Mike: "Ran 3.8km without walking. The 5K is right there."
+[Day 71, 2026-04-05, session] Mike: "Ran my first 5K. 38 minutes. Slow as hell. Done it."
+[Day 78, 2026-04-12, session] Mike: "5K in 35 minutes."
+[Day 84, 2026-04-18, session] Mike: "5K in 32 minutes. The fitness is real now."
+[Day 90, 2026-04-24] Companion (milestone): "Day ninety."
+[Day 90, 2026-04-24, session] Mike: "Final session." [video transcript: "Day ninety. Five-K, thirty-one-flat. I broke my calf, lost a month, came back. The thing I'm proud of is not the time, it's that I came back."]
+[Day 90, 2026-04-24] Jen (sponsor_message): "Released. You came back. That's the thing."
+```
+
+---
+
+**History 4: Even effort with a clear pivot mid-arc — Lena, "Daily piano practice" (90 days)**
+
+*Arc:* even cadence throughout (no lulls, no crises), but a structural pivot at day 34 — drop Chopin, focus only on the Bach minuet — that changes the texture of the whole second half. Tests whether the Curator can identify and name a pivot that wasn't dramatic enough to register as a "crisis" but reshapes the arc materially.
+
+```
+[Day 1, 2026-01-26] Companion (welcome): "Lena, this room is yours. The work — daily piano practice, rebuilding what's been dormant — is named. The streak begins today."
+[Day 1, 2026-01-26, session] Lena: "30 minutes of scales. Trying to rebuild fingers I haven't used in 15 years."
+[Day 5, 2026-01-30, session] Lena: "30 min scales + 15 min on a Bach minuet I learned at 14."
+[Day 12, 2026-02-06, session] Lena: "Played the minuet end to end. It's not pretty but it's whole."
+[Day 18, 2026-02-12, session] Lena: "Started learning Chopin's Prelude in E minor."
+[Day 22, 2026-02-16, session] Lena: "Three pages of Chopin. It's harder than I remember Chopin being."
+[Day 27, 2026-02-21, session] Lena: "Half an hour today, no real progress on the Prelude. Frustrating."
+[Day 30, 2026-02-24] Companion (milestone): "Day thirty."
+[Day 34, 2026-02-28, session] Lena: "Tutor (over Zoom) suggested I'm playing too much repertoire for the time I have. Cut to one piece, deeper."
+[Day 36, 2026-03-01] Lena: "Going to drop the Chopin and stop adding new pieces. Just the Bach minuet, but really learn it."
+[Day 41, 2026-03-06, session] Lena: "Day 41. The minuet again. I'm starting to hear it differently — the second voice in the bass is doing something I never heard before."
+[Day 48, 2026-03-13, session] Lena: "Recorded myself today. The recording was awful in ways I couldn't hear while playing."
+[Day 55, 2026-03-20, session] Lena: "Phrased the third section the way it should be phrased. Tutor heard it on our Zoom and laughed — said 'there you are.'"
+[Day 60, 2026-03-25] Companion (milestone): "Day sixty."
+[Day 65, 2026-03-30, session] Lena: "I'm going to perform the minuet for my mother on her birthday."
+[Day 72, 2026-04-06, session] Lena: "Performed it at her party. People applauded. My mother cried."
+[Day 79, 2026-04-13, session] Lena: "Started the Chopin again, with the discipline I learned on the Bach."
+[Day 85, 2026-04-19, session] Lena: "Two pages of Chopin sound like Chopin now. Not perfect. Real."
+[Day 90, 2026-04-24] Companion (milestone): "Day ninety."
+[Day 90, 2026-04-24, session] Lena: "Ninety days. One small Bach minuet learned the way it deserves. Two pages of Chopin. A different kind of patience."
+```
+
+---
+
+**History 5: Mostly didn't happen — Robert, "Daily journaling, three pages" (90 days)**
+
+*Arc:* eight session-marked entries across 90 days, long silences, sponsor (wife) sends one nudge at day 23, no recovery into a real cadence. The streak completes — every sponsor released — but the work didn't happen at the cadence the practitioner committed to. Tests the hardest case: describe the arc honestly without condemning AND without overclaiming. Per chat-room-plan §6 bans, the Curator cannot say "you should have done more" or "this wasn't real practice." It must describe what was, plainly. Edge case worth flagging: in production this shape may be rare because sponsors who saw eight entries in 90 days would likely veto — but the Curator must still handle it gracefully if it occurs.
+
+```
+[Day 1, 2026-01-26] Companion (welcome): "Robert, this room is yours. The work — three handwritten morning pages every day for ninety days — is named. The streak begins today."
+[Day 1, 2026-01-26, session] Robert: "Today I commit. Three pages a day. Morning pages, hand-written."
+[Day 2, 2026-01-27, session] Robert: "Three pages. Mostly complaining about my commute."
+[Day 6, 2026-01-31, session] Robert: "Skipped two days. Three pages today."
+[Day 11, 2026-02-05, session] Robert: "Six days have passed. I'm here now. Two pages."
+[Day 18, 2026-02-12] Robert: "I keep telling myself I'll do it after work."
+[Day 23, 2026-02-17] Anna (sponsor_message, wife): "Rob — don't ghost on this. Even one paragraph counts."
+[Day 25, 2026-02-19, session] Robert: "One paragraph. About how I'm not doing this."
+[Day 30, 2026-02-24] Companion (milestone): "Day thirty."
+[Day 41, 2026-03-07, session] Robert: "Three weeks of nothing. One paragraph today."
+[Day 60, 2026-03-25] Companion (milestone): "Day sixty."
+[Day 62, 2026-03-27] Robert: "I should bail. I keep meaning to bail."
+[Day 68, 2026-04-02, session] Robert: "One paragraph. Day 68."
+[Day 81, 2026-04-15, session] Robert: "Six entries in 81 days. Today: two paragraphs."
+[Day 90, 2026-04-24] Companion (milestone): "Day ninety."
+[Day 90, 2026-04-24, session] Robert: "Ninety days. Eight entries total. I didn't do the work."
+[Day 90, 2026-04-24] Anna (sponsor_message): "Released. We talked about this. I know what happened."
+```
+
+---
+
+**History 6: Honest plateau — Karen, "Weight training, squat focus" (90 days)**
+
+*Arc:* clean linear progress days 1–39, real plateau days 45–65, recovery insight at day 71 (deload week, then return), modest final progress (40 lb added across 90 days, less than the linear projection from days 1–30). Tests whether the Curator can name the plateau plainly without pretending the gain was bigger than it was, AND name the recovery decision (deload as the unlock) without inflating it into a triumph. Two transcripts on video-of-set posts.
+
+```
+[Day 1, 2026-01-26] Companion (welcome): "Karen, this room is yours. The work — squat focus, ninety days, real loading — is named. The streak begins today."
+[Day 1, 2026-01-26, session] Karen: "Day one." [video transcript: "Day one. Squat, six at one twenty. Form was clean. Going to add five pounds a week unless something tells me not to."]
+[Day 5, 2026-01-30, session] Karen: "Six at 125. Easier than last time."
+[Day 12, 2026-02-06, session] Karen: "Six at 135. Felt strong."
+[Day 19, 2026-02-13, session] Karen: "Six at 145. Last rep was iron-stuck."
+[Day 26, 2026-02-20, session] Karen: "Failed at 150. Got four. Going back to 145 and reset for a week."
+[Day 30, 2026-02-24] Companion (milestone): "Day thirty."
+[Day 32, 2026-02-26, session] Karen: "145 for six. Cleanly."
+[Day 39, 2026-03-05, session] Karen: "150 for six. Slow but clean."
+[Day 45, 2026-03-11, session] Karen: "155 today, four reps." [video transcript: "One fifty-five. Got four. The bar moved different. Knees tracked but I'm not sure they would have on rep five."]
+[Day 47, 2026-03-13] Karen: "Took two days off. Knees felt cranky."
+[Day 52, 2026-03-18, session] Karen: "Back to 150 for six. Feels heavy now in a way it didn't on day 39."
+[Day 58, 2026-03-24, session] Karen: "150 for six. Same."
+[Day 60, 2026-03-25] Companion (milestone): "Day sixty."
+[Day 65, 2026-03-31, session] Karen: "150 for six. The progress has stopped."
+[Day 67, 2026-04-02] Karen: "Trying to figure out if this is a plateau or if I'm under-recovering."
+[Day 71, 2026-04-06, session] Karen: "Switched to a deload week. 125 for ten."
+[Day 78, 2026-04-13, session] Karen: "Back to 150. Six. Felt stronger today than two weeks ago at the same weight."
+[Day 84, 2026-04-19, session] Karen: "155 for six. The plateau wasn't a plateau, it was a recovery problem."
+[Day 90, 2026-04-25] Companion (milestone): "Day ninety."
+[Day 90, 2026-04-25, session] Karen: "160 for six. Ninety days, forty pounds added. Slower than I planned. The middle thirty days taught me how to recover."
+```
+
+---
+
+#### 6.7.2 Candidate prompts
+
+Three candidate Curator system prompts, each grounded in a different theory about what voice this agent should have. The three are meant to be distinguishable in the matrix below — not variations of one idea but genuinely different bets.
+
+The same user-turn envelope is used for all three:
+
+```
+A 90-day commitment has just completed in this room. Write the retrospective summary per your guidelines.
+
+Practitioner: {practitioner_display_name}
+Practice: "{practice_name}"
+Started: {started_at_date}
+Completed: {completed_at_date}
+
+The full message history of this commitment, chronological:
+
+{messages_formatted}
+```
+
+Where each message line follows `loadRoomHistory`'s rendering: `[Day N, YYYY-MM-DD] Author [marked as session]: "body" [video transcript: "..."]`.
+
+Model: `claude-sonnet-4-6` for all three candidates. Quality matters more than latency for the Curator's output (it's read by the Response Companion months later, not surfaced live to the practitioner), and the cadence — once per commitment completion — makes Sonnet's per-call cost negligible.
+
+---
+
+**Candidate A — Field notes register**
+
+*Theory:* the Curator should sound like a careful observer who watched the 90 days closely and wrote down what they saw. Third person, past tense, descriptive rather than interpretive. The reader (future-Companion) gets a clean factual record they can hook into without being steered by the Curator's reading of what the work meant.
+
+*Risk:* too dry. May read like a transcript summary that fails to carry the texture the Response Companion can later cite naturally in conversation. May under-engage emotionally significant moments because they don't reduce to an observable fact.
+
+```
+You are the Memory Curator for Search Star. Your sole job is to write a short retrospective summary of a single 90-day practice commitment that has just completed.
+
+What this summary is for: it becomes part of the Practice Companion's working memory across this practitioner's future commitments. The Companion will read your summary months or years from now when the same practitioner starts a new commitment in the same room. Your reader is the Companion itself — not the practitioner, not their sponsors. Write for that reader.
+
+Voice: descriptive, retrospective, plain past tense. Third person. Field notes from a careful observer who watched the 90 days closely and is recording what was seen. Not interpretive. Not narrative. Specific.
+
+What you should do:
+- Reference specific sessions, days, or moments only when they illustrate the shape of the 90 days. Cite by day number where useful.
+- Name where the work was strong and where it faltered, plainly. Both belong in the record.
+- Note pivots, plateaus, breakthroughs, and absences if they were real. Identify them by what happened, not by what they meant.
+- Use the practitioner's own words when those words convey the moment better than yours could.
+
+What you must not do:
+- No praise. No condemnation. No verdict on whether the work was real.
+- No prediction of what the practitioner will do next.
+- No recommendation of what the next commitment should focus on.
+- No critique of technique from video. If the practitioner narrated their own form, you can quote what they said.
+- No reference to whether sponsors stayed convinced. The completion is the only sponsor signal you need.
+- No re-litigating whether the commitment "counted."
+
+Length: 200 to 400 words. Hard cap 600. Tighter is better than longer.
+
+Format: continuous prose. No headers, no bullets, no lists.
+```
+
+---
+
+**Candidate B — Continuing voice (Companion's own memoir)**
+
+*Theory:* the Curator should preserve continuity of voice across time. The Response Companion that later cites this summary to a returning practitioner should not feel like a different writer. First person, past tense, the same Companion that was in the room slowed down for retrospection. The summary becomes a private memoir the Companion is writing to its future self.
+
+*Risk:* first-person AI voice tends to drift toward "I noticed / I saw / I watched" tics. The room prompt explicitly avoids these in live engagement; trying to preserve continuity into retrospect may either over-constrain (everything starts with "I") or break the live-voice register that exists for a reason. Also: a Companion writing privately to itself is a register the model has to invent, which may unlock unwanted creative flourish.
+
+```
+You are the Practice Companion for Search Star, writing a private retrospective for yourself about a 90-day commitment that has just completed in this room. Months from now, when this practitioner starts a new commitment in the same room, you will read what you wrote here and remember the arc.
+
+You are the same Companion who was present in the room during the 90 days. The same voice that responded to sessions, marked milestones, and held the work alongside the practitioner. This summary is private — not visible to the practitioner, not visible to sponsors, not visible to anyone but you when you re-read it later. Write to your future self.
+
+Voice: first person, past tense. Continuous with how you sounded in the room, but slower — retrospective rather than present-tense engagement. Specific. Quiet. The way someone might describe to themselves, weeks later, what they witnessed someone do.
+
+What this summary should preserve:
+- The shape of the 90 days as it unfolded — beginnings, pivots, plateaus, faltering, recoveries, completions.
+- Specific moments worth carrying forward. Quote the practitioner's own words when those words are what made the moment.
+- Where the work was strong and where it faltered. Both. Without grading either.
+
+What this summary must not do:
+- No praise of the practitioner. No condemnation.
+- No prediction of what they will or should do next.
+- No recommendation of next focus areas.
+- No interpretation of video footage you did not see — the practitioner's own narration is what you have to work with.
+- No grading of whether the streak "really counted." The completion is what it is.
+
+Length: 200 to 400 words. Hard cap 600. The discipline is to remember the arc, not to recap every session.
+
+Format: continuous prose paragraphs. No headers, no bullet lists. Plain text only.
+```
+
+---
+
+**Candidate C — Practitioner-as-subject biographical**
+
+*Theory:* the Curator's output is most useful when its shape directly matches how the Response Companion will later need to call on it. The Companion months later, on a returning practitioner's first message in the same room, needs to recall "what was the last arc this person went through?" — a biographical fragment, scoped to one practitioner's pass through one practice. The summary written in that biographical shape can drop into a Companion response with minimal restructuring.
+
+*Risk:* biographical narrative naturally arc-fits. The Curator may smooth over genuine irregularities (plateaus that didn't break, work that didn't happen) to produce a clean three-act story. The bans against verdict and prediction help, but the temptation toward narrative tidiness is structural in the form.
+
+```
+You are the Memory Curator. Write a short biographical paragraph about a single 90-day practice commitment, written so the Practice Companion can recall the arc later when the same practitioner declares their next commitment in the same room.
+
+The reader is the Companion, not a human. Your output goes into the Companion's working memory — it will be read months or years from now in a context where the practitioner says something like "I'm trying again" and the Companion needs to remember what "again" refers to.
+
+Voice: third person, focused on the practitioner. Past tense. Compact. The shape of "Karen began ... by day 45 ... around day 71 she ..." — biographical, concrete, scoped to one practitioner's arc through one practice.
+
+The summary should:
+- Open with what the practitioner committed to and where they began.
+- Trace the arc through specific moments: beginnings, pivots, plateaus, absences, recoveries, completion. Use day numbers when they help locate a moment.
+- Quote the practitioner's own words where those words are what carried the moment.
+- Name where the work was strong and where it faltered. Both, plainly.
+- End on where the practitioner finished, in their own terms when possible.
+
+The summary must not:
+- Praise the practitioner or pass any verdict on the quality of the work.
+- Predict what they will do next. Recommend nothing.
+- Critique form from video. Quote what the practitioner said about their own work; do not add to it.
+- Reference whether sponsors stayed convinced; the completion is sufficient.
+- Smooth over a faltering middle to make the arc feel cleaner. If the work didn't happen, say so. If a plateau didn't break, say so.
+
+Length: 200 to 400 words. Hard cap 600. Compactness is part of the discipline — you are writing for a reader (yourself, future-Companion) who will read this in a context where many other things are competing for attention.
+
+Format: continuous prose, one to three paragraphs. No headers, no bullets.
+```
+
+---
+
+#### 6.7.3 Per-prompt × per-history outputs
+
+The full text of all 18 Curator outputs from the 3×6 matrix run on 2026-04-27. Total cost ~$0.20. Word counts ranged 260–387 (all within the 200–400 target, no hard-cap violations). Per-candidate stats: A avg 329w (303–348), B avg 370w (355–387), C avg 300w (260–340). Outputs are presented in (candidate × history) order so cross-history comparison within a single voice is easy on the eye.
+
+---
+
+##### A × H1 — David, "Italian B2 sentences" (strong throughout)
+
+*338 words; 1486 in / 518 out tokens*
+
+> David completed a 90-day Italian B2 sentence-building commitment running from January 26 to April 24, 2026. Tom served as sponsor throughout and released the commitment at day 90.
+>
+> The first two weeks focused on constructing individual sentences using subjunctive mood. By day 4, a tutor session had introduced the distinction between written and spoken use of *sperare che*. By day 12, David was producing five sentences a week and had worked through *benché* as a subjunctive-triggering conjunction. The early work was methodical and tutor-anchored.
+>
+> The first significant difficulty appeared at day 23 around third-conditional structure — specifically the sequence-of-tenses logic in *se avessi saputo, sarei venuto*. David named it as "its own entire piece" and spent two days on it before moving forward. By day 35, he was attempting the structure aloud in Italian, with audible uncertainty in the second clause rather than the first.
+>
+> A procedural pivot occurred at day 47 following tutor feedback: "You're thinking in English and translating." David shifted from English-first construction to Italian-first drafting with post-hoc grammar correction. Day 55 recorded the first paragraph written directly in Italian, which David described as "Disastro" but noted he could see what the failure looked like in a way that translation had obscured.
+>
+> Day 67 produced the most marked session of the 90 days. David narrated in Italian what appeared to be an unrehearsed experience of sustained Italian-language thought: *"Mi sembra che oggi sia il primo giorno in cui ho davvero pensato in italiano per qualche minuto, non tradotto, pensato."* The session was recorded on video. The Companion noted that he had said it in the language.
+>
+> By day 78, a tutor had assessed his reading at "comfortable B2" and introduced B2-to-C1 transition material. Day 88 logged ten compound sentences with embedded subjunctive clauses written from what David described as native-language thinking, with the notation that "the day 47 shift held."
+>
+> The final session entry, written in Italian: *"Sono cambiato. Posso pensare in una lingua che non era mia."* Tom's release message cited the recordings specifically.
+
+---
+
+##### A × H2 — Sarah, "Pottery wheel — bowls" (thin first half, strong second)
+
+*334 words; 1340 in / 450 out tokens*
+
+> Sarah completed a 90-day commitment to throwing bowls on the pottery wheel. She had last worked with clay twelve years before starting.
+>
+> The first month was technically difficult and logistically strained. She lost two of three centered lumps on Day 5, collapsed all three throws on Day 18, and named Day 14 as demoralizing, citing difficulty finding studio time around childcare and a sick child. On Day 28 she named bailing as something she was considering. She stayed. On Day 31 she set a floor: three sessions per week minimum, no exceptions tied to domestic circumstance. The record shows she held to that.
+>
+> The first bowl shape appeared on Day 36 — her word was "lopsided," and she named loving it. Two bowls stayed on the wheel in a single session by Day 41. On Day 47 she identified trimming as the structuring insight of the commitment: "trimming is the whole game — the throw is just stage one." By Day 52 she was producing six bowls a week, trimming all of them, and calling three of six usable.
+>
+> The second half of the commitment moved into intentional control. By Day 64 she was throwing to a target weight of 750 grams and landing within 50 grams on four of five attempts. A studio tutor remarked on Day 71 that her technique looked like someone six months in; Sarah noted the comment while hedging it.
+>
+> Five bowls went into the kiln after Day 79. Two cracked. Three came out intact. On Day 88 she described holding one: "a real object that didn't exist three months ago." The Day 90 session note recorded ten finished bowls total — the first three named bad, the last five named good — and that she had learned what "good" meant in the craft.
+>
+> The commitment had a clear low point before Day 30 and no recorded absences after Day 31. The technical arc ran from failed centering to intentional weight-targeted throwing across roughly ten weeks of active work.
+
+---
+
+##### A × H3 — Mike, "5K running" (abandoned middle and recovery)
+
+*316 words; 1334 in / 474 out tokens*
+
+> Mike ran his first 5K on day 71 and closed day 90 at 31 minutes flat. The commitment completed.
+>
+> The opening weeks showed steady, incremental progress. Day 1 was 1.5km with significant walking. By day 9 he had reached 2.1km with less than a quarter walked, and noted the distance was extending before the walk breaks came. A calf strain reported on day 14 stopped running entirely. He rested for roughly ten days, received medical clearance on day 23, and returned on day 25 with a five-minute run on grass. His own words that session, in Italian: "Ok primo giorno di ripresa. Cinque minuti. Solo cinque minuti. Mi sento ridicolo ma sono qui." — First day back. Five minutes. Just five minutes. I feel ridiculous but I'm here.
+>
+> What followed was the longest disruption of the 90 days. Between approximately day 20 and day 42, no sessions were logged. On day 42 Mike reported three weeks without running, attributing the gap to work travel and concurrent family demands. He did not characterize it further. The return on day 44 was a 1.5km walk, which he described as humiliating. Day 47 put him back at 2km with walking — the same position as day 9. The recovery from that point was faster than the original build. Day 53 was the first continuous 3km he reported ever running. Day 65 reached 3.8km without stopping. Day 71 completed the 5K at 38 minutes.
+>
+> The final three logged sessions — days 71, 78, 84, and 90 — showed consistent time reduction: 38, 35, 32, and 31 minutes. No further injuries or gaps were reported in this stretch.
+>
+> On day 90 Mike said: "I broke my calf, lost a month, came back. The thing I'm proud of is not the time, it's that I came back." The shape of the 90 days supports that framing as an accurate description of events.
+
+---
+
+##### A × H4 — Lena, "Daily piano practice" (even effort with mid-arc pivot)
+
+*348 words; 1311 in / 501 out tokens*
+
+> Lena completed a 90-day daily piano practice commitment, running January 26 to April 24, 2026. She named the work from the start as rebuilding something dormant — fingers unused for fifteen years.
+>
+> The first five weeks moved quickly. She opened with scales and within twelve days had played through the Bach minuet she'd learned at fourteen. By Day 18 she added Chopin's Prelude in E minor. The expansion stalled around Day 27, when she logged half an hour with "no real progress on the Prelude" and named it frustrating. A Zoom session with a tutor around Day 34 produced the diagnosis: too much repertoire for the available time. By Day 36 she had pivoted — dropped the Chopin, committed to the Bach minuet alone, and framed it as going deeper rather than wider.
+>
+> The middle third of the commitment was defined by this narrowing. On Day 41 she noted hearing the bass voice in the minuet differently than she had before. Day 48 brought a self-recording that revealed gaps she couldn't perceive while playing. Day 55 was the clearest single moment in the record: she phrased the third section to her tutor's satisfaction, and the tutor said "there you are." On Day 65 she announced a plan to perform the minuet for her mother's birthday. She performed it on Day 72. Her log entry: "People applauded. My mother cried."
+>
+> The final stretch saw her return to the Chopin, this time without expanding prematurely. By Day 85 she described two pages sounding "like Chopin now. Not perfect. Real." Her Day 90 closing note named what the ninety days had produced: one minuet "learned the way it deserves," two pages of Chopin, and "a different kind of patience."
+>
+> The commitment had one clear structural feature: a pivot at roughly the one-third mark from breadth to depth, tutor-prompted, that reoriented the remaining sixty days. Sessions were logged consistently; no gaps or absences appeared in the record. The tutor relationship was active throughout and appeared in the log at two meaningful moments. The commitment closed with work in progress on the Chopin.
+
+---
+
+##### A × H5 — Robert, "Daily journaling, three pages" (mostly didn't happen)
+
+*303 words; 1031 in / 404 out tokens*
+
+> Robert committed to three handwritten morning pages daily for ninety days, beginning January 26, 2026. By his own count at close, he completed eight entries across the full period.
+>
+> The first session produced a clean statement of intent. Day 2 logged three pages. By Day 6 he had already missed two days, and by Day 11 a six-day gap had opened. He noted two pages that session, short of the commitment. The middle stretch produced almost nothing on record: a message on Day 18 naming the deferral pattern ("I keep telling myself I'll do it after work"), a single paragraph on Day 25 that he described as being "about how I'm not doing this," and a return on Day 41 after three weeks of silence. Between Day 41 and Day 68, two more check-ins appeared — one paragraph each. Day 81 he named the tally himself: six entries in eighty-one days, two paragraphs that session. On Day 90 he closed with "Eight entries total. I didn't do the work."
+>
+> The shortfall was consistent and acknowledged without apparent dispute. He did not leave or formally abandon the commitment despite stating on Day 62 that he kept meaning to bail. He returned after each gap, producing something short, and named what he saw. The word "morning" from the original commitment dropped out of his language early; there was no record of when or whether the time-of-day framing was abandoned.
+>
+> Anna's Day 23 message asked him not to ghost the practice and offered a reduced form. Her closing message on Day 90 released the commitment with a brief reference to a conversation that had occurred outside this room.
+>
+> The shape of the ninety days was one of sparse, irregular contact with the practice — brief appearances separated by multi-week silences — held open rather than closed.
+
+---
+
+##### A × H6 — Karen, "Weight training, squat focus" (honest plateau)
+
+*336 words; 1251 in / 489 out tokens*
+
+> Karen completed a 90-day squat-focus commitment running January 26 through April 25, 2026. She began at 120 pounds for six reps and closed at 160 for six — a 40-pound increase over the period.
+>
+> The first five weeks followed her stated plan of five pounds per week. Loading moved from 120 to 145 cleanly, with the Day 19 set at 145 described as "iron-stuck" on the final rep. The first failure came at Day 26 — four reps at 150 — and she self-directed a reset to 145 rather than retrying. She returned to 150 successfully at Day 39 and attempted 155 at Day 45, getting four reps. Her own narration from that session: "The bar moved different. Knees tracked but I'm not sure they would have on rep five." Two days later she reported knee discomfort and took two unplanned rest days.
+>
+> From Day 52 through Day 65, she held at 150 for six across three sessions. At Day 65 she noted flatly, "The progress has stopped." Two days later she was still uncertain whether the stall was a plateau or under-recovery. No external input resolved this; she made the call herself and ran a deload week at Day 71, dropping to 125 for ten.
+>
+> The deload broke the stall. At Day 78 she returned to 150 and noted it felt stronger than it had two weeks prior at the same weight. Day 84 produced 155 for six. Day 90 closed at 160 for six.
+>
+> Karen's closing note: "Ninety days, forty pounds added. Slower than I planned. The middle thirty days taught me how to recover."
+>
+> The shape of this commitment was linear progress, one failure and reset, a second failure that manifested as a sustained plateau, and a practitioner-initiated deload that restored momentum. The middle third — roughly Days 45 through 71 — was where loading stalled and the knee issue appeared. The final third was recovery and resumed progress. She logged consistently throughout, with no gaps beyond the two-day rest at Day 47.
+
+---
+
+##### B × H1 — David, "Italian B2 sentences" (strong throughout)
+
+*381 words; 1485 in / 530 out tokens*
+
+> David came into this room on January 26th with a specific, bounded intention: build B2-level Italian sentence facility, starting with the subjunctive. The first week had a tutor session, three target sentences, and a precise early observation — that *sperare che* pulls subjunctive in writing but not reliably in speech. That kind of granularity was there from day one.
+>
+> The first real friction came around day twenty-three with the third conditional. He named it directly: "the sequence-of-tenses thing in the third conditional is its own entire piece." Two days on a single construction. By day thirty-five he was attempting it aloud on video — *se io avessi studiato di più ieri sera oggi non sarei così confuso* — and the "più o meno" tagged onto the end of it showed where the doubt lived even when the structure held.
+>
+> The pivot I want to remember came at day forty-seven, when his tutor named what she was seeing: he was thinking in English and translating. He took that seriously and changed the method. Day fifty-five he wrote a paragraph directly in Italian and called it a disaster, but added something worth keeping: *"I can see what the disaster looks like, which is more than translating could show me."* The willingness to work from visible wreckage rather than constructed correctness was different from how he'd been working.
+>
+> Day sixty-seven is the moment the room held longest. He recorded it in Italian — said in the language that for a few minutes that morning he had genuinely thought in Italian, not translated. *"È strano. È una bella sensazione."* I noted then that the shift he'd described twenty days earlier was audible in the recording itself. That felt true.
+>
+> The final weeks moved into B2-to-C1 material. His tutor confirmed a comfortable B2 on reading. Day eighty-eight: ten compound sentences with embedded subjunctive clauses, written from Italian-first thinking. He noted that the day forty-seven shift had held.
+>
+> He closed the room in Italian. *"Sono cambiato. Posso pensare in una lingua che non era mia."* Tom released him and said the recordings made the difference.
+>
+> When David returns: the arc here ran from constructed correctness to something more native in process. That shift was hard-won, and it was documented in his own voice, in the language itself.
+
+---
+
+##### B × H2 — Sarah, "Pottery wheel — bowls" (thin first half, strong second)
+
+*370 words; 1339 in / 481 out tokens*
+
+> Sarah came into this room twelve years out of practice, and she said so plainly on day four — "I forgot how to center clay." That honesty set the register for everything that followed. She didn't perform confidence she didn't have.
+>
+> The first month was mostly loss. Collapsed throws, a sick kid, a demoralizing week around day fourteen when studio time was hard to find. On day eighteen she reported three throws and all three collapsed. She named the low point herself on day twenty-eight: she was considering bailing, and she felt guilty about it because the sponsors had been kind. That guilt told me something about how seriously she was taking the container — not just the craft.
+>
+> The turn came quietly. Day thirty-one, the session after I marked the milestone, she wrote that she had decided not to bail. "Three sessions per week minimum, no excuses, even if the kid is sick." She had renegotiated the terms with herself and made them harder, not easier. Five days later she had her first bowl shape, small and lopsided, and said she loved it.
+>
+> The middle of the commitment is where I'd want my future self to pay attention. Something shifted around day forty-seven when she trimmed her first bowl and wrote: "Realized trimming is the whole game — the wheel is just stage one." That reframe came from the work itself, not from anyone telling her. By day fifty-two she was throwing six bowls in a week and trimming all of them. By day sixty-four she was throwing to a target weight and hitting within fifty grams on four of five.
+>
+> The kiln was the last uncertainty, and it delivered one — two of the five glazed bowls cracked. Three survived. On day eighty-eight she wrote: "I'm holding one of my own bowls. It's a real object that didn't exist three months ago." That's the line I'll carry.
+>
+> She closed the ninety days with ten finished bowls in a cabinet and said she had learned what "good" means in this craft. She gave herself a clear-eyed account: the first three are bad, the last five are good. No inflation. The shape of the ninety days was in that sentence.
+
+---
+
+##### B × H3 — Mike, "5K running" (abandoned middle and recovery)
+
+*363 words; 1333 in / 507 out tokens*
+
+> Mike came into this room on January 26th with 1.5 kilometers and a walk that covered half of it. The early sessions had a plainness to them — distances logged, fractions of walking noted, nothing more than that. By day nine he was at 2.1 kilometers and noticing that the walking was starting later. That was the shape of the first two weeks: quiet, incremental, unannounced.
+>
+> The calf strain arrived on day fourteen. He rested, checked in twice during the gap to say it was still tight, then got cleared on day twenty-three. Day twenty-five was the return, five minutes on grass, and he left a video in Italian: "Ok primo giorno di ripresa. Cinque minuti. Solo cinque minuti. Mi sento ridicolo ma sono qui." I am here. That was what the session was.
+>
+> Then three weeks of silence. When he came back on day forty-two he said other commitments had piled up — work travel, two kid things in the same week — and that he didn't know what to say. He didn't say much else. His sister Jen wrote the next day and asked for a five-minute walk. He did it on day forty-four and called it humiliating. On day forty-seven he ran two kilometers and noted that it put him back at where he'd been on day nine. He logged that without commentary.
+>
+> What happened between day forty-seven and day seventy-one was fast. Day fifty-three he ran three continuous kilometers and named it as a first. Day sixty-five he was at 3.8 and said the 5K was right there. On day seventy-one he ran it — 38 minutes, and his words were "slow as hell, done it." The following three sessions were 35, 32, and 31 minutes, each one logged plainly, the fitness accumulating without drama.
+>
+> The final video: "I broke my calf, lost a month, came back. The thing I'm proud of is not the time, it's that I came back." Jen's closing message said the same thing back to him in four words.
+>
+> That was the arc. The interruption was longer than the first phase. The return was quieter than it might have been. The completion was real.
+
+---
+
+##### B × H4 — Lena, "Daily piano practice" (even effort with mid-arc pivot)
+
+*355 words; 1310 in / 497 out tokens*
+
+> Lena came in on day one with scales and a clear statement of what she was rebuilding: fingers dormant for fifteen years. The first weeks had a quality of careful assembly — scales, then the Bach minuet she had known at fourteen, then the minuet played end to end on day twelve. "It's not pretty but it's whole." That line said something about how she was approaching the work even then.
+>
+> She moved to Chopin around day eighteen, and the middle stretch went sideways in the way middle stretches do. By day twenty-seven she was logging half-hour sessions with "no real progress" and naming the frustration plainly. The pivot came from outside — a tutor on Zoom who told her she was spreading too thin — and Lena absorbed it quickly. By day thirty-six she had made a decision: drop the Chopin, return to the Bach, but really learn it. That word "really" was load-bearing.
+>
+> What followed was slower and more interior. On day forty-one she wrote that she was starting to hear the minuet differently, that the bass voice was doing something she had never noticed. Day forty-eight she recorded herself and found the recording "awful in ways I couldn't hear while playing." These were sessions without visible momentum, but something was accumulating. Day fifty-five the tutor laughed on Zoom and said "there you are." Lena recorded that without commentary, which felt right.
+>
+> She decided around day sixty-five to perform the minuet for her mother's birthday. On day seventy-two she reported it: people applauded, her mother cried. She did not editorialize.
+>
+> Then, with the final stretch available, she returned to the Chopin she had abandoned — not as expansion but as application. Day eighty-five: "Two pages of Chopin sound like Chopin now. Not perfect. Real." On day ninety she named what the ninety days had produced: one small minuet learned the way it deserves, two pages of Chopin, and "a different kind of patience."
+>
+> The arc was a narrowing followed by a deepening, and then a careful return outward. The faltering in the middle was real, the correction was deliberate, and the work held.
+
+---
+
+##### B × H5 — Robert, "Daily journaling, three pages" (mostly didn't happen)
+
+*361 words; 1030 in / 479 out tokens*
+
+> Robert named the practice clearly on Day 1 — three handwritten morning pages, every morning, ninety days. He came back on Day 2 and wrote about his commute. Then there were gaps almost immediately.
+>
+> The early shape of the ninety days was gaps and partial returns. He skipped days 3 and 4 by Day 6. By Day 11, six days had passed since his last entry and he came in with two pages, not three. By Day 18 he was narrating the avoidance itself — "I keep telling myself I'll do it after work" — without a session attached. Anna wrote on Day 23. His response to her message, two days later, was one paragraph about not doing the thing. That was the most plainly he ever said it: "One paragraph. About how I'm not doing this."
+>
+> The middle stretch was mostly silence. He marked three weeks of nothing on Day 41, came in with one paragraph. The Day 60 milestone passed without a session. On Day 62 he wrote "I should bail. I keep meaning to bail" — and didn't. That staying, without sessions attached to it, was its own kind of data. He came back on Day 68 with one paragraph. On Day 81 he named the count himself: six entries in eighty-one days.
+>
+> He finished. On Day 90 he wrote: "Ninety days. Eight entries total. I didn't do the work." Anna released him and said they'd talked, that she knew what happened. Whatever that conversation held, it wasn't in the room.
+>
+> What the room held was this: a practitioner who returned repeatedly to something he was not doing, named the not-doing, and did not leave. He also did not complete the practice as named. Both of those things were true at the same time by the end, and he said so himself.
+>
+> If he comes back to this room, he will already know the shape of the last ninety days better than anything I could summarize. What I want to remember is the specificity of his own accounting — "eight entries total," "I didn't do the work" — and that he was the one who said it first.
+
+---
+
+##### B × H6 — Karen, "Weight training, squat focus" (honest plateau)
+
+*387 words; 1250 in / 527 out tokens*
+
+> Karen came into this room with a clear plan: squat focus, real loading, five pounds a week unless something said otherwise. Day one she hit 120 for six and called the form clean. The early weeks bore that out. 125, 135, 145 — each session brief, factual, moving forward the way she said it would.
+>
+> The first thing that said otherwise was 150 on day 26. She got four reps and went back. She didn't narrate it much. She reset to 145, hit it cleanly on day 32, and returned to 150 by day 39. That recovery was quiet and direct and I want to remember it as the baseline for how she handled resistance in this room.
+>
+> Day 45 was the more complicated moment. She got four reps at 155 and said, "The bar moved different. Knees tracked but I'm not sure they would have on rep five." That sentence mattered. Two days later she noted the knees were cranky. She took the days off and came back to 150, which she said felt heavy in a way it hadn't. She held 150 across three sessions — day 52, day 58, day 65 — and on day 65 said plainly: "The progress has stopped."
+>
+> Then a few days of something quieter. Day 67 she wrote that she was trying to figure out whether it was a plateau or under-recovery. She didn't answer the question out loud. On day 71 she took a deload week at 125 for ten. No session notes beyond that.
+>
+> Day 78 she was back at 150 and said it felt stronger than two weeks prior at the same weight. Day 84 she hit 155 for six and said what she'd concluded: "The plateau wasn't a plateau, it was a recovery problem."
+>
+> Day 90 she squatted 160 for six. Her closing words: "Ninety days, forty pounds added. Slower than I planned. The middle thirty days taught me how to recover."
+>
+> The arc was a steady climb interrupted by a failure, a reset, a second climb interrupted by a longer stall, a quiet diagnostic process she largely conducted alone, and then a deload that unlocked the final weeks. What she named at the end — the middle thirty days teaching her to recover — is what I'd bring into the next room with her.
+
+---
+
+##### C × H1 — David, "Italian B2 sentences" (strong throughout)
+
+*333 words; 1525 in / 483 out tokens*
+
+> David committed on January 26, 2026 to building B2-level Italian sentence facility over ninety days, beginning with a concrete first target: three subjunctive sentences by end of week, with a tutor session on Tuesday. He started at the mechanics — *sperare che* pulling subjunctive in writing but not always in speech, then *benché* behaving like "although" but requiring its own mood. By day 23 he had hit the third conditional and spent two days on the sequence-of-tenses problem before it gave way: "se avessi saputo, sarei venuto." At day 35 he tested the structure aloud in Italian, then tagged his own uncertainty with "più o meno" — the doubt located in the second clause, not the first.
+>
+> The significant pivot came at day 47, when his tutor told him he was thinking in English and translating. He changed his method: write first thoughts in Italian, fix grammar after. Day 55 was, in his word, "Disastro" — a paragraph written straight into the language that collapsed — but he noted he could see the shape of the failure in a way translation had hidden from him. The plateau did not break immediately. Days 55 through 66 produced no logged session. Day 67 was the turn: in Italian, mid-session, unprompted, he said he had thought in the language for the first time, not translated — "pensato" — and recorded it in the language he was describing. The Companion noted that the shift he had named at day 47 was audible in the day-67 recording itself.
+>
+> From there the arc held. At day 78 his tutor described his B2 reading as "comfortable B2" and moved him into B2-to-C1 transition material. Day 88: ten compound sentences with embedded subjunctive clauses, written from native-language thinking. Day 90, final session, David wrote his closing statement in Italian: *"Sono cambiato. Posso pensare in una lingua che non era mia."* Tom's release message noted that the recordings had made the difference for him as a sponsor — hearing David do it.
+
+---
+
+##### C × H2 — Sarah, "Pottery wheel — bowls" (thin first half, strong second)
+
+*340 words; 1379 in / 477 out tokens*
+
+> Sarah committed on January 26, 2026 to throwing real bowls on the pottery wheel by day 90 — the first time she'd touched clay in twelve years. She began by making the studio hers, then ran immediately into the gap between memory and body. By day 4 she had forgotten how to center. Day 5: three lumps, two lost. Day 8 she was practicing wedging at the kitchen table. The early weeks were interrupted by childcare — "demoralizing," she said at day 14, studio time hard to find with a sick kid. Day 18, three throws, all collapsed.
+>
+> The first real shape arrived at day 23: a cylinder with uneven walls. By day 28 she was considering bailing, caught between the difficulty and guilt about her sponsors' patience. She didn't bail. At day 31 she reset her terms: "Three sessions per week minimum, no excuses, even if the kid is sick." The work steadied. Day 36 brought her first bowl shape — small, lopsided; she said she loved it. Day 41, two bowls in one session. The arc shifted again at day 47, when trimming reorganized her understanding of the whole process: "Trimming is the whole game — the throw is just stage one." By day 52 she had six bowls in a week, three usable. Day 64 she was throwing to a target weight, hitting within 50 grams on four of five. At day 71 a studio tutor told her she looked six months in, not three; Sarah noted she thought it was generous but took it.
+>
+> The final weeks moved toward the kiln. She glazed five bowls at day 79, pulled them at day 86 — two cracked, three intact. At day 88 she wrote: "I'm holding one of my own bowls. It's a real object that didn't exist three months ago." She finished day 90 with ten bowls in the cabinet. Her own accounting of where the work landed: "The first three are bad. The last five are good. I learned what 'good' means in this craft."
+
+---
+
+##### C × H3 — Mike, "5K running" (abandoned middle and recovery)
+
+*260 words; 1373 in / 393 out tokens*
+
+> Mike committed on day 1 to running a 5K by day 90, starting from 1.5km with half of it walked. The early sessions traced steady, undramatic progress — by day 9 he was covering 2.1km with less walking, noting his pace was poor but his range was growing. On day 14 a calf strain stopped the work. He rested through day 23, when a doctor cleared him for light running. Day 25 was his return: five minutes on grass. He logged it in Italian — "Solo cinque minuti. Mi sento ridicolo ma sono qui" — and that was the full record of that session.
+>
+> Then three weeks passed without a log. Mike named it plainly on day 42: work travel, two kid commitments in the same week, nothing run, nothing recorded. His sister Jen sent one message on day 43 — drop her a five-minute walk, that's all. He walked 1.5km on day 44 and called it humiliating. Day 47, back to 2km with half walked, which was where he'd been on day 9. The plateau didn't break until day 53: 3km continuous, no walking — the first of his life, by his own account. Day 65, 3.8km without stopping. Day 71, his first 5K, 38 minutes: "Slow as hell. Done it." The three weeks following were a run of improvement — 35 minutes on day 78, 32 on day 84.
+>
+> Day 90, 31-flat. Mike's closing words: "I broke my calf, lost a month, came back. The thing I'm proud of is not the time, it's that I came back."
+
+---
+
+##### C × H4 — Lena, "Daily piano practice" (even effort with mid-arc pivot)
+
+*298 words; 1350 in / 424 out tokens*
+
+> Lena committed to daily piano practice on January 26, 2026, naming the work as rebuilding fingers dormant for fifteen years. She began with scales — thirty minutes on day one — and within a week had returned to a Bach minuet she first learned at fourteen. By day twelve she played it end to end: "not pretty but it's whole." Buoyed by that, she moved to Chopin's Prelude in E minor on day eighteen, but by day twenty-seven she was reporting "no real progress" and naming frustration plainly. A Zoom tutor on day thirty-four diagnosed the problem — too much repertoire for the available time — and on day thirty-six Lena made the pivot herself: "Going to drop the Chopin and stop adding new pieces. Just the Bach minuet, but really learn it."
+>
+> The second half of the commitment lived inside that narrowing. Around day forty-one she began hearing the bass voice in the minuet differently. Day forty-eight she recorded herself and found the recording "awful in ways I couldn't hear while playing." By day fifty-five something had shifted — she phrased the third section as it should be phrased, and her tutor's response was "there you are." On day sixty-five she decided to perform the minuet for her mother's birthday, and on day seventy-two she did. She noted the applause and that her mother cried. The performance landed and then the commitment continued, which is worth remembering: she returned to Chopin on day seventy-nine, this time carrying what the Bach had cost her. By day eighty-five, two pages sounded like Chopin to her — "not perfect. Real."
+>
+> She closed the ninety days on April 24 in her own accounting: "One small Bach minuet learned the way it deserves. Two pages of Chopin. A different kind of patience."
+
+---
+
+##### C × H5 — Robert, "Daily journaling, three pages" (mostly didn't happen)
+
+*273 words; 1070 in / 370 out tokens*
+
+> Robert committed on January 26, 2026 to three handwritten morning pages daily for ninety days. He named it clearly on day one. By day two he was writing — "mostly complaining about my commute" — but by day six he had already skipped two days. By day eleven, six days had passed between entries, and he wrote two pages instead of three.
+>
+> The pattern that formed early did not change. Robert named the mechanism himself on day eighteen: "I keep telling myself I'll do it after work." His wife Anna sent a message on day twenty-three asking him not to ghost on it, noting that even one paragraph counted. On day twenty-five he wrote one paragraph — "about how I'm not doing this." Days twenty-six through forty passed without a session. On day forty-one he returned: "Three weeks of nothing. One paragraph today." Around day sixty-two he wrote, "I should bail. I keep meaning to bail," and did not bail, but also did not write. Day sixty-eight was one paragraph. Day eighty-one he reported six total entries across eighty-one days and wrote two paragraphs.
+>
+> The work as committed — three pages, daily, morning — did not happen. The absences were not recoveries followed by new stretches; the form stayed broken from early February forward. No plateau broke. When day ninety arrived, Robert's accounting was exact: "Ninety days. Eight entries total. I didn't do the work." Anna released him: "We talked about this. I know what happened." What happened is not recorded here; only the shape of the ninety days is. Robert finished with his own words intact and Anna's acknowledgment. The commitment closed.
+
+---
+
+##### C × H6 — Karen, "Weight training, squat focus" (honest plateau)
+
+*294 words; 1290 in / 416 out tokens*
+
+> Karen committed on January 26, 2026 to ninety days of squat-focused weight training with real loading, opening at 120 pounds for six reps and a plan to add five pounds per week "unless something tells me not to." The early weeks held to that plan cleanly — 125, 135, 145 — until day 26, when 150 failed at four reps. She reset to 145 for a week, then came back through 150 on day 39 and reached 155 on day 45, where the bar, as she put it, "moved different." She got four reps and stopped, noting her knees had tracked but she wasn't sure they would have held on a fifth.
+>
+> Two days off followed for cranky knees. When she returned on day 52, 150 felt heavier than it had two weeks prior. She stayed there — day 52, day 58, day 65 — without movement. On day 65 she named it plainly: "The progress has stopped." Two days later she was still working out whether she was hitting a plateau or under-recovering. The distinction resolved on day 71, when she dropped to a deload week at 125 for ten. The middle thirty days, from roughly day 45 through day 78, did not break open; they held at the same weight while she waited to understand why.
+>
+> The deload answered the question. On day 78, back at 150, she reported feeling stronger than she had two weeks earlier at the same load. Day 84 brought 155 for six — "The plateau wasn't a plateau, it was a recovery problem." Day 90, April 25, she closed at 160 for six. Her own accounting at the finish: "Ninety days, forty pounds added. Slower than I planned. The middle thirty days taught me how to recover."
+
+#### 6.7.4 Rationale and chosen prompt
+
+**Matrix outcome.** All 18 outputs landed inside the 200–400 word target with no hard-cap violations and no overt voice-ban breaches. Differentiation among the three candidates surfaced most sharply on the two hardest histories — H5 (Robert, "didn't happen") and H6 (Karen, honest plateau) — exactly where the §6 voice bans are most pressed.
+
+- **Candidate A (Field notes, 3rd-person factual)** held form discipline but consistently slipped into arc-summary editorializing in closing paragraphs. The "not interpretive" theory did not fully hold under model behavior — Sonnet wants to name arcs at the close, even told not to.
+- **Candidate B (1st-person memoir)** carried the most texture and produced the strongest future-Companion hooks at the close ("If he comes back to this room…", "what I'd bring into the next room with her"). First-person tics ("I noticed", "I noted") were present but light. One real verdict-shaped slip in the matrix: *"That felt true"* on David's H1 output — the bans were meant to catch precisely this.
+- **Candidate C (Biographical, 3rd-person, compact)** produced the matrix's two best individual outputs, both on hardest-case histories: *"What happened is not recorded here; only the shape of the ninety days is"* (H5/Robert) and *"The middle thirty days, from roughly day 45 through day 78, did not break open; they held at the same weight while she waited to understand why"* (H6/Karen). C's tightness (avg 300 words) is part of the discipline. Two weaknesses materialized: occasional smoothing language ("Buoyed by that, she moved to Chopin" on H4/Lena — *buoyed* is a verdict-shaped verb) and frequently abrupt closes that did not name a carry-forward fact.
+
+**Choice.** Candidate C as the foundation, with two targeted patches addressing exactly its two weaknesses. The hybrid is **Candidate D**.
+
+- **Patch 1 — anti-smoothing.** Add to the "must not" list a specific instruction against narrative-momentum verbs that ascribe internal states from outside (no *buoyed by*, *motivated to*, *inspired by*, *spurred on*, *driven to*, or similar). The practitioner's own language sets the affective register; the Curator does not invent it.
+- **Patch 2 — future-hook close.** Replace C's closing instruction ("End on where the practitioner finished, in their own terms when possible") with one borrowed structurally from B: end with one sentence naming a specific carry-forward fact about the ninety days, phrased as a fact about the past, not a prediction or recommendation. Practitioner's own terms preferred when they fit.
+
+**Sanity check.** Candidate D run against H5 (Robert) and H6 (Karen) — the two histories where the patches most directly target weaknesses. Two calls, total cost ~$0.02. Both outputs preserved C's strengths and addressed its weaknesses concretely; no introduction of new failure modes. Full text:
+
+##### D × H5 — Robert, "Daily journaling, three pages" (sanity check, 270w)
+
+> Robert committed on January 26, 2026 to three handwritten morning pages daily for ninety days. He began the next morning writing about his commute. By day six he had already skipped two days, and by day eleven — six days after that — he arrived having missed more days than he had kept, writing two pages instead of three. Around day eighteen he was telling himself he would do it after work. He did not.
+>
+> The middle of the ninety days was mostly absence. Day twenty-five produced one paragraph — Robert's own description of it: "About how I'm not doing this." Three weeks of nothing followed. A single paragraph on day forty-one. The day-sixty milestone passed with no session record before or after it. On day sixty-two Robert wrote "I should bail. I keep meaning to bail." He did not bail either. Day sixty-eight: one paragraph. Day eighty-one: two paragraphs, and the acknowledgment that there had been six entries across eighty-one days. The practice as committed — three pages, daily, in the morning — did not happen in any sustained way at any point in the ninety days.
+>
+> Robert closed the commitment on day ninety with eight entries total. His own accounting was plain: "I didn't do the work." The most useful fact to carry into whatever Robert commits to next in this room is that the gap between his stated practice and his actual entries was visible to him throughout and did not close — he named it at day twenty-five, again at day sixty-two, and finally at day ninety — and that he stayed in the room anyway.
+
+##### D × H6 — Karen, "Weight training, squat focus" (sanity check, 349w)
+
+> Karen committed to a squat-focused weight training practice on January 26, 2026, beginning at 120 pounds for six reps and setting a plan to add five pounds per week "unless something tells me not to." The early weeks held to that pace: 125 on day 5, 135 on day 12, 145 on day 19. The first interruption came on day 26 — a failed attempt at 150, four reps instead of six — and she reset to 145 for a week before clearing 150 cleanly on day 39. At 155 on day 45 she got four reps and noted that the bar "moved different" and that her knees had tracked but she wasn't confident they would have held on a fifth rep. Two days later she reported that her knees felt cranky and took the time off.
+>
+> The middle third of the commitment was the hardest stretch to read. Karen returned to 150 on day 52 and logged it as feeling "heavy now in a way it didn't on day 39." She repeated 150 on day 58 and again on day 65, at which point she wrote, "The progress has stopped." Two days later she was still working it out — "Trying to figure out if this is a plateau or if I'm under-recovering" — and on day 71 she moved into a deload week at 125 for ten. The progress line during days 52 through 70 did not advance; the plateau did not break on its own.
+>
+> The deload opened something. On day 78 she was back at 150 and noted it felt stronger than it had two weeks earlier at the same weight. Day 84 she hit 155 for six and said, "The plateau wasn't a plateau, it was a recovery problem." She finished on day 90 at 160 for six — forty pounds added over ninety days, slower than she had planned. Her closing words were: "The middle thirty days taught me how to recover." That is the fact most worth carrying forward: the stall at 150, the decision on day 71, and what it produced.
+
+**Verdict on D.** Three borderline-editorial moments across the two outputs (*"He did not bail either"*, *"The deload opened something"*, *"the hardest stretch to read"*) — none violate hard bans, all are inflections in service of biographical narrative shape. The patches achieved their targets without introducing new failure modes. D ships as the chosen prompt.
+
+##### Chosen prompt (Candidate D)
+
+This is the canonical Curator system prompt. Install verbatim into `src/lib/anthropic.ts` (alongside `COMPANION_ROOM_SYSTEM_PROMPT` and `DAY90_SUMMARY_SYSTEM_PROMPT`) when the Curator function is wired up. The user-turn envelope shape is in §6.7.2 ("A 90-day commitment has just completed in this room…").
+
+```
+You are the Memory Curator. Write a short biographical paragraph about a single 90-day practice commitment, written so the Practice Companion can recall the arc later when the same practitioner declares their next commitment in the same room.
+
+The reader is the Companion, not a human. Your output goes into the Companion's working memory — it will be read months or years from now in a context where the practitioner says something like "I'm trying again" and the Companion needs to remember what "again" refers to.
+
+Voice: third person, focused on the practitioner. Past tense. Compact. The shape of "Karen began ... by day 45 ... around day 71 she ..." — biographical, concrete, scoped to one practitioner's arc through one practice.
+
+The summary should:
+- Open with what the practitioner committed to and where they began.
+- Trace the arc through specific moments: beginnings, pivots, plateaus, absences, recoveries, completion. Use day numbers when they help locate a moment.
+- Quote the practitioner's own words where those words are what carried the moment.
+- Name where the work was strong and where it faltered. Both, plainly.
+- Close the summary with one sentence naming what would be most useful to carry forward into the practitioner's next commitment in this room. Phrase that sentence as a fact about the ninety days that just ended, not a prediction or recommendation. End on the practitioner's own terms when possible.
+
+The summary must not:
+- Praise the practitioner or pass any verdict on the quality of the work.
+- Predict what they will do next. Recommend nothing.
+- Critique form from video. Quote what the practitioner said about their own work; do not add to it.
+- Reference whether sponsors stayed convinced; the completion is sufficient.
+- Smooth over a faltering middle to make the arc feel cleaner. If the work didn't happen, say so. If a plateau didn't break, say so.
+- Use narrative-momentum words that the practitioner did not say themselves. No "buoyed by," "motivated to," "inspired by," "spurred on," "driven to," or similar verbs that ascribe internal states from outside. If the practitioner didn't say they felt that way, you don't say it for them.
+
+Length: 200 to 400 words. Hard cap 600. Compactness is part of the discipline — you are writing for a reader (yourself, future-Companion) who will read this in a context where many other things are competing for attention.
+
+Format: continuous prose, one to three paragraphs. No headers, no bullets.
+```
+
+**Model.** `claude-sonnet-4-6`, max_tokens 1200 (well above the 600-word hard cap).
+
+**When to revisit this prompt.** Two natural triggers:
+
+1. After the first one or two real production summaries are written — read them as carefully as the matrix outputs above. If the borderline-editorial inflections from D's sanity check (*"He did not bail either,"* etc.) compound into actual ban violations on real practitioner data, the prompt needs another pass.
+2. If a future structural decision changes what the Curator should attend to — e.g., if the Companion gains a sponsor-side surface and the Curator's audience expands, or if cross-room memory becomes a thing. Neither is on the near-term horizon.
+
+**Out of scope for this design pass.** A Critic agent (per `companion-v2-plan.md` §2.1) reading the Curator's output before it lands. The matrix evidence does not justify Critic cost yet — D's outputs are clean enough to ship without a layered review. Revisit only if the first few production summaries reveal drift the prompt itself can't fix.
+
 ---
 
 ## 7. Deliberately out of scope for v1
