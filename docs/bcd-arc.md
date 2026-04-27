@@ -1604,42 +1604,57 @@ shouldn't be lost. This is the "I noticed X but it's not today's work" list.)*
   not a deferred option.
 
   **What happened.** Sequence visible in screenshot
-  `/mnt/chromeos/MyFiles/Downloads/Screenshot 2026-04-26 10.32.17 AM.png`:
+  `/mnt/chromeos/MyFiles/Downloads/Screenshot 2026-04-26 10.32.17 AM.png`
+  (and continued past the screenshot frame):
   Rick (practitioner of "Pullups") posts a non-session message — "I
   haven't done it yet. I'm going to go later today." — answering an
   earlier Companion question. The Companion fires the followup path,
   correctly addresses Rick, and replies "Rick, then the session isn't
   marked yet — come back when you've done it." That reply ends in a
-  period, deliberately closing the loop. David (practitioner of
-  "Italian") then posts a substantive non-session message about his
-  own commitment — "I don't remember what I put in the spec but it's
-  something related to creating complex Italian sentences at a B2
-  level." The Companion does not respond.
+  period, deliberately closing the loop with Rick. David (practitioner
+  of "Italian"), who had a separate pending Companion question of his
+  own from earlier in the room, then posts a substantive non-session
+  message about his own commitment — "I don't remember what I put in
+  the spec but it's something related to creating complex Italian
+  sentences at a B2 level." The Companion does not respond. David
+  continues posting further messages directly answering the Companion's
+  earlier question to him. The Companion never re-engages — David's
+  whole subsequent thread to the Companion goes silent on the Companion
+  side.
 
   **Root cause (V1 design, not a regression).** The followup-path
   guard at `src/app/api/rooms/[id]/messages/route.ts:262` short-circuits
-  when the most recent `companion_*` message has no `?` in its
-  trailing 200 chars. The Rick-addressed Companion reply ended in a
-  period, so the guard correctly suppressed any further followup
-  attempt — by design, the chain stops when the Companion stops asking.
-  The addressee gate from commits `79ad074` + `73a93ae` is never
-  reached in this trace; the `?` heuristic short-circuits first. Same
-  behavior would have shipped under the pre-79ad074 code.
+  when the **room's most recent** `companion_*` message has no `?` in
+  its trailing 200 chars. After the Companion's period-ending reply to
+  Rick, every subsequent practitioner_post in the room — including
+  David's — is checked against that Rick-targeted reply, not against
+  the Companion's earlier `?`-ending question to David. The pending
+  Companion-to-David thread is structurally orphaned the moment the
+  Companion takes any non-question turn anywhere in the room. The
+  addressee gate from commits `79ad074` + `73a93ae` only addresses the
+  inverse failure (don't fire on the wrong addressee when there *is* a
+  pending question); it does not address this one. The architecture
+  has no notion of "addressee-scoped conversation thread" — only "the
+  room's most recent Companion turn." Same orphaning behavior would
+  have shipped under the pre-79ad074 code; the addressee fix made V1
+  more conservative, not more capable.
 
   **Why it matters.** This is not a bug to patch — it is the V1
   trigger-driven architecture exhibiting the limitation that
   `docs/companion-v2-scope.md` §1 named explicitly: the Companion
   reacts to one trigger message at a time and has no "should I speak
   now?" decision separate from the trigger fire. A practitioner
-  posting substantive material about their own commitment cannot
-  elicit a Companion response unless they session-mark it. In a
-  multi-practitioner room this means the Companion engages
-  asymmetrically — whoever happened to be answering a pending question
-  gets it, whoever else is talking does not — even when the second
-  practitioner has obviously more to engage with. Adding more
-  trigger types (a fourth branch for "substantive chat," a fifth for
-  "video upload," etc.) compounds the architectural problem rather
-  than resolving it.
+  answering the Companion's pending question to *them* cannot get a
+  response if any other practitioner has spoken to the Companion in
+  the meantime; a practitioner posting substantive material about
+  their own commitment cannot elicit a Companion response unless they
+  session-mark it. In a multi-practitioner room these failures
+  compound — the Companion engages asymmetrically with whichever
+  practitioner happened to be answering the room's most recent
+  pending question, and goes silent on every other simultaneously-open
+  thread. Adding more trigger types (a fourth branch for "substantive
+  chat," a fifth for "video upload," etc.) compounds the architectural
+  problem rather than resolving it.
 
   **Scope call.** The third option from the 2026-04-22 entry — "stop
   using the followup path as a unitary concept; move to a

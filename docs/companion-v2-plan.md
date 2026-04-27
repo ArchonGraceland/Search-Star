@@ -49,14 +49,21 @@ opposite directions in the same room:
   to Rick was followed by side-chat from David. The followup path
   fired against David's message and produced a meta-correction.
   Patched 2026-04-26 with the addressee gate.
-- **Under-engagement (2026-04-26, David's "Italian sentences" post).**
-  After a Companion reply ended in a period (closing the loop with
-  Rick), David posted substantive non-session material about his own
-  commitment. The followup path correctly skipped (no `?` in the prior
-  Companion message), and the Companion stayed silent. The patch from
-  the morning does not address this; the architecture cannot see
-  "David has spoken substantively and could be engaged" because there
-  is no trigger that asks the question.
+- **Under-engagement (2026-04-26, David's orphaned Companion thread).**
+  The Companion had a pending `?`-ending question to David from earlier
+  in the room. Rick then posted his own answer to a different Companion
+  question, the Companion replied to Rick ending in a period, and from
+  that point forward every David post — including substantive material
+  about his own commitment AND messages directly answering the
+  Companion's pending question to him — failed the followup heuristic,
+  because the heuristic checks the room's most recent Companion message
+  (the period-ending Rick reply) rather than the most recent
+  Companion-to-this-practitioner message. The Companion never
+  re-engaged across David's whole subsequent thread. The architecture
+  has no notion of "addressee-scoped conversation thread" — only "the
+  room's most recent Companion turn." The morning's addressee fix
+  addresses the inverse failure (don't fire on the wrong addressee
+  when a question is pending); it does nothing here.
 
 Adding more trigger types — a fourth branch for "substantive chat,"
 a fifth for "video upload" (`companion-v2-scope.md` §5), a sixth for
@@ -420,9 +427,16 @@ today's behavior.
 Plan the dry-run with at least 10 scenarios covering both the speak
 and silence cases:
 
-1. Substantive non-session post about own practice (the David
-   "Italian sentences" case from 2026-04-26 — Companion should engage
-   with a question)
+1. Practitioner answering the Companion's pending question to them,
+   while the Companion's most recent room turn was a period-ending
+   reply to a different practitioner (the orphaned-pending-question
+   shape from the 2026-04-26 David trace — Companion should engage,
+   recognizing that David's post is an answer to a still-open thread
+   between them, not new chat that just happened to land after
+   another practitioner spoke). This is the harder of the two
+   sub-cases the trace illustrates; the simpler sub-case (substantive
+   non-session post about own practice with no pending Companion
+   question) should also engage.
 2. Side-chat between two practitioners about each other's work (the
    Rick/David case from 2026-04-22 — Companion should stay silent)
 3. Practitioner asks the Companion a direct question ("what should I
@@ -482,7 +496,7 @@ migration adds friction.
   of failing to engage substantive non-session material that in
   retrospect should have been engaged.
 - The two production traces from `bcd-arc.md` (2026-04-22 Rick/David
-  over-engagement and 2026-04-26 David "Italian sentences"
+  over-engagement and 2026-04-26 David orphaned-pending-question
   under-engagement) are demonstrably resolved when re-played as
   scenarios against the new architecture.
 - The followup heuristic and the addressee fallback gate are removed
