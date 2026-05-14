@@ -5,16 +5,15 @@ import { isInstitutionalPortalEnabled } from '@/lib/feature-flags'
 
 // Institution enrollment route.
 //
-// Pass 5 §2 (F24 pattern): the SSR client is retained for
-// `auth.getUser()` (cookie-bound — that's correct) and for the
-// `get_user_id_by_email` RPC (a read; F24 specifically targets writes
-// that silently no-op under JWT-propagation failure, and the RPC is
-// SECURITY DEFINER on the database side anyway). Every write — the
-// membership INSERT and the `profiles.institution_id` UPDATE — runs
-// on the service client. The institution lookup that gates access
-// also runs on the service client, mirroring the dashboard and
-// members pages: a silent-empty here from JWT-propagation failure
-// would bounce a legitimate institution contact to 404.
+// Pass 5 §2 (F24 pattern): the SSR client is retained only for
+// `auth.getUser()` (cookie-bound — that's correct). Every database
+// call — the institution access lookup, the per-email
+// `get_user_id_by_email` RPC, the membership INSERT, the
+// `profiles.institution_id` UPDATE — runs on the service client.
+// The RPC moved to service client (2026-05-14) so EXECUTE can be
+// revoked from the `authenticated` role on a SECURITY DEFINER
+// function that would otherwise let any signed-in user enumerate
+// other users by email via /rest/v1/rpc.
 //
 // Authorization is layered:
 //   1. Authentication: SSR `auth.getUser()` (gate at the door).
@@ -84,9 +83,11 @@ export async function POST(
   const cleanEmails = emails.map((e) => e.trim().toLowerCase()).filter(Boolean)
 
   for (const email of cleanEmails) {
-    // Look up user by email via RPC. SECURITY DEFINER on the database
-    // side; SSR client is fine here — F24 targets writes specifically.
-    const { data: targetUserId, error: rpcError } = await ssr
+    // Look up user by email via RPC. Service-client call so we can
+    // REVOKE EXECUTE on this SECURITY DEFINER function from the
+    // `authenticated` role — only the service role needs it, since
+    // every callsite is server-side after the access gate above.
+    const { data: targetUserId, error: rpcError } = await db
       .rpc('get_user_id_by_email', { p_email: email })
 
     if (rpcError || !targetUserId) {
